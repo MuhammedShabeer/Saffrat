@@ -939,6 +939,11 @@
             SetCharge();
             SetCustomer();
 
+            var defaultOrderType = parseInt('@Model.DefaultOrderType');
+            if (defaultOrderType == 1) SetDineInOrder();
+            else if (defaultOrderType == 2) SetPickUpOrder();
+            else if (defaultOrderType == 3) SetDeliveryOrder();
+
             $("#cartActions a").each(function () {
                 $(this).addClass('disabled');
             });

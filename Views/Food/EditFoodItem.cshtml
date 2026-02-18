@@ -56,6 +56,13 @@
                                 @Localize("Please enter item name.")
                             </div>
                         </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Arabic Name") <code>*</code></label>
+                            <input asp-for="ArabicName" type="text" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter arabic name.")
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="control-label">@Localize("Description")</label>

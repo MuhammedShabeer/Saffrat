@@ -40,7 +40,7 @@ namespace Saffrat.Controllers
         [HttpPost]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> General([Required] string AppName,
-            [Required] int DefaultCustomer, [Required] int SaleAccount, [Required] int PurchaseAccount, [Required] int PayrollAccount,
+            [Required] int DefaultCustomer, [Required] int DefaultOrderType, [Required] int SaleAccount, [Required] int PurchaseAccount, [Required] int PayrollAccount,
             [Required] string Copyright, [Required] bool SendInvoiceEmail, IFormFile Logo, IFormFile Favicon, IFormFile Preloader)
         {
             var response = new Dictionary<string, string>();
@@ -136,6 +136,7 @@ namespace Saffrat.Controllers
                 GetSetting.SendInvoiceEmail = SendInvoiceEmail;
                 GetSetting.AppName = AppName;
                 GetSetting.Copyright = Copyright;
+                GetSetting.DefaultOrderType = DefaultOrderType;
 
                 try
                 {
@@ -437,8 +438,8 @@ namespace Saffrat.Controllers
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> EditLanguage(int? Id)
         {
-            var lang = await _dbContext.StringResources.Where(x=> x.LanguageId == Id).OrderBy(x=> x.Name).ToListAsync();
-            
+            var lang = await _dbContext.StringResources.Where(x => x.LanguageId == Id).OrderBy(x => x.Name).ToListAsync();
+
             if (lang != null)
             {
                 var name = _dbContext.Languages.FirstOrDefault(x => x.Id == Id);
@@ -783,7 +784,7 @@ namespace Saffrat.Controllers
                 response.Add("status", "error");
                 response.Add("message", "Discount not exist.");
             }
-            
+
             return Json(response);
         }
 
@@ -850,7 +851,7 @@ namespace Saffrat.Controllers
 
                 if (charge.Id > 0)
                 {
-                    var existing=_dbContext.Charges.AsNoTracking().FirstOrDefault(x=> x.Id == charge.Id);
+                    var existing = _dbContext.Charges.AsNoTracking().FirstOrDefault(x => x.Id == charge.Id);
                     charge.IsDefault = existing.IsDefault;
                     _dbContext.Charges.Update(charge);
                 }
@@ -952,7 +953,7 @@ namespace Saffrat.Controllers
                 response.Add("status", "error");
                 response.Add("message", "Charge not exist.");
             }
-            
+
             return Json(response);
         }
         [HttpPost]
@@ -1126,7 +1127,7 @@ namespace Saffrat.Controllers
             if (ModelState.IsValid)
             {
                 var existing = _dbContext.EmailTemplates.FirstOrDefault(x => x.Id == emailtemplate.Id);
-                if(existing != null)
+                if (existing != null)
                 {
                     try
                     {

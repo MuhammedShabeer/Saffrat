@@ -22,7 +22,8 @@
                     </h4>
                 </div>
                 <ul class="breadcrumb">
-                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i
+                                class="fa fa-home me-1"></i>@Localize("Home")</a></li>
                     <li class="breadcrumb-item">@Localize("General Setting")</li>
                 </ul>
             </div>
@@ -36,7 +37,7 @@
             <form id="frm" class="needs-validation" novalidate="">
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6 form-group">
+                        <div class="col-md-6 form-group d-none">
                             <label class="control-label">@Localize("App Name") <code>*</code></label>
                             <input asp-for="AppName" type="text" class="form-control" required />
                             <div class="invalid-feedback">
@@ -45,7 +46,8 @@
                         </div>
                         <div class="col-md-6 form-group">
                             <label class="control-label">@Localize("Default Customer") <code>*</code></label>
-                            <select asp-for="DefaultCustomer" class="form-control selectpicker" data-live-search="true" required>
+                            <select asp-for="DefaultCustomer" class="form-control selectpicker" data-live-search="true"
+                                required>
                                 @foreach (var item in ViewBag.customers)
                                 {
                                     <option value="@item.Id">@item.CustomerName</option>
@@ -55,11 +57,20 @@
                                 @Localize("Please select default customer.")
                             </div>
                         </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Default Order Type") <code>*</code></label>
+                            <select asp-for="DefaultOrderType" class="form-control selectpicker" required>
+                                <option value="1">@Localize("Dine In")</option>
+                                <option value="2">@Localize("Pick Up")</option>
+                                <option value="3">@Localize("Delivery")</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 form-group">
                             <label class="control-label">@Localize("Sale Account") <code>*</code></label>
-                            <select asp-for="SaleAccount" class="form-control selectpicker" data-live-search="true" required>
+                            <select asp-for="SaleAccount" class="form-control selectpicker" data-live-search="true"
+                                required>
                                 @foreach (var item in ViewBag.accounts)
                                 {
                                     <option value="@item.Id">@item.AccountName</option>
@@ -71,7 +82,8 @@
                         </div>
                         <div class="col-md-6 form-group">
                             <label class="control-label">@Localize("Purchase Account") <code>*</code></label>
-                            <select asp-for="PurchaseAccount" class="form-control selectpicker" data-live-search="true" required>
+                            <select asp-for="PurchaseAccount" class="form-control selectpicker" data-live-search="true"
+                                required>
                                 @foreach (var item in ViewBag.accounts)
                                 {
                                     <option value="@item.Id">@item.AccountName</option>
@@ -85,7 +97,8 @@
                     <div class="row">
                         <div class="col-md-6 form-group">
                             <label class="control-label">@Localize("Payroll Account") <code>*</code></label>
-                            <select asp-for="PayrollAccount" class="form-control selectpicker" data-live-search="true" required>
+                            <select asp-for="PayrollAccount" class="form-control selectpicker" data-live-search="true"
+                                required>
                                 @foreach (var item in ViewBag.accounts)
                                 {
                                     <option value="@item.Id">@item.AccountName</option>
@@ -95,7 +108,7 @@
                                 @Localize("Please select payroll account.")
                             </div>
                         </div>
-                        <div class="form-group col-md-6">
+                        <div class="form-group col-md-6 d-none">
                             <label class="control-label">@Localize("Copyright") <code>*</code></label>
                             <input type="text" asp-for="Copyright" class="form-control" required />
                             <div class="invalid-feedback">
@@ -108,25 +121,30 @@
                         <label class="control-label" asp-for="SendInvoiceEmail">@Localize("Send Invoice Email")</label>
                     </div>
                     <div class="row">
-                        <div class="col-md-4 col-lg-3 form-group">
+                        <div class="col-md-4 col-lg-3 form-group d-none">
                             <label class="control-label">@Localize("Logo")</label>
                             <div id="imagePreview1" class="image-preview" style="background-image:url('@Model.Logo')">
                                 <label>@Localize("Choose File")</label>
-                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" asp-for="Logo">
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico"
+                                    asp-for="Logo">
                             </div>
                         </div>
-                        <div class="col-md-4 col-lg-3 form-group">
+                        <div class="col-md-4 col-lg-3 form-group d-none">
                             <label class="control-label">@Localize("Favicon")</label>
-                            <div id="imagePreview3" class="image-preview" style="background-image:url('@Model.Favicon')">
+                            <div id="imagePreview3" class="image-preview"
+                                style="background-image:url('@Model.Favicon')">
                                 <label>@Localize("Choose File")</label>
-                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" asp-for="Favicon">
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico"
+                                    asp-for="Favicon">
                             </div>
                         </div>
-                        <div class="col-md-4 col-lg-3 form-group">
+                        <div class="col-md-4 col-lg-3 form-group d-none">
                             <label class="control-label">@Localize("Preloader")</label>
-                            <div id="imagePreview4" class="image-preview" style="background-image:url('@Model.Preloader')">
+                            <div id="imagePreview4" class="image-preview"
+                                style="background-image:url('@Model.Preloader')">
                                 <label>@Localize("Choose File")</label>
-                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" asp-for="Preloader">
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico"
+                                    asp-for="Preloader">
                             </div>
                         </div>
                     </div>

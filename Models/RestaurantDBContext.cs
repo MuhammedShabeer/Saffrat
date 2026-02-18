@@ -540,6 +540,9 @@ namespace Saffrat.Models
                     .IsRequired()
                     .HasMaxLength(150);
 
+                entity.Property(e => e.ArabicName)
+                    .HasMaxLength(150);
+
                 entity.Property(e => e.Image).HasMaxLength(255);
 
                 entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
@@ -555,6 +558,9 @@ namespace Saffrat.Models
 
                 entity.Property(e => e.ItemName)
                     .IsRequired()
+                    .HasMaxLength(250);
+
+                entity.Property(e => e.ArabicName)
                     .HasMaxLength(250);
 
                 entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");

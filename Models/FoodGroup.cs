@@ -14,6 +14,7 @@ namespace Saffrat.Models
         public int? Id { get; set; }
         [Required]
         public string GroupName { get; set; }
+        public string ArabicName { get; set; }
         public string Image { get; set; }
         [Required]
         public bool Status { get; set; }

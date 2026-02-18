@@ -11,6 +11,7 @@ namespace Saffrat.Models
         public string Favicon { get; set; }
         public string Preloader { get; set; }
         public int DefaultCustomer { get; set; }
+        public int DefaultOrderType { get; set; }
         public int SaleAccount { get; set; }
         public int PurchaseAccount { get; set; }
         public int PayrollAccount { get; set; }

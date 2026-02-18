@@ -51,7 +51,8 @@ namespace Saffrat.Controllers
                 DefaultCustomer = _dbContext.Customers.FirstOrDefault(x => x.Id == 1),
                 Waiters = _dbContext.Users.Where(x => x.Role == "waiter").ToList(),
                 Drivers = _dbContext.Users.Where(x => x.Role == "deliveryman").ToList(),
-                PaymentMethods = _dbContext.PaymentMethods.ToList()
+                PaymentMethods = _dbContext.PaymentMethods.ToList(),
+                DefaultOrderType = GetSetting.DefaultOrderType
             };
 
             return View(pos);
@@ -746,7 +747,7 @@ namespace Saffrat.Controllers
                         if (oorder.OrderType == 1)
                         {
                             var existingTable = _dbContext.RestaurantTables.FirstOrDefault(x => x.TableName == oorder.TableName);
-                            if(existingTable != null)
+                            if (existingTable != null)
                             {
                                 existingTable.Status = false;
                                 _dbContext.RestaurantTables.Update(existingTable);
@@ -934,7 +935,7 @@ namespace Saffrat.Controllers
                         Action = "Close Order",
                         Status = "error",
                         CreatedAt = CurrentDateTime(),
-                        Description = "Email failed to send. Order #"+order.Id.ToString()
+                        Description = "Email failed to send. Order #" + order.Id.ToString()
                     };
                     SaveLog(log, _dbContext);
                 }
@@ -1379,7 +1380,7 @@ namespace Saffrat.Controllers
             var itemHtml = "";
             foreach (var item in order.OrderDetails)
             {
-                itemHtml += @"<td>" + item.Item.ItemName;
+                itemHtml += @"<td>" + item.Item.ItemName + (string.IsNullOrEmpty(item.Item.ArabicName) ? "" : " - " + item.Item.ArabicName);
                 if (item.OrderItemModifiers.Count > 0)
                     itemHtml += "<br> - ";
                 var i = 1;
@@ -1461,7 +1462,7 @@ namespace Saffrat.Controllers
             {
                 itemHtml += @"<tr><td>" + item.Total + "</td>";
                 itemHtml += @"<td class=""centered"">" + item.Quantity + "</td>";
-                itemHtml += @"<td class=""right"">" + item.Item.ItemName;
+                itemHtml += @"<td class=""right"">" + item.Item.ItemName + (string.IsNullOrEmpty(item.Item.ArabicName) ? "" : " - " + item.Item.ArabicName);
                 if (item.OrderItemModifiers.Count > 0)
                     itemHtml += "<br> - ";
                 var i = 1;

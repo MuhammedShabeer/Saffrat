@@ -12,5 +12,6 @@ namespace Saffrat.ViewModels
         public ICollection<User> Drivers { get; set; }
         public ICollection<PaymentMethod> PaymentMethods { get; set; }
         public Customer DefaultCustomer { get; set; }
+        public int DefaultOrderType { get; set; }
     }
 }

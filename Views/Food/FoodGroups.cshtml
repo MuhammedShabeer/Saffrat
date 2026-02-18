@@ -18,7 +18,8 @@
                     </h4>
                 </div>
                 <ul class="breadcrumb">
-                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i
+                                class="fa fa-home me-1"></i>@Localize("Home")</a></li>
                     <li class="breadcrumb-item">@Localize("Food Groups")</li>
                 </ul>
             </div>
@@ -42,6 +43,7 @@
                                 <th>@Localize("#")</th>
                                 <th>@Localize("Image")</th>
                                 <th>@Localize("Group Name")</th>
+                                <th>@Localize("Arabic Name")</th>
                                 <th>@Localize("Status")</th>
                                 <th>@Localize("Updated At")</th>
                                 <th>@Localize("Updated By")</th>
@@ -56,6 +58,7 @@
                                     <td>@item.Id</td>
                                     <td><img src="/Media/FoodGroupImage?name=@item.Image" width="50" height="40" /></td>
                                     <td>@item.GroupName</td>
+                                    <td>@item.ArabicName</td>
                                     <td>
                                         @if (item.Status)
                                         {
@@ -69,10 +72,15 @@
                                     <td>@item.UpdatedAt</td>
                                     <td><span>&#64</span>@item.UpdatedBy</td>
                                     <td>
-                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown"
+                                            aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
                                         <div class="dropdown-menu">
-                                            <a class="dropdown-item btn" href="javascript:void(0);" onclick="OpenMainModal(@item.Id);"><i class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
-                                            <a class="dropdown-item btn" href="javascript:void(0);" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                            <a class="dropdown-item btn" href="javascript:void(0);"
+                                                onclick="OpenMainModal(@item.Id);"><i class="fas fa-edit"></i> <span
+                                                    class="ml-2">@Localize("Edit")</span></a>
+                                            <a class="dropdown-item btn" href="javascript:void(0);"
+                                                onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span
+                                                    class="ml-2">@Localize("Delete")</span></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -107,6 +115,13 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label class="control-label">@Localize("Arabic Name") <code>*</code></label>
+                            <input name="ArabicName" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter arabic name.")
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <label class="control-label">@Localize("Status") <code>*</code></label>
                             <select name="Status" class="form-control selectpicker" required>
                                 <option value="true">@Localize("Active")</option>
@@ -118,9 +133,11 @@
                         </div>
                         <div class="form-group">
                             <label class="control-label">@Localize("Image")</label>
-                            <div id="imagePreview" class="image-preview" style="background-image:url('/Media/FoodGroupImage?name=default')">
+                            <div id="imagePreview" class="image-preview"
+                                style="background-image:url('/Media/FoodGroupImage?name=default')">
                                 <label for="groupimage">@Localize("Choose File")</label>
-                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" id="groupimage" name="groupimage">
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" id="groupimage"
+                                    name="groupimage">
                             </div>
                         </div>
                     </div>
@@ -244,6 +261,7 @@
                             $("#submit").text('@Localize("Update")');
                             $("#frm input[name='Id']").val(result.id);
                             $("#frm input[name='GroupName']").val(result.groupName);
+                            $("#frm input[name='ArabicName']").val(result.arabicName);
                             $("#frm select[name='Status']").selectpicker('val', String(result.status));
                             $('#imagePreview').css('background-image', 'url("/Media/FoodGroupImage?name=' + result.image + '")');
                             $("#mainModal").modal('show');
@@ -269,6 +287,7 @@
                 $("#submit").text('@Localize("Save")');
                 $("#frm input[name='Id']").val('');
                 $("#frm input[name='GroupName']").val('');
+                $("#frm input[name='ArabicName']").val('');
                 $("#frm select[name='Status']").selectpicker('val', 'true');
                 $('#imagePreview').css('background-image', 'url("/Media/FoodGroupImage?name=default")');
                 $("#mainModal").modal('show');

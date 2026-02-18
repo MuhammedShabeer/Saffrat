@@ -18,6 +18,7 @@ namespace Saffrat.Models
         public int GroupId { get; set; }
         [Required]
         public string ItemName { get; set; }
+        public string ArabicName { get; set; }
         public string Description { get; set; }
         [Required]
         public decimal Price { get; set; }

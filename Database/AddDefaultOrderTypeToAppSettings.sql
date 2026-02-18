@@ -1,0 +1,2 @@
+ALTER TABLE AppSettings ADD DefaultOrderType INT NOT NULL DEFAULT 1;
+GO
