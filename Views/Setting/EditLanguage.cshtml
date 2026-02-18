@@ -1,0 +1,106 @@
+﻿@model IEnumerable<Saffrat.Models.StringResource>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Update Language");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Update Language")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Setting" asp-action="Languages">@Localize("Languages")</a></li>
+                    <li class="breadcrumb-item">@Localize("Update Language")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>@ViewBag.name</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var fieldId = "field" + item.Id;
+                                var progressId = "progress" + item.Id;
+
+                                <tr>
+                                    <td class="text-muted align-middle">@item.Name</td>
+                                    <td>
+                                        <input type="text" id="@fieldId" value="@item.Value" onblur="ChangeLanguage(@item.Id)" class="form-control" style="min-width:500px;" />
+                                    </td>
+                                    <td id="@progressId" class="align-middle" style="min-width:90px;"></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@section scripts{
+    <script>
+        $("#language-menu").addClass("active");
+        $("#setting-menu").addClass("active");
+
+        function ChangeLanguage(id) {
+            var val = $("#field" + id).val();
+            $("#progress" + id).addClass("disabled btn-progress-two");
+            $.ajax({
+                url: '/Setting/UpdateLanguage',
+                type: 'POST',
+                data: {
+                    Key: id,
+                    Value: val
+                },
+                dataType: "json",
+                success: function (data) {
+                    if (data.status == "success") {
+                        //successMessage(data.message);
+                        $("#progress" + id).html('<span class="text-primary">@Localize("Updated")</span>');
+                    }
+                    else {
+                        errorMessage(data.message);
+                    }
+                },
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.href = '/Account/Login';
+                    }
+                    else if (data.status == 403) {
+                        errorMessage('@Localize("Access denied.")');
+                    }
+                    else {
+                        console.log(JSON.stringify(data));
+                    }
+                },
+                complete: function () {
+                    $("#progress" + id).removeClass("disabled btn-progress-two");
+                }
+            });
+        }
+    </script>
+}

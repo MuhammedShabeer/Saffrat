@@ -1,0 +1,279 @@
+﻿@model IEnumerable<Saffrat.Models.RestaurantTable>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Tables");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Tables")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Tables")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <button onclick="OpenMainModal(0);" class="btn btn-primary">@Localize("Add New")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-2">
+                    @foreach (var item in Model)
+                    {
+                        var id = "row" + item.Id;
+                        var reserved = item.Status.Equals(true) ? "active" : "";
+                        <div class="col-6 col-md-3 col-lg-2 mb-2" id="@id">
+                            <article class="product shadow @reserved">
+                                <div class="product-header">
+                                    <div class="image" data-background="/Media/TableImage?name=@item.Image" style="background-image: url('/Media/TableImage?name=@item.Image');">
+                                    </div>
+                                </div>
+                                <div class="product-details">
+                                    <div class="title text-center">
+                                        <h2>@item.TableName</h2>
+                                    </div>
+                                    <div class="text-center p-2">
+                                        <a href="javascript:void(0);" onclick="OpenMainModal(@item.Id);" class="btn btn-primary btn-sm mt-1 mr-1" data-toggle="tooltip" title="@Localize("Edit")"><i class="fa fa-edit"></i></a>
+                                        <a href="javascript:void(0);" onclick="Delete(@item.Id);" class="btn btn-danger btn-sm mt-1 mr-1" data-toggle="tooltip" title="@Localize("Delete")"><i class="fa fa-trash"></i></a>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section models{
+    <div class="modal fade" id="mainModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mainModalTitle"></h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <form id="frm" class="needs-validation" novalidate="">
+                    <div class="modal-body">
+                        <input type="hidden" name="Id" value="" />
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Table Name") <code>*</code></label>
+                            <input name="TableName" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter table name.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Image")</label>
+                            <div id="imagePreview" class="image-preview" style="background-image:url('/Media/TableImage?name=default')">
+                                <label for="tableimage">@Localize("Choose File")</label>
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" name="tableimage" id="tableimage">
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="Status" value="true">
+                            <label class="control-label">@Localize("Reserved")</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-whitesmoke br">
+                        <button type="submit" class="btn btn-primary" id="submit">Save</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section scripts{
+
+    <script>
+        $("#tableList-menu").addClass("active");
+
+        $("#frm input[name='Status']").change(function () {
+            if ($("#frm input[name='Status']").prop("checked") == true) {
+                $("#frm input[name='Status']").val(true);
+            }
+            else {
+                $("#frm input[name='Status']").val(false);
+            }
+        });
+
+        tableimage.onchange = evt => {
+            const [file] = tableimage.files
+            if (file) {
+                $('#imagePreview').css('background-image', 'url("' + URL.createObjectURL(file) + '")');
+            }
+        }
+
+        function Delete(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/Table/DeleteTable",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Table deleted successfully.")');
+                                        $("#row" + id).remove();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Table/SaveTable',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            setCookie("successMessage", '@Localize("Table saved successfully.")');
+                            window.location.reload(true);
+                        } else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+
+        function OpenMainModal(id) {
+            $("#frm").removeClass("was-validated");
+            if (id > 0) {
+                jQuery.ajax({
+                    url: "/Table/TableDetail",
+                    method: "GET",
+                    data: {
+                        Id: id
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            $("#mainModalTitle").text('@Localize("Update Table")');
+                            $("#submit").text('@Localize("Update")');
+                            $("#frm input[name='Id']").val(result.id);
+                            $("#frm input[name='TableName']").val(result.tableName);
+                            if (result.status == true) {
+                                $("#frm input[name='Status']").prop('checked', true);
+                                $("#frm input[name='Status']").val(true);
+                            }
+                            else {
+                                $("#frm input[name='Status']").prop('checked', false);
+                                $("#frm input[name='Status']").val(false);
+                            }
+                            $('#imagePreview').css('background-image', 'url("/Media/TableImage?name=' + result.image + '")');
+                            $("#mainModal").modal('show');
+                        } else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            } else {
+                $("#mainModalTitle").text('@Localize("Add Table")');
+                $("#submit").text('@Localize("Save")');
+                $("#frm input[name='Id']").val('');
+                $("#frm input[name='TableName']").val('');
+                $("#frm input[name='Status']").prop('checked', false);
+                $('#imagePreview').css('background-image', 'url("/Media/TableImage?name=default")');
+                $("#mainModal").modal('show');
+            }
+        }
+    </script>
+}

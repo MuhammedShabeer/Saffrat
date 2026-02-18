@@ -1,0 +1,156 @@
+﻿@model Saffrat.Models.WorkPeriod
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Work Period");
+    Layout = "~/Views/Shared/_POSLayout.cshtml";
+}
+
+@section styles{
+
+}
+
+<div class="container-fluid" style="margin-top:80px;">
+    <div class="row">
+        <div class="col-12 col-sm-8 offset-sm-2 col-md-6 offset-md-3 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4>@Localize("Work Period")</h4>
+                </div>
+                <div class="card-body">
+                    @if (Model == null || Model.IsEnd.Equals(true))
+                    {
+                        <form id="frmStartWorkPeriod" class="needs-validation" novalidate="">
+                            <div class="form-group">
+                                <label class="label-control">@Localize("Opening Balance") <code>*</code></label>
+                                <div class="input-group">
+                                    <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                    <input name="OpeningBalance" type="text" class="form-control cleave-number" inputmode="numeric" required />
+                                </div>
+                                <div class="invalid-feedback">
+                                    @Localize("Please enter opening balance.")
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary" id="startSubmit">@Localize("Start Work Period")</button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <form id="frmEndWorkPeriod">
+                            <dl class="row">
+                                <dt class="col-sm-3">
+                                    @Localize("Start At")
+                                </dt>
+                                <dd class="col-sm-9">
+                                    @Model.StartedAt
+                                </dd>
+                                <dt class="col-sm-3">
+                                    @Localize("Start By")
+                                </dt>
+                                <dd class="col-sm-9">
+                                    &#64;@Model.StartedBy
+                                </dd>
+                                <dt class="col-sm-3">
+                                    @Localize("Opening Balance")
+                                </dt>
+                                <dd class="col-sm-9">
+                                    @GetCurrency(Model.OpeningBalance)
+                                </dd>
+                            </dl>
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary" id="endSubmit">@Localize("End Work Period")</button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+        $("#frmStartWorkPeriod").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frmStartWorkPeriod"))) {
+                $("#startSubmit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/WorkPeriod/StartWorkPeriod',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            setCookie("successMessage", '@Localize("Work Period started successfully.")');
+                            window.location.reload(true);
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#startSubmit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+
+        $("#frmEndWorkPeriod").submit(function (e) {
+            e.preventDefault();
+
+            $("#endSubmit").addClass("disabled btn-progress");
+            $.ajax({
+                url: '/WorkPeriod/EndWorkPeriod',
+                type: 'POST',
+                dataType: "json",
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    $("#WorkPeriodModel").modal('hide');
+                    if (data.status == "success") {
+                        setCookie("successMessage", '@Localize("Work Period ended successfully.")');
+                        window.location.reload(true);
+                    }
+                    else {
+                        errorMessage(data.message);
+                    }
+                },
+                error: function (data) {
+                    if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                },
+                complete: function () {
+                    $("#endSubmit").removeClass("disabled btn-progress");
+                }
+            });
+        });
+
+
+    </script>
+}

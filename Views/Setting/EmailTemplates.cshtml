@@ -1,0 +1,289 @@
+﻿@model IEnumerable<Saffrat.Models.EmailTemplate>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Email Templates");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles{
+    <link rel="stylesheet" href="~/lib/summernote/summernote-lite.min.css">
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Email Templates")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Email Templates")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("#")</th>
+                                <th>@Localize("Name")</th>
+                                <th>@Localize("Subject")</th>
+                                <th>@Localize("Updated At")</th>
+                                <th>@Localize("Updated By")</th>
+                                <th>@Localize("Action")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Id</td>
+                                    <td>@item.Name</td>
+                                    <td>@item.Subject</td>
+                                    <td>@item.UpdatedAt</td>
+                                    <td><span>&#64</span>@item.UpdatedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item btn" onclick="OpenMainModal(@item.Id);"><i class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
+                                            <a class="dropdown-item btn" onclick="Restore(@item.Id);"><i class="fas fa-arrow-rotate-right"></i> <span class="ml-2">@Localize("Restore")</span></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section models{
+    <div class="modal fade" id="mainModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mainModalTitle"></h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <form id="frm" class="needs-validation" novalidate="">
+                    <div class="modal-body">
+                        <input type="hidden" name="Id" value="" />
+                        <p class="text-primary"><strong>@Localize("Parameters you can use")</strong></p>
+                        <div id="t-description">
+
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Subject") <code>*</code></label>
+                            <input name="Subject" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter subject.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Template")</label>
+                            <textarea name="Template" class="summernote" required>
+                            </textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-whitesmoke">
+                        <button type="submit" class="btn btn-primary" id="submit">@Localize("Update")</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section scripts{
+    <script src="~/lib/summernote/summernote-lite.min.js"></script>
+    <script>
+
+        $("#setting-menu").addClass("active");
+        $("#emailtemplatelist-menu").addClass("active");
+
+        var dt = $('#datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [5]
+                }
+            ],
+            'lengthMenu': [[50, 100, 150, -1], [50, 100, 150, "All"]],
+        });
+
+        function OpenMainModal(id) {
+            $("#frm").removeClass("was-validated");
+            if (id > 0) {
+                jQuery.ajax({
+                    url: "/Setting/EmailTemplateDetail",
+                    method: "GET",
+                    data: {
+                        Id: id
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            $("#mainModalTitle").text('@Localize("Update Email Template")');
+                            $("#submit").text('@Localize("Update")');
+                            $('#t-description').html(result.description);
+                            $("#frm input[name='Id']").val(result.id);
+                            $("#frm input[name='Subject']").val(result.subject);
+                            $("#frm textarea[name='Template']").val('');
+                            $("#frm textarea[name='Template']").summernote('code', result.template);
+                            $("#mainModal").modal('show');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            }
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Setting/SaveEmailTemplate',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            setCookie("successMessage", '@Localize("Email Template saved successfully.")');
+                            window.location.reload(true);
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+
+        function Restore(id) {
+            $.alert({
+                title: '@Localize("Restore Email Template?")',
+                content: '@Localize("Are you sure want to restore email template.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-check"></i> @Localize("Restore")',
+                        btnClass: 'btn btn-primary',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/Setting/RestoreEmailTemplate",
+                                type: 'PUT',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                                    $('#d-check' + id).prop("checked", false);
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Email Template restore successfully.")');
+                                        window.location.reload(true);
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                        $('#d-check' + id).prop("checked", false);
+                                    }
+                                },
+                                complete: function () {
+                                    
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                            $('#d-check' + id).prop("checked", false);
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+}

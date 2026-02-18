@@ -1,0 +1,172 @@
+﻿@model IEnumerable<Saffrat.Models.Employee>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Add Attendance");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Add Attendance")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="HRM" asp-action="Attandance">@Localize("Attandance")</a></li>
+                    <li class="breadcrumb-item">@Localize("Add Attendance")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="AddAttendance" asp-controller="HRM" method="get" class="needs-validation" novalidate="">
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Shift") <code>*</code></label>
+                            <select name="shift" id="shift" class="form-control selectpicker" data-live-search="true" required>
+                                <option value="">@Localize("Choose Option")</option>
+                                @foreach (var item in ViewBag.shifts)
+                                {
+                                    <option value="@item.Key">@item.Value</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select shift.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Date") <code>*</code></label>
+                            <input type="date" name="date" value="@ViewBag.date" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
+                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Submit")</button>
+                        </div>
+                    </div>
+                </form>
+
+                @if (ViewBag.currentshift != null && Model.Count() > 0)
+                {
+                    <div class="text-end">
+                        <p class="mb-0 text-primary"><strong>@Localize("Date"): </strong>@ViewBag.date</p>
+                        <p class="mb-0 text-primary"><strong>@Localize("Shift"): </strong>@ViewBag.currentshift.Title</p>
+                        <p class="text-primary"><strong>@Localize("Time"): </strong>@String.Format("{0} - {1}", ViewBag.currentshift.StartAt, ViewBag.currentshift.EndAt)</p>
+                    </div>
+                    <form id="frm" class="needs-validation" novalidate="">
+                        <input type="hidden" name="ShiftId" value="@ViewBag.currentshift.Id">
+                        <input type="hidden" name="date" value="@ViewBag.date">
+                        <div class="table-responsive">
+                            <table class="table" id="datatable">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("#")</th>
+                                        <th>@Localize("Employee")</th>
+                                        <th>@Localize("Clock In")</th>
+                                        <th>@Localize("Clock Out")</th>
+                                        <th>@Localize("Status")</th>
+                                        <th>@Localize("Note")</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model)
+                                    {
+                                        var id = "row" + item.Id;
+                                        <tr id="@id">
+                                            <td>@item.Id</td>
+                                            <td>
+                                                @String.Format("{0} (EMP-{1})", item.Name, item.Id) <br />
+                                                @String.Format("{0} - {1}", item.Department.Title, item.Designation.Title) <br />
+                                            </td>
+                                            <td>
+                                                <input type="hidden" name="EmployeeId[]" value="@item.Id">
+                                                <input type="time" name="ClockIn[]" value="@ViewBag.currentshift.StartAt" onclick="this.showPicker();" class="form-control" required>
+                                            </td>
+                                            <td>
+                                                <input type="time" name="ClockOut[]" value="@ViewBag.currentshift.EndAt" onclick="this.showPicker();" class="form-control" required>
+                                            </td>
+                                            <td>
+                                                <select name="Status[]" class="form-select" required>
+                                                    <option value="Present">@Localize("Present")</option>
+                                                    <option value="Absent">@Localize("Absent")</option>
+                                                    <option value="Leave">@Localize("Leave")</option>
+                                                    <option value="Late">@Localize("Late")</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="text" name="Note[]" value="-" class="form-control">
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3" id="submit">@Localize("Submit")</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+        $('#shift').val('@ViewBag.shift');
+        $("#hrm-menu").addClass("active");
+        $("#attendaceList-menu").addClass("active");
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/HRM/AddAttendance',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            setCookie("successMessage", '@Localize("Attandance saved successfully.")');
+                            window.location.href = '/HRM/Attendance';
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+    </script>
+}

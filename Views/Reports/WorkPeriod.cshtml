@@ -1,0 +1,196 @@
+﻿@model IEnumerable<Saffrat.Models.WorkPeriod>
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Work Period Report");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Work Period Report")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Work Period Report")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="WorkPeriod" asp-controller="Reports" method="get" class="needs-validation" novalidate="">
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("From") <code>*</code></label>
+                            <input type="date" name="start" value="@ViewBag.start" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("To") <code>*</code></label>
+                            <input type="date" name="end" value="@ViewBag.end" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
+                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="exportTable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("Start By")</th>
+                                <th>@Localize("Start At")</th>
+                                <th>@Localize("End By")</th>
+                                <th>@Localize("End At")</th>
+                                <th>@Localize("Opening Balance")</th>
+                                <th>@Localize("Closing Balance")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                decimal openingTotal = 0;
+                                decimal closingTotal = 0;
+                            }
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <a href="#">&#64;@item.StartedBy</a>
+                                    </td>
+                                    <td>
+                                        @item.StartedAt
+                                    </td>
+                                    <td>
+                                        <a href="#">&#64;@item.EndBy</a>
+                                    </td>
+                                    <td>
+                                        @item.EndAt
+                                    </td>
+                                    <td>
+                                        @item.OpeningBalance
+                                    </td>
+                                    <td>
+                                        @item.ClosingBalance
+                                    </td>
+                                </tr>
+
+                                openingTotal += item.OpeningBalance;
+                                closingTotal += (decimal)item.ClosingBalance;
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr class="text-primary">
+                                <th>Total</th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th>@GetCurrency(openingTotal)</th>
+                                <th>@GetCurrency(closingTotal)</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.html5.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.print.min.js"></script>
+
+    <script>
+        var fileName = '@Localize("Work Period Report") (@Localize("From") @ViewBag.start @Localize("To") @ViewBag.end)';
+
+        $("#report-menu").addClass("active");
+        $("#workPeriodReport-menu").addClass("active");
+
+        $(document).ready(function () {
+            $('#exportTable').DataTable({
+                dom: 'B',
+                'language': {
+                    "processing": '@Localize("Processing...")',
+                    "loadingRecords": "@Localize("Loading...")",
+                    'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                    "zeroRecords": "@Localize("No Result Found")",
+                    "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                    "infoEmpty": '',
+                    "infoFiltered": '',
+                    "search": '@Localize("Search")',
+                    'paginate': {
+                        'previous': '<i class="fa fa-chevron-left"></i>',
+                        'next': '<i class="fa fa-chevron-right"></i>'
+                    }
+                },
+                "ordering": false,
+                paging: false,
+                buttons: [
+                    {
+                        extend: 'excel',
+                        title: fileName,
+                        text: '<i title="excel" class="fa fa-file-excel"></i>',
+                        className: 'btn',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    },
+                    {
+                        extend: 'pdf',
+                        title: fileName,
+                        text: '<i title="pdf" class="fa fa-file-pdf"></i>',
+                        className: 'btn',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        },
+                        footer: true,
+                        customize: function (doc) {
+                            doc.content[1].table.widths =
+                                Array(doc.content[1].table.body[0].length + 1).join('*').split('');
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        title: fileName,
+                        text: '<i title="print" class="fa fa-print"></i>',
+                        className: 'btn',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        },
+                        footer: true
+                    },
+                    {
+                        extend: 'csv',
+                        title: fileName,
+                        text: '<i title="csv" class="fa fa-file-csv"></i>',
+                        className: 'btn',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    },
+                ]
+            });
+        });
+    </script>
+}

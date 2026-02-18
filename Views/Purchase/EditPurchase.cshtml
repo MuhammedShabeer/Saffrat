@@ -1,0 +1,227 @@
+﻿@model Saffrat.Models.Purchase
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Update Purchase");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Update Purchase")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Purchase" asp-action="PurchaseHistory">@Localize("Purchases")</a></li>
+                    <li class="breadcrumb-item">@Localize("Update Purchase")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body">
+                    <input asp-for="Id" type="hidden" />
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Supplier") <code>*</code></label>
+                            <select asp-for="SupplierId" class="form-control selectpicker" data-live-search="true" required>
+                                <option value="">@Localize("Choose Option")</option>
+                                @foreach (var item in ViewBag.suppliers)
+                                {
+                                    <option value="@item.Key">@item.Value</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select supplier.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Invoice No.") <code>*</code></label>
+                            <input asp-for="InvoiceNo" type="text" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter invoice number.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Payment Method") <code>*</code></label>
+                            <select asp-for="PaymentType" class="form-control selectpicker" required>
+                                <option value="">@Localize("Choose Option")</option>
+                                @foreach (var item in ViewBag.paymentMethods)
+                                {
+                                    <option value="@item.Value">@item.Value</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select payment method.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Purchase Date") <code>*</code></label>
+                            <input asp-for="PurchaseDate" type="date" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Description")</label>
+                        <textarea asp-for="Description" class="form-control"></textarea>
+                    </div>
+                    <div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("Item Name") </th>
+                                        <th>@Localize("Stock") </th>
+                                        <th>@Localize("Quantity") </th>
+                                        <th>@Localize("Price") </th>
+                                        <th>@Localize("Total") </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cart">
+                                    @foreach (var item in Model.PurchaseDetails)
+                                    {
+                                        var quantityId = "ItemQuantity" + item.IngredientItemId;
+                                        var rateId = "ItemRate" + item.IngredientItemId;
+                                        var totalId = "ItemTotal" + item.IngredientItemId;
+                                        var id = "cItem" + item.IngredientItemId;
+                                        <tr id="@id">
+                                            <td>@item.IngredientItem.ItemName</td>
+                                            <td>
+                                                <input type="hidden" name="ItemId[]" value="@item.IngredientItemId">
+                                                @item.IngredientItem.Quantity @item.IngredientItem.Unit
+                                            </td>
+                                            <td>
+                                                <div class="mt-1 mb-1"><input name="ItemQuantity[]" id="@quantityId" onkeyup="CartItemChange();" value="@item.Quantity" type="text" class="form-control cleave-number" inputmode="numeric" required /></div>
+                                            </td>
+                                            <td>
+                                                <div class="mt-1 mb-1"><input name="ItemRate[]" id="@rateId" onkeyup="CartItemChange();" value="@item.PurchasePrice" type="text" class="form-control cleave-number" inputmode="numeric" required /></div>
+                                            </td>
+                                            <td id="@totalId">
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th colspan="3"></th>
+                                        <th>@Localize("Total Bill") </th>
+                                        <th id="totalBill">@GetCurrency(0)</th>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3"></td>
+                                        <th>@Localize("Paid")</th>
+                                        <th>
+                                            <div class="input-group">
+                                                <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                                <input asp-for="PaidAmount" onkeyup="CartItemChange();" type="text" class="form-control cleave-number" inputmode="numeric" required />
+                                            </div>
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="3"></th>
+                                        <th>@Localize("Due")</th>
+                                        <th id="dueAmount">@GetCurrency(0)</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Update")</button>
+                    <a asp-controller="Purchase" asp-action="PurchaseHistory" class="btn btn-secondary mr-1">@Localize("Back To List")</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section scripts{
+    <script>
+        $("#purchase-menu").addClass("active");
+        $("#purchaseList-menu").addClass("active");
+
+        CartItemChange();
+
+        function CartItemChange() {
+            var parent = document.getElementById('cart');
+            var children = Array.from(parent.children);
+
+            var totalAmount = 0;
+            var paidAmount = Number(getLocaleNumber($("#PaidAmount").val()));
+            var dueAmount = 0;
+            children.forEach(element => {
+                if (element.tagName === 'TR') {
+                    id = StrToNum(element.id);
+                    var quantity = Number(getLocaleNumber($("#ItemQuantity" + id).val()));
+                    var rate = Number(getLocaleNumber($("#ItemRate" + id).val()));
+                    var itemtotal = quantity * rate;
+                    totalAmount += itemtotal;
+                    $("#ItemTotal" + id).text(getNumber(itemtotal.toFixed(2)));
+                }
+            });
+
+            var dueAmount = totalAmount - paidAmount;
+            $("#totalBill").text(GetCurrency(getNumber(totalAmount.toFixed(2))));
+            $("#dueAmount").text(GetCurrency(getNumber(dueAmount.toFixed(2))));
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Purchase/UpdatePurchase',
+                    type: 'PUT',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Purchase updated successfully.")');
+                            CartItemChange();
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,318 @@
+﻿@model IEnumerable<Saffrat.Models.FoodGroup>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Food Groups");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Food Groups")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Food Groups")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <button onclick="OpenMainModal(0);" class="btn btn-primary">@Localize("Add New")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("#")</th>
+                                <th>@Localize("Image")</th>
+                                <th>@Localize("Group Name")</th>
+                                <th>@Localize("Status")</th>
+                                <th>@Localize("Updated At")</th>
+                                <th>@Localize("Updated By")</th>
+                                <th>@Localize("Action")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Id</td>
+                                    <td><img src="/Media/FoodGroupImage?name=@item.Image" width="50" height="40" /></td>
+                                    <td>@item.GroupName</td>
+                                    <td>
+                                        @if (item.Status)
+                                        {
+                                            <div class="badge badge-primary badge-shadow">@Localize("Active")</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="badge badge-secondary badge-shadow">@Localize("InActive")</div>
+                                        }
+                                    </td>
+                                    <td>@item.UpdatedAt</td>
+                                    <td><span>&#64</span>@item.UpdatedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item btn" href="javascript:void(0);" onclick="OpenMainModal(@item.Id);"><i class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
+                                            <a class="dropdown-item btn" href="javascript:void(0);" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section models{
+    <div class="modal fade" id="mainModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mainModalTitle"></h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <form id="frm" class="needs-validation" novalidate="">
+                    <div class="modal-body">
+                        <input type="hidden" name="Id" />
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Group Name") <code>*</code></label>
+                            <input name="GroupName" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter group name.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Status") <code>*</code></label>
+                            <select name="Status" class="form-control selectpicker" required>
+                                <option value="true">@Localize("Active")</option>
+                                <option value="false">@Localize("InActive")</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select status.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Image")</label>
+                            <div id="imagePreview" class="image-preview" style="background-image:url('/Media/FoodGroupImage?name=default')">
+                                <label for="groupimage">@Localize("Choose File")</label>
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" id="groupimage" name="groupimage">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-whitesmoke br">
+                        <button type="submit" class="btn btn-primary" id="submit">Save</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+
+@section scripts{
+    <script>
+
+        groupimage.onchange = evt => {
+            const [file] = groupimage.files
+            if (file) {
+                $('#imagePreview').css('background-image', 'url("' + URL.createObjectURL(file) + '")');
+            }
+        }
+
+        $("#food-menu").addClass("active");
+        $("#foodGroupList-menu").addClass("active");
+
+        var dt = $('#datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [6]
+                }
+            ],
+            'lengthMenu': [[50, 100, 250, -1], [50, 100, 250, "All"]],
+        });
+
+        function Delete(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/Food/DeleteFoodGroup",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Food Group deleted successfully.")');
+                                        dt.row("#row" + id).remove().draw();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function OpenMainModal(id) {
+            $("#frm").removeClass("was-validated");
+            if (id > 0) {
+                jQuery.ajax({
+                    url: "/Food/FoodGroupDetail",
+                    method: "GET",
+                    data: {
+                        Id: id
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            $("#mainModalTitle").text('@Localize("Update Food Group")');
+                            $("#submit").text('@Localize("Update")');
+                            $("#frm input[name='Id']").val(result.id);
+                            $("#frm input[name='GroupName']").val(result.groupName);
+                            $("#frm select[name='Status']").selectpicker('val', String(result.status));
+                            $('#imagePreview').css('background-image', 'url("/Media/FoodGroupImage?name=' + result.image + '")');
+                            $("#mainModal").modal('show');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            } else {
+                $("#mainModalTitle").text('@Localize("Add Food Group")');
+                $("#submit").text('@Localize("Save")');
+                $("#frm input[name='Id']").val('');
+                $("#frm input[name='GroupName']").val('');
+                $("#frm select[name='Status']").selectpicker('val', 'true');
+                $('#imagePreview').css('background-image', 'url("/Media/FoodGroupImage?name=default")');
+                $("#mainModal").modal('show');
+            }
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Food/SaveFoodGroup',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            setCookie("successMessage", '@Localize("Food Group saved successfully.")');
+                            window.location.reload(true);
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+    </script>
+}

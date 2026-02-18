@@ -1,0 +1,689 @@
+﻿@model IEnumerable<Saffrat.Models.Payroll>
+
+@using Saffrat.Resources
+@using System.Globalization
+@inherits LocService<TModel>
+
+@{
+    int month = Convert.ToInt32(ViewBag.month);
+    int year = Convert.ToInt32(ViewBag.year);
+    int currentyear = DateTime.UtcNow.Year;
+    ViewData["Title"] = @Localize("Payroll");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section styles{
+    <style>
+        @@media screen {
+            #printSection {
+                display: none;
+            }
+        }
+
+        @@media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #printSection, #printSection * {
+                visibility: visible;
+            }
+
+            #printSection {
+                position: absolute;
+                left: 0;
+                top: 0;
+                right: 0;
+                min-width: 800px;
+            }
+
+            .col-md-1 {
+                flex: 0 0 auto;
+                width: 8.33333333%;
+            }
+
+            .col-md-2 {
+                flex: 0 0 auto;
+                width: 16.66666667%;
+            }
+
+            .col-md-3 {
+                flex: 0 0 auto;
+                width: 25%;
+            }
+
+            .col-md-4 {
+                flex: 0 0 auto;
+                width: 33.33333333%;
+            }
+
+            .col-md-5 {
+                flex: 0 0 auto;
+                width: 41.66666667%;
+            }
+
+            .col-md-6 {
+                flex: 0 0 auto;
+                width: 50%;
+            }
+
+            .col-md-7 {
+                flex: 0 0 auto;
+                width: 58.33333333%;
+            }
+
+            .col-md-8 {
+                flex: 0 0 auto;
+                width: 66.66666667%;
+            }
+
+            .col-md-9 {
+                flex: 0 0 auto;
+                width: 75%;
+            }
+
+            .col-md-10 {
+                flex: 0 0 auto;
+                width: 83.33333333%;
+            }
+
+            .col-md-11 {
+                flex: 0 0 auto;
+                width: 91.66666667%;
+            }
+
+            .col-md-12 {
+                flex: 0 0 auto;
+                width: 100%;
+            }
+        }
+    </style>
+}
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Payroll")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Payroll")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <button onclick="OpenGenerateModal();" class="btn btn-primary">@Localize("Generate")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Payroll" asp-controller="HRM" method="get" class="needs-validation" novalidate="">
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Month") <code>*</code></label>
+                            <select id="month" name="month" class="form-control selectpicker" required>
+                                @for (int i = 1; i < 13; i++)
+                                {
+                                    var m = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(i);
+                                    <option value="@i">@m</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select month.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Year") <code>*</code></label>
+                            <select id="year" name="year" class="form-control selectpicker" required>
+                                @{
+                                    int y = currentyear;
+                                }
+                                @for (int i = 1; i < 13; i++)
+                                {
+                                    <option value="@y">@y</option>
+                                    y--;
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select year.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
+                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("#")</th>
+                                <th>@Localize("Employee")</th>
+                                <th>@Localize("Payroll Type")</th>
+                                <th>@Localize("Basic Salary")</th>
+                                <th>@Localize("Net Salary")</th>
+                                <th>@Localize("Month-Year")</th>
+                                <th>@Localize("Status")</th>
+                                <th>@Localize("Generated At")</th>
+                                <th>@Localize("Generated By")</th>
+                                <th>@Localize("Action")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Id</td>
+                                    <td>
+                                        @String.Format("{0} (EMP-{1})", item.Employee.Name, item.Employee.Id) <br />
+                                        @String.Format("{0} - {1}", item.Employee.Department.Title, item.Employee.Designation.Title) <br />
+                                    </td>
+                                    <td>@item.PayrollType</td>
+                                    <td>@item.Salary</td>
+                                    <td>@item.NetSalary</td>
+                                    <td>@item.Month-@item.Year</td>
+                                    <td>
+                                        @if (item.PaymentStatus == "Paid")
+                                        {
+                                            <div class="badge badge-primary">@Localize(item.PaymentStatus)</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="badge badge-danger">@Localize(item.PaymentStatus)</div>
+                                        }
+                                    </td>
+                                    <td>@item.GeneratedAt</td>
+                                    <td>&#64;@item.GeneratedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <div class="dropdown-menu">
+                                            @if (item.PaymentStatus == "Unpaid")
+                                            {
+                                                <a class="dropdown-item btn" onclick="PayInvoice(@item.Id);"><i class="fas fa-money-bill"></i> <span class="ml-2">@Localize("Mark Paid")</span></a>
+                                            }
+                                            <a class="dropdown-item btn" onclick="OpenInvoiceModal(@item.Id);"><i class="fas fa-print"></i> <span class="ml-2">@Localize("View Invoice")</span></a>
+                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section models{
+
+    <div class="modal fade" id="generateModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@Localize("Generate Payroll")</h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <form id="frmgenerate" class="needs-validation" novalidate="">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Month") <code>*</code></label>
+                            <select name="month" class="form-control selectpicker" required>
+                                @for (int i = 1; i < 13; i++)
+                                {
+                                    var m = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(i);
+                                    <option value="@i">@m</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select month.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Year") <code>*</code></label>
+                            <select name="year" class="form-control selectpicker" required>
+                                @{
+                                    int ye = currentyear;
+                                }
+                                @for (int i = 1; i < 5; i++)
+                                {
+                                    <option value="@ye">@ye</option>
+                                    ye--;
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select year.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-whitesmoke br">
+                        <button type="submit" class="btn btn-primary submit">@Localize("Generate")</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="invoiceModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@Localize("Payslip")</h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <i class="fa fa-x" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-md-end">
+                        <div class="mb-3">
+                            <button type="button" id="printinv" class="btn btn-info">
+                                <i class="fas fa-print me-2"></i>
+                                Print
+                            </button>
+                        </div>
+                    </div>
+                    <div class="invoice" id="empinv">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="title">
+                                            <h4>@GetSetting.CompanyName</h4>
+                                            <address>
+                                                @GetSetting.CompanyAddress<br>
+                                                @Localize("Phone"): @GetSetting.CompanyPhone @Localize("Email"): @GetSetting.CompanyEmail
+                                            </address>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-md-end">
+                                        <div class="title">
+                                            <h4 class="text-primary">@Localize("PAYSLIP")</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <address>
+                                            <strong>@Localize("Employee Information")</strong><br>
+                                            <span id="i-EmployeeName"></span> (EMP-<span id="i-EmployeeId"></span>)<br>
+                                            <span id="i-EmployeeDepartment"></span> - <span id="i-EmployeeDesignation"></span><br>
+                                            <span id="i-EmployeeAddress"></span><br>
+                                        </address>
+                                    </div>
+                                    <div class="col-md-6 text-md-end">
+                                        <address>
+                                            <strong>@Localize("Payroll") #</strong> <span id="i-PayrollNo"></span><br>
+                                            <strong>@Localize("Pay Type"):</strong> <span id="i-PayType"></span><br>
+                                            <strong>@Localize("Generated At"):</strong> <span id="i-PayDate"></span><br>
+                                            <strong>@Localize("Period"):</strong> <span id="i-Period"></span><br>
+                                        </address>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-1 mt-4">
+                            <div class="col-md-6">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">@Localize("Earning")</th>
+                                                <th scope="col" class="text-end">@Localize("Amount")</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="i-Earnings">
+                                            <tr>
+                                                <td>@Localize("Basic Pay")</td>
+                                                <td class="text-end" id="i-BasicPay"></td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th scope="col">@Localize("Gross Earnings")</th>
+                                                <th scope="col" class="text-end" id="i-TotalEarnings"></th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">@Localize("Deduction")</th>
+                                                <th scope="col" class="text-end">@Localize("Amount")</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="i-Deductions">
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th scope="col">@Localize("Total Deductions")</th>
+                                                <th scope="col" class="text-end" id="i-TotalDeductions"></th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="details text-end">
+                                <div class="title">@Localize("Net Pay")</div>
+                                <div class="value" id="i-NetPay"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section scripts{
+    <script>
+
+        $('#month').val('@ViewBag.month');
+        $('#year').val('@ViewBag.year');
+
+        $("#hrm-menu").addClass("active");
+        $("#payrollList-menu").addClass("active");
+
+        var dt = $('#datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [9]
+                }
+            ],
+            'lengthMenu': [[50, 100, 150, -1], [50, 100, 150, "All"]],
+        });
+
+        function OpenGenerateModal() {
+            $("#generateModal").modal('show');
+        }
+
+        function OpenInvoiceModal(id) {
+            if (id > 0) {
+                $('#i-Earnings tr').slice(1).remove();
+                $('#i-Deductions tr').slice(1).remove();
+                jQuery.ajax({
+                    url: "/HRM/PayrollDetail",
+                    method: "GET",
+                    data: {
+                        Id: id
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var res = data.data;
+                            $('#i-EmployeeId').text(res.employee.id);
+                            $('#i-EmployeeName').text(res.employee.name);
+                            $('#i-EmployeeDepartment').text(res.employee.department.title);
+                            $('#i-EmployeeDesignation').text(res.employee.designation.title);
+                            $('#i-EmployeeAddress').text(res.employee.presentAddress);
+                            $('#i-PayrollNo').text(res.id);
+                            $('#i-PayType').text(res.payrollType);
+                            $('#i-PayDate').text(getDate(res.generatedAt));
+                            $('#i-Period').text(res.month + '-' + res.year);
+                            $('#i-BasicPay').text(GetCurrency(getNumber(res.salary)));
+                            var detail = res.payrollDetails;
+                            var earning = res.salary;
+                            var deduction = 0;
+                            for (var i = 0; i < detail.length; i++) {
+                                if (detail[i].amountType == 'Earning') {
+                                    var html = '<tr><td>' + detail[i].title + '</td>';
+                                    if (detail[i].isPercentage) {
+                                        var am = (detail[i].amount * res.salary) / 100;
+                                        html += '<td class="text-end">(' + getNumber(detail[i].amount) + ' %) ' + GetCurrency(getNumber(am)) + '</td></tr>';
+                                        earning += am;
+                                    }
+                                    else {
+                                        html += '<td class="text-end">' + GetCurrency(getNumber(detail[i].amount)) + '</td></tr>';
+                                        earning += detail[i].amount;
+                                    }
+                                    $('#i-Earnings').append(html);
+                                }
+                                else {
+                                    var html = '<tr><td>' + detail[i].title + '</td>';
+                                    if (detail[i].isPercentage) {
+                                        var am = (detail[i].amount * res.salary) / 100;
+                                        html += '<td class="text-end">(' + getNumber(detail[i].amount) + ' %) ' + GetCurrency(getNumber(am)) + '</td></tr>';
+                                        deduction += am;
+                                    }
+                                    else {
+                                        html += '<td class="text-end">' + GetCurrency(getNumber(detail[i].amount)) + '</td></tr>';
+                                        deduction += detail[i].amount;
+                                    }
+                                    $('#i-Deductions').append(html);
+                                }
+                            }
+
+                            $('#i-TotalEarnings').text(GetCurrency(getNumber(earning.toFixed(2))));
+                            $('#i-TotalDeductions').text(GetCurrency(getNumber(deduction.toFixed(2))));
+                            $('#i-NetPay').text(GetCurrency(getNumber(res.netSalary.toFixed(2))));
+
+                            $("#invoiceModal").modal('show');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            }
+        }
+
+        function printData() {
+            var elem = document.getElementById("empinv");
+            var domClone = elem.cloneNode(true);
+
+            var $printSection = document.getElementById("printSection");
+
+            if (!$printSection) {
+                var $printSection = document.createElement("div");
+                $printSection.id = "printSection";
+                document.body.appendChild($printSection);
+            }
+
+            $printSection.innerHTML = "";
+            $printSection.appendChild(domClone);
+            window.print();
+        }
+
+        $('#printinv').on('click', function () {
+            printData();
+        })
+
+        function PayInvoice(id) {
+            $.alert({
+                title: '@Localize("Pay Salary")',
+                content: '@Localize("Are you sure want to pay salary?")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-check"></i> @Localize("Pay Now")',
+                        btnClass: 'btn btn-primary',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/HRM/PaySalary",
+                                type: 'PUT',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        setCookie('successMessage', '@Localize("Salary paid successfully.")');
+                                        window.location.reload(true);
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function Delete(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/HRM/DeletePayroll",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Payroll deleted successfully.")');
+                                        dt.row("#row" + id).remove().draw();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        $("#frmgenerate").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frmgenerate"))) {
+                $("#frmgenerate .submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/HRM/GeneratePayroll',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            setCookie("successMessage", '@Localize("Payroll generated successfully.")');
+                            window.location.reload(true);
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#frmgenerate .submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+    </script>
+}

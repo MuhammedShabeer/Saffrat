@@ -1,0 +1,195 @@
+﻿@model Saffrat.Models.Modifier
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Update Modifier");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Update Modifier")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Food" asp-action="Modifiers">@Localize("Modifiers")</a></li>
+                    <li class="breadcrumb-item">@Localize("Update Modifier")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <input asp-for="Id" type="hidden" />
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Title") <code>*</code></label>
+                        <input asp-for="Title" type="text" class="form-control" required />
+                        <div class="invalid-feedback">
+                            @Localize("Please enter title.")
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Price") <code>*</code></label>
+                        <div class="input-group">
+                            <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                            <input asp-for="Price" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                        </div>
+                        <div class="invalid-feedback">
+                            @Localize("Please enter price.")
+                        </div>
+                    </div>
+                    <div class="section-title">@Localize("Ingredient Consumptions")</div>
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Ingredient Item")</label>
+                        <select id="IngredientItem" class="form-control selectpicker" data-live-search="true" onchange="AddItemInCart();">
+                            <option value="">@Localize("Choose Option")</option>
+                            @foreach (var item in ViewBag.ingredients)
+                            {
+                                <option value="@item.Key">@item.Value</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("Item Name")</th>
+                                        <th>@Localize("Stock")</th>
+                                        <th>@Localize("Consumptions")</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cart">
+                                    @foreach (var item in Model.ModifierIngredients)
+                                    {
+                                        var id = "ingredient" + item.IngredientId;
+                                        <tr id="@id">
+                                            <td>@item.Ingredient.ItemName</td>
+                                            <td><input type="hidden" name="ItemId[]" value="@item.IngredientId" />@item.Ingredient.Quantity @item.Ingredient.Unit</td>
+                                            <td><div class="mt-1 mb-1"><input name="ItemConsumption[]" inputmode="numeric" type="text" value="@item.Quantity" class="form-control cleave-number" required /></div></td>
+                                            <td><a href="javascript:void(0);" type="number" onclick="DeleteItemInCart(@item.IngredientId);" class="btn btn-sm btn-danger mt-1 mr-1" title="Delete"><i class="fa fa-trash"></i></a></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Save")</button>
+                    <a asp-controller="Food" asp-action="Modifiers" class="btn btn-secondary mr-1" id="save">@Localize("Back To List")</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section scripts{
+    <script>
+        $("#food-menu").addClass("active");
+        $("#modifierList-menu").addClass("active");
+
+        function AddItemInCart() {
+            var IngredientItemId = $("#IngredientItem").val();
+
+            if (IngredientItemId > 0) {
+                jQuery.ajax({
+                    url: "/Ingredient/IngredientItemDetail",
+                    method: "GET",
+                    data: {
+                        Id: IngredientItemId
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            if ($('#ingredient' + result.id).length) {
+                                errorMessage('@Localize("Ingredient Item already in cart.")');
+                            } else {
+                                var htmlText = '<tr id="ingredient' + result.id + '"><td>' + result.itemName + '</td>';
+                                htmlText += '<td><input type="hidden" name="ItemId[]" value="' + result.id + '"/>' + result.quantity + result.unit + '</td>';
+                                htmlText += '<td><div class="mt-1 mb-1"><input id="quantity' + result.id + '" inputmode="numeric" name="ItemConsumption[]" type="text" value="1" class="form-control cleave-number" required /></div></td>';
+                                htmlText += '<td><a href="javascript:void(0);" onclick="DeleteItemInCart(' + result.id + ');" class="btn btn-sm btn-danger mt-1 mr-1" title="Delete"><i class="fa fa-trash"></i></a></td></tr>';
+                                $("#cart").append(htmlText);
+                                InitCleaveNumber('#quantity' + result.id);
+                            }
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            }
+        }
+
+        function DeleteItemInCart(id) {
+            $("#ingredient" + id).remove();
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Food/UpdateModifier',
+                    type: 'PUT',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Modifier updated successfully.")');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,144 @@
+﻿@model Saffrat.Models.AppSetting
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    Model.MailPassword = String.Empty;
+    ViewData["Title"] = @Localize("Email Configuration");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Email Configuration")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Email Configuration")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Mail Protocol") <code>*</code></label>
+                            <select asp-for="MailProtocol" class="form-control selectpicker" required>
+                                <option value="SMTP">SMTP</option>
+                                <option value="Mail">Mail</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select mail protocol.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Mail Encryption") <code>*</code></label>
+                            <select asp-for="MailEncryption" class="form-control selectpicker" required>
+                                <option value="SSL">SSL</option>
+                                <option value="TLS">TLS</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Plase select mail encryption.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Mail Host") <code>*</code></label>
+                            <input asp-for="MailHost" type="text" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter mail host.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Mail Port") <code>*</code></label>
+                            <input asp-for="MailPort" type="number" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter mail port.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Mail Username") <code>*</code></label>
+                            <input asp-for="MailUserName" type="text" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter mail username.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Mail Password") <code>*</code></label>
+                            <input asp-for="MailPassword" type="text" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter mail password.")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Save Changes")</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+
+    <script>
+
+        $("#setting-menu").addClass("active");
+        $("#email-menu").addClass("active");
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Setting/Email',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Email Configuration saved successfully.")');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,405 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Saffrat.Helpers;
+using Saffrat.Models;
+using Saffrat.Services;
+using System.Security.Claims;
+
+namespace Saffrat.Controllers
+{
+    public class PurchaseController : BaseController
+    {
+		private readonly ILogger<PurchaseController> _logger;
+		private readonly RestaurantDBContext _dbContext;
+        private readonly ITransactionService _transactionService;
+
+        public PurchaseController(ILogger<PurchaseController> logger, RestaurantDBContext dbContext, ITransactionService transactionService,
+            ILanguageService languageService, ILocalizationService localizationService)
+        : base(languageService, localizationService)
+        {
+			_logger = logger;
+			_dbContext = dbContext;
+            _transactionService = transactionService;
+		}
+
+        /*
+         * Purchase Views
+         */
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public IActionResult AddPurchase()
+        {
+            ViewBag.suppliers = this.GetSuppliers();
+            ViewBag.paymentMethods = this.GetPaymentMethods();
+            ViewBag.ingredients = this.GetIngredients();
+            return View();
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public IActionResult EditPurchase(int? Id)
+        {
+            var purchase = _dbContext.Purchases
+                .Where(x => x.Id == Id)
+                .OrderByDescending(x => x.Id)
+                .Include(x => x.Supplier).FirstOrDefault();
+            if (purchase != null)
+            {
+                purchase.PurchaseDetails = _dbContext.PurchaseDetails
+                .Where(x => x.PurchaseId == purchase.Id)
+                .Include(x => x.IngredientItem).ToList();
+
+                ViewBag.suppliers = this.GetSuppliers();
+                ViewBag.paymentMethods = this.GetPaymentMethods();
+                ViewBag.ingredients = this.GetIngredients();
+                return View(purchase);
+            }
+            return NotFound();
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public IActionResult PurchaseHistory(int? supplier, DateTime? start, DateTime? end, string status)
+        {
+            DateTime from = StartOfDay(start);
+            DateTime to = EndOfDay(end);
+
+            ViewBag.start = from.ToString("yyyy-MM-dd");
+            ViewBag.end = to.ToString("yyyy-MM-dd");
+            ViewBag.status = status;
+            ViewBag.supplier = supplier;
+            ViewBag.suppliers = this.GetSuppliers();
+
+            var purchases = _dbContext.Purchases
+                .Where(x => x.PurchaseDate >= from && x.PurchaseDate <= to)
+                .OrderByDescending(x => x.Id)
+                .Include(x => x.Supplier).ToList();
+            if (supplier != null)
+                purchases = purchases.Where(x => x.SupplierId == supplier).ToList();
+
+            if (status == "paid")
+                purchases = purchases.Where(x => x.DueAmount == 0).ToList();
+
+            if (status == "unpaid")
+                purchases = purchases.Where(x => x.DueAmount > 0).ToList();
+
+            return View(purchases);
+        }
+
+        /*
+         * Purchase APIs
+         */
+
+        [HttpPost]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> AddPurchase(Purchase purchase, int?[] ItemId, decimal?[] ItemQuantity, decimal?[] ItemRate)
+        {
+            var response = new Dictionary<string, string>();
+            using var transaction = _dbContext.Database.BeginTransaction();
+            try
+            {
+                var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (ModelState.IsValid)
+                {
+                    purchase.UpdatedAt = CurrentDateTime();
+                    purchase.UpdatedBy = userName;
+
+                    if (ItemId.Length > 0 && ItemId.Length == ItemQuantity.Length && ItemId.Length == ItemRate.Length)
+                    {
+                        decimal total = 0;
+                        for (int i = 0; i < ItemId.Length; i++)
+                        {
+                            var item = _dbContext.IngredientItems.FirstOrDefault(x => x.Id == ItemId[i]);
+                            if (item != null)
+                            {
+                                decimal quantity = Convert.ToDecimal(ItemQuantity[i]);
+                                decimal rate = Convert.ToDecimal(ItemRate[i]);
+                                decimal subtotaltotal = quantity * rate;
+                                total += subtotaltotal;
+                                item.Quantity += quantity;
+                                _dbContext.IngredientItems.Update(item);
+                                _dbContext.SaveChanges();
+                            }
+                        }
+
+                        if(purchase.PaidAmount < 0 || purchase.PaidAmount > total)
+                        {
+                            response.Add("status", "error");
+                            response.Add("message", "Please enter valid amount.");
+                        }
+                        else
+                        {
+                            purchase.TotalAmount = total;
+                            purchase.DueAmount = total - purchase.PaidAmount;
+
+                            _dbContext.Purchases.Add(purchase);
+                            _dbContext.SaveChanges();
+
+                            for (int i = 0; i < ItemId.Length; i++)
+                            {
+                                decimal quantity = Convert.ToDecimal(ItemQuantity[i]);
+                                decimal rate = Convert.ToDecimal(ItemRate[i]);
+
+                                PurchaseDetail purchaseDetail = new();
+                                purchaseDetail.PurchaseId = Convert.ToInt32(purchase.Id);
+                                purchaseDetail.IngredientItemId = Convert.ToInt32(ItemId[i]);
+                                purchaseDetail.PurchasePrice = rate;
+                                purchaseDetail.Quantity = quantity;
+
+                                _dbContext.PurchaseDetails.Add(purchaseDetail);
+                            }
+
+                            await _dbContext.SaveChangesAsync();
+                            await transaction.CommitAsync();
+
+                            Transaction statement = new()
+                            {
+                                AccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
+                                TransactionReference = "pur-" + purchase.Id,
+                                TransactionType = "purchase",
+                                Description = purchase.Description,
+                                Credit = 0,
+                                Debit = purchase.TotalAmount,
+                                Amount = purchase.TotalAmount,
+                                Date = CurrentDateTime(),
+                            };
+                            _ = await _transactionService.AddTransaction(statement);
+
+                            response.Add("status", "success");
+                            response.Add("message", "success");
+                        }
+                    }
+                    else
+                    {
+                        response.Add("status", "error");
+                        response.Add("message", "Please add item in cart.");
+                    }
+                }
+                else
+                {
+                    response.Add("status", "error");
+                    response.Add("message", "Enter required fields.");
+                }
+            }
+            catch(Exception ex)
+            {
+                await transaction.RollbackAsync();
+                response.Add("status", "error");
+                response.Add("message", "Something went wrong."+ex.Message);
+            }
+            return Json(response);
+        }
+
+        [HttpPut]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> UpdatePurchase(Purchase pur, int?[] ItemId, decimal?[] ItemQuantity, decimal?[] ItemRate)
+        {
+            var response = new Dictionary<string, string>();
+            using var transaction = _dbContext.Database.BeginTransaction();
+            try
+            {
+                var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var purchase = _dbContext.Purchases.FirstOrDefault(x => x.Id == pur.Id);
+                if (ModelState.IsValid && purchase != null)
+                {
+
+                    if (ItemId.Length > 0 && ItemId.Length == ItemQuantity.Length && ItemId.Length == ItemRate.Length)
+                    {
+                        decimal total = 0;
+                        for (int i = 0; i < ItemId.Length; i++)
+                        {
+                            var item = _dbContext.IngredientItems.FirstOrDefault(x => x.Id == ItemId[i]);
+                            var purchaseDetail = _dbContext.PurchaseDetails.FirstOrDefault(x => x.PurchaseId == purchase.Id && x.IngredientItemId == ItemId[i]);
+                            if (item != null && purchaseDetail != null)
+                            {
+                                decimal quantity = Convert.ToDecimal(ItemQuantity[i]);
+                                decimal rate = Convert.ToDecimal(ItemRate[i]);
+                                decimal subtotaltotal = quantity * rate;
+                                total += subtotaltotal;
+                                item.Quantity -= purchaseDetail.Quantity;
+                                item.Quantity += quantity;
+                                _dbContext.IngredientItems.Update(item);
+
+                                purchaseDetail.PurchasePrice = rate;
+                                purchaseDetail.Quantity = quantity;
+
+                                _dbContext.PurchaseDetails.Update(purchaseDetail);
+                            }
+                        }
+                        if (pur.PaidAmount < 0 || pur.PaidAmount > total)
+                        {
+                            response.Add("status", "error");
+                            response.Add("message", "Please enter valid amount.");
+                        }
+                        else
+                        {
+                            purchase.TotalAmount = total;
+                            purchase.DueAmount = purchase.TotalAmount - pur.PaidAmount;
+                            purchase.PaidAmount = pur.PaidAmount;
+                            purchase.InvoiceNo = pur.InvoiceNo;
+                            purchase.SupplierId = pur.SupplierId;
+                            purchase.Description = pur.Description;
+                            purchase.PurchaseDate = pur.PurchaseDate;
+
+
+                            _dbContext.Purchases.Update(purchase);
+                            await _dbContext.SaveChangesAsync();
+                            await transaction.CommitAsync();
+
+                            Transaction statement = new()
+                            {
+                                AccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
+                                TransactionReference = "pur-" + purchase.Id,
+                                TransactionType = "purchase",
+                                Description = purchase.Description,
+                                Credit = 0,
+                                Debit = purchase.TotalAmount,
+                                Amount = purchase.TotalAmount,
+                                Date = CurrentDateTime(),
+                            };
+                            _ = await _transactionService.UpdateTransaction(statement);
+
+                            response.Add("status", "success");
+                            response.Add("message", "success");
+                        }
+                    }
+                    else
+                    {
+                        response.Add("status", "error");
+                        response.Add("message", "Please add items in cart.");
+                    }
+                }
+                else
+                {
+                    response.Add("status", "error");
+                    response.Add("message", "Enter required fields.");
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                response.Add("status", "error");
+                response.Add("message", "Something went wrong.");
+            }
+            return Json(response);
+        }
+
+        [HttpDelete]
+        [Authorize(Roles = "admin")]
+        public async Task<JsonResult> DeletePurchase(int? Id)
+        {
+            var response = new Dictionary<string, string>();
+            var existing = await _dbContext.Purchases.FindAsync(Id);
+            if (existing != null)
+            {
+                using var transaction = _dbContext.Database.BeginTransaction();
+                try
+                {
+                    var purchaseDetails = _dbContext.PurchaseDetails
+                        .Where(x => x.PurchaseId == existing.Id)
+                        .Include(x => x.IngredientItem).ToList();
+                    foreach (var item in purchaseDetails)
+                    {
+                        var ingredientItem = item.IngredientItem;
+                        ingredientItem.Quantity -= item.Quantity;
+                        _dbContext.IngredientItems.Update(ingredientItem);
+                    }
+
+                    _dbContext.Purchases.Remove(existing);
+                    await _dbContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    var statement = _dbContext.Transactions.FirstOrDefault(x => x.TransactionReference == "pur-" + existing.Id);
+                    _ = await _transactionService.DeleteTransaction(statement);
+
+                    response.Add("status", "success");
+                    response.Add("message", "success");
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    response.Add("status", "error");
+                    response.Add("message", "Something went wrong.");
+                }
+            }
+            else
+            {
+                response.Add("status", "error");
+                response.Add("message", "Purchase not exist.");
+            }
+
+            return Json(response);
+        }
+
+        [HttpPut]
+        [Authorize(Roles = "admin")]
+        public async Task<JsonResult> PayDue(int? Id)
+        {
+            var response = new Dictionary<string, string>();
+            var existing = await _dbContext.Purchases.FindAsync(Id);
+            if (existing != null)
+            {
+                try
+                {
+                    existing.PaidAmount = existing.TotalAmount;
+                    existing.DueAmount = 0;
+                    _dbContext.Purchases.Update(existing);
+                    await _dbContext.SaveChangesAsync();
+
+                    response.Add("status", "success");
+                    response.Add("message", "success");
+                }
+                catch
+                {
+                    response.Add("status", "error");
+                    response.Add("message", "Something went wrong.");
+                }
+            }
+            else
+            {
+                response.Add("status", "error");
+                response.Add("message", "Purchase not exist.");
+            }
+
+            return Json(response);
+        }
+
+        /*
+         * Class Private Functions
+         */
+        private Dictionary<int, string> GetIngredients()
+        {
+            Dictionary<int, string> suppliers = _dbContext.IngredientItems
+                .Select(t => new
+                {
+                    t.Id,
+                    t.ItemName
+                }).ToDictionary(t => Convert.ToInt32(t.Id), t => t.ItemName);
+            return suppliers;
+        }
+
+        private Dictionary<int, string> GetSuppliers()
+        {
+            Dictionary<int, string> suppliers = _dbContext.Suppliers
+                .Select(t => new
+                {
+                    t.Id,
+                    t.SupplierName
+                }).ToDictionary(t => Convert.ToInt32(t.Id), t => t.SupplierName);
+            return suppliers;
+        }
+
+        private Dictionary<int, string> GetPaymentMethods()
+        {
+            Dictionary<int, string> methods = _dbContext.PaymentMethods
+                .Select(t => new
+                {
+                    t.Id,
+                    t.Title
+                }).ToDictionary(t => Convert.ToInt32(t.Id), t => t.Title);
+            return methods;
+        }
+    }
+}

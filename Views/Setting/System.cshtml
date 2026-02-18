@@ -1,0 +1,169 @@
+﻿@model Saffrat.Models.AppSetting
+
+@using Saffrat.Resources
+@using Microsoft.Extensions.Options;
+@using System.Collections.ObjectModel;
+@using System.Globalization;
+@inherits LocService<TModel>
+
+@inject IOptions<RequestLocalizationOptions> LocOptions
+
+@{
+    var cultureList = LocOptions.Value.SupportedCultures.OrderBy(x => x.EnglishName).ToList();
+    var uicultureList = LocOptions.Value.SupportedUICultures.OrderBy(x => x.NativeName).ToList();
+
+    ReadOnlyCollection<TimeZoneInfo> tz = TimeZoneInfo.GetSystemTimeZones();
+
+}
+
+@{
+    ViewData["Title"] = @Localize("System");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("System")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("System")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Default Region") <code>*</code></label>
+                            <select class="form-control selectpicker" data-live-search="true" asp-for="DefaultRegion" required>
+                                @foreach (var item in cultureList)
+                                {
+                                    <option value="@item.Name">@item.EnglishName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select region.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Default Language") <code>*</code></label>
+                            <select class="form-control selectpicker" data-live-search="true" asp-for="DefaultLanguage" required>
+                                @foreach (var item in uicultureList)
+                                {
+                                    <option value="@item.Name">@item.NativeName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select language.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Timezone") <code>*</code></label>
+                            <select class="form-control selectpicker" data-live-search="true" asp-for="Timezone" required>
+                                @foreach (var item in tz)
+                                {
+                                    <option value="@item.Id">@item.DisplayName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select timezone.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Currency Name") <code>*</code></label>
+                            <input asp-for="CurrencyName" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter currency name.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Currency Symbol") <code>*</code></label>
+                            <input asp-for="CurrencySymbol" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter currency symbol.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Currency Position") <code>*</code></label>
+                            <select asp-for="CurrencyPosition" class="form-control selectpicker" required>
+                                <option value="0">[@Localize("Symbol")][@Localize("Amount")]</option>
+                                <option value="1">[@Localize("Amount")][@Localize("Symbol")]</option>
+                                <option value="2">[@Localize("Symbol")] [@Localize("Amount")]</option>
+                                <option value="3">[@Localize("Amount")] [@Localize("Symbol")]</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select currency position.")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Save Changes")</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+
+    <script>
+
+        $("#setting-menu").addClass("active");
+        $("#currency-menu").addClass("active");
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Setting/System',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("System setting saved successfully.")');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+
+    </script>
+}

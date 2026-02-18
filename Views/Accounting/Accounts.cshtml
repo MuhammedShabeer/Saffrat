@@ -1,0 +1,312 @@
+﻿@model IEnumerable<Saffrat.Models.Account>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Accounts");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Accounts")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Accounts")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <button onclick="OpenMainModal(0);" class="btn btn-primary">@Localize("Add New")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("#")</th>
+                                <th>@Localize("Account Name")</th>
+                                <th>@Localize("Account Number")</th>
+                                <th>@Localize("Credit")</th>
+                                <th>@Localize("Debit")</th>
+                                <th>@Localize("Balance")</th>
+                                <th>@Localize("Note")</th>
+                                <th>@Localize("Updated At")</th>
+                                <th>@Localize("Updated By")</th>
+                                <th>@Localize("Actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Id</td>
+                                    <td>@item.AccountName</td>
+                                    <td>@item.AccountNumber</td>
+                                    <td>@item.Credit</td>
+                                    <td>@item.Debit</td>
+                                    <td>@item.Balance</td>
+                                    <td>@item.Note</td>
+                                    <td>@item.UpdatedAt</td>
+                                    <td>&#64;@item.UpdatedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item btn" onclick="OpenMainModal(@item.Id);"><i class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
+                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section models{
+    <div class="modal fade" id="mainModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mainModalTitle"></h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <form id="frm" class="needs-validation" novalidate="">
+                    <div class="modal-body">
+                        <input type="hidden" name="Id" id="Id" value="" />
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Account Name") <code>*</code></label>
+                            <input name="AccountName" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter account name.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Account Number") <code>*</code></label>
+                            <input name="AccountNumber" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter account number.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Balance") <code>*</code></label>
+                            <div class="input-group">
+                                <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                <input name="Balance" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                            </div>
+                            <div class="invalid-feedback">
+                                @Localize("Please enter balance.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Note")</label>
+                            <textarea name="Note" class="form-control"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-whitesmoke">
+                        <button type="submit" class="btn btn-primary" id="submit">Save</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section scripts{
+    <script>
+
+        $("#accounting-menu").addClass("active");
+        $("#accountList-menu").addClass("active");
+
+        var dt = $('#datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [4, 7]
+                }
+            ],
+            'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        });
+
+        function Delete(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record and all related data must be deleted.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/Accounting/DeleteAccount",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Account deleted successfully.")');
+                                        dt.row("#row" + id).remove().draw();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function OpenMainModal(id) {
+            $("#frm").removeClass("was-validated");
+            if (id > 0) {
+                jQuery.ajax({
+                    url: "/Accounting/AccountDetail",
+                    method: "GET",
+                    data: {
+                        Id: id
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            $("#mainModalTitle").text('@Localize("Update Account")');
+                            $("#submit").text('@Localize("Update")');
+                            $("#frm input[name='Id']").val(result.id);
+                            $("#frm input[name='AccountName']").val(result.accountName);
+                            $("#frm input[name='AccountNumber']").val(result.accountNumber);
+                            $("#frm input[name='Balance']").val(getNumber(result.balance));
+                            $("#frm input[name='Balance']").prop("readonly", true);
+                            $("#frm textarea[name='Note']").val(result.note);
+                            $("#mainModal").modal('show');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            } else {
+                $("#mainModalTitle").text('@Localize("Add Account")');
+                $("#submit").text('@Localize("Save")');
+                $("#frm input[name='Id']").val('');
+                $("#frm input[name='Balance']").prop("readonly", false);
+                $("#frm")[0].reset();
+                $("#mainModal").modal('show');
+            }
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Accounting/SaveAccount',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            setCookie("successMessage", '@Localize("Account saved successfully.")');
+                            window.location.reload(true);
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+    </script>
+}

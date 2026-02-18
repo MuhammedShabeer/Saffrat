@@ -1,0 +1,86 @@
+﻿@model Saffrat.Models.User
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("User Detail");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("User Detail")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Users" asp-action="Index">@Localize("Users")</a></li>
+                    <li class="breadcrumb-item">@Localize("User Detail")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row mt-5">
+    <div class="col-12 col-sm-8 offset-sm-2 col-md-6 offset-md-3 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+        <div class="card profile-widget">
+            <div class="profile-widget-header">
+                <img alt="image" src="~/uploads/user_icon.png" class="rounded-circle profile-widget-picture">
+            </div>
+            <div class="profile-widget-description pb-0">
+                <div class="profile-widget-name">
+                    @Model.FullName <div class="text-muted d-inline font-weight-normal">
+                        / &#64;@Model.UserName
+                    </div>
+                </div>
+                <dl class="row">
+                    <dt class="col-sm-3">
+                        @Localize("Email"):
+                    </dt>
+                    <dd class="col-sm-9">
+                        @Html.DisplayFor(model => model.Email)
+                    </dd>
+                    <dt class="col-sm-3">
+                        @Localize("Role"):
+                    </dt>
+                    <dd class="col-sm-9">
+                        @Html.DisplayFor(model => model.Role)
+                    </dd>
+                    <dt class="col-sm-3">
+                        @Localize("Status"):
+                    </dt>
+                    <dd class="col-sm-9">
+                        @if(Model.Status == 1)
+                        {
+                            <span class="text-primary">@Localize("Active")</span>
+                        }
+                        else
+                        {
+                            <span class="text-danger">@Localize("InActive")</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-3">
+                        @Localize("Last Login"):
+                    </dt>
+                    <dd class="col-sm-9">
+                        @Model.LastLogin
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+<script>
+        $("#users-menu").addClass("active");
+        $("#userList-menu").addClass("active");
+</script>
+}

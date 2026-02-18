@@ -1,0 +1,236 @@
+﻿@using Microsoft.AspNetCore.Builder
+@using Microsoft.AspNetCore.Localization
+@using System.Globalization
+@using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Http.Extensions
+@using Saffrat.Helpers
+@using Saffrat.Resources
+
+@inherits LocService<TModel>
+
+@inject IOptions<RequestLocalizationOptions> LocOptions
+@{
+    var uicultureList = LocOptions.Value.SupportedUICultures.OrderBy(x => x.NativeName).ToList();
+
+    string returnUrl = ViewContext.HttpContext.Request.Path + ViewContext.HttpContext.Request.QueryString;
+
+    var dir = "ltr";
+    if (CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft)
+    {
+        dir = "rtl";
+    }
+    var lang = CultureInfo.CurrentUICulture.Name;
+}
+
+<!DOCTYPE html>
+<html lang="@lang" dir="@dir">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
+    <meta name="robots" content="noindex nofollow">
+    <title>@ViewData["Title"] - @GetSetting.AppName</title>
+    <!-- General CSS Files -->
+    <link rel="stylesheet" href="~/fonts/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="~/lib/jquery-confirm/jquery-confirm.min.css">
+    <link rel="stylesheet" href="~/lib/izitoast/css/iziToast.min.css">
+
+    @if (dir == "ltr")
+    {
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    }
+    else
+    {
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    }
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap-select.min.css" />
+    @await RenderSectionAsync("styles", required: false)
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <!-- Favicon and Touch Icons -->
+    <link rel="shortcut icon" href="@GetSetting.Favicon">
+    <link rel="icon" type="image/png" href="@GetSetting.Favicon" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="@GetSetting.Favicon">
+</head>
+
+<body class="@GetSetting.ThemeColor">
+    <div class="loader" style="background: url('@GetSetting.Preloader') 50% 50% no-repeat var(--colorBackground);"></div>
+    <div id="app">
+        <div class="main-wrapper">
+            <div class="@GetSetting.ThemeNavbar" id="navbar">
+                <!--top navbar start-->
+                <div class="navbar-bg"></div>
+                <nav class="navbar navbar-expand-lg main-navbar sticky pos-navbar">
+                    <div class="navbar-nav navbar-brand d-none d-md-flex me-auto">
+                        <a href="/">
+                            <img alt="image" src="@GetSetting.Logo" />
+                        </a>
+                    </div>
+                    <ul class="navbar-nav d-lg-none">
+                        <li class="dropdown">
+                            <div class="top-icon dropdown-toggle no-carret" id="posMenuDropDown" data-bs-toggle="dropdown">
+                                <a class="nav-link" href="#">
+                                    <i class="fas fa-bars"></i>
+                                </a>
+                            </div>
+                            <div class="dropdown-menu pullDown ms-2" aria-labelledby="posMenuDropDown">
+                                <a asp-controller="Home" asp-action="Index" class="dropdown-item has-icon">
+                                    <i class="fas fa-home"></i> @Localize("Dashboard")
+                                </a>
+                                <a asp-controller="POS" asp-action="Index" class="dropdown-item has-icon">
+                                    <i class="fas fa-store"></i> @Localize("POS")
+                                </a>
+                                <a asp-controller="POS" asp-action="Kitchen" class="dropdown-item has-icon">
+                                    <i class="fas fa-desktop"></i> @Localize("Kitchen")
+                                </a>
+                                <a asp-controller="WorkPeriod" asp-action="Index" class="dropdown-item has-icon">
+                                    <i class="fas fa-cash-register"></i> @Localize("Register")
+                                </a>
+                                <a asp-controller="POS" asp-action="OrderHistory" class="dropdown-item has-icon">
+                                    <i class="fas fa-list"></i> @Localize("Order History")
+                                </a>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <ul class="navbar-nav d-none d-lg-inline-block ms-2 menu">
+                        <li>
+                            <a asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home"></i> @Localize("Dashboard")
+                            </a>
+                        </li>
+                        <li>
+                            <a asp-controller="POS" asp-action="Index">
+                                <i class="fas fa-store"></i> @Localize("POS")
+                            </a>
+                        </li>
+                        <li>
+                            <a asp-controller="POS" asp-action="Kitchen">
+                                <i class="fas fa-desktop"></i> @Localize("Kitchen")
+                            </a>
+                        </li>
+                        <li>
+                            <a asp-controller="WorkPeriod" asp-action="Index">
+                                <i class="fas fa-cash-register"></i> @Localize("Register")
+                            </a>
+                        </li>
+                        <li>
+                            <a asp-controller="POS" asp-action="OrderHistory">
+                                <i class="fas fa-list"></i> @Localize("Order History")
+                            </a>
+                        </li>
+                    </ul>
+
+                    <ul class="navbar-nav ms-auto">
+                        <li class="top-icon">
+                            <a href="javascript:void(0)" class="nav-link fullscreen-btn" data-toggle="tooltip" title="Full Screen">
+                                <i class="fas fa-expand"></i>
+                            </a>
+                        </li>
+                        <li class="top-icon">
+                            <a href="javascript:void(0)" id="switchTheme" class="nav-link" data-toggle="tooltip" title="Night Mode">
+                                <i class="fas fa-moon"></i>
+                            </a>
+                        </li>
+                        <li class="top-icon">
+                            <a href="javascript:void(0)" id="switchLanguage" class="nav-link" data-toggle="tooltip" title="Language">
+                                <i class="fas fa-globe"></i>
+                            </a>
+                        </li>
+                        <li class="dropdown">
+                            <a href="#" id="accountDropDown" class="nav-link dropdown-toggle nav-link-lg nav-link-user me-2"
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <img alt="image" src="~/uploads/user_icon.png" class="avatar">
+                                <span class="username d-none d-md-inline">@Localize("My Account") <i class="fa fa-chevron-down"></i></span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end pullDown" aria-labelledby="accountDropDown">
+                                <div class="dropdown-title">@User.Identity.Name </div>
+                                <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item has-icon">
+                                    <i class="fas fa-cog"></i>
+                                    @Localize("Change Password")
+                                </a>
+                                <a asp-controller="Account" asp-action="LogOut" class="dropdown-item has-icon text-danger">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    @Localize("Logout")
+                                </a>
+                            </div>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <!--top navbar end-->
+
+            <div class="pos-main">
+                @RenderBody()
+            </div>
+
+            <div class="modal language fade" id="LanguageModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="btn btn-light" data-toggle="tooltip" title="Back" data-dismiss="modal">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <h5 class="modal-title">@Localize("Change Language")</h5>
+                            <span></span>
+                        </div>
+                        <div class="modal-body">
+                            <ul>
+                                @foreach (var item in uicultureList)
+                                {
+                                    var img = "/images/flags/" + General.GetTwoLetterCountryCode(item) + ".svg";
+                                    <li>
+                                        <a href="/Home/ChangeLanguage?culture=@item.Name&name=@item.EnglishName&returnUrl=@returnUrl">
+                                            <img src="@img" />
+                                            @item.NativeName
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @await RenderSectionAsync("models", required: false)
+
+        </div>
+
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-confirm/jquery-confirm.min.js"></script>
+    <script src="~/lib/izitoast/js/iziToast.min.js"></script>
+    <script src="~/lib/cleave/cleave.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap-select.min.js"></script>
+
+    <script>
+        const lang = {
+            region: '@Html.Raw(CultureInfo.CurrentCulture.Name)',
+            success: '@Localize("Success")',
+            error: '@Localize("Error")',
+            warning: '@Localize("Warning")',
+            noresult: '@Localize("No Result Found")',
+        };
+
+        const currencyformat = {
+            position: '@GetSetting.CurrencyPosition',
+            symbol: '@Html.Raw(GetSetting.CurrencySymbol)',
+            decimalseparator: '@Html.Raw(CultureInfo.CurrentCulture.NumberFormat.CurrencyDecimalSeparator)',
+            groupseparator: '@Html.Raw(CultureInfo.CurrentCulture.NumberFormat.CurrencyGroupSeparator)',
+        };
+
+        const numberformat = {
+            decimalseparator: '@Html.Raw(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)',
+            groupseparator: '@Html.Raw(CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator)',
+        };
+
+    </script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Page Specific JS File -->
+    @await RenderSectionAsync("scripts", required: false)
+
+</body>
+</html>

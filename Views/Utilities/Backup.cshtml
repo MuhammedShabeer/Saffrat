@@ -1,0 +1,84 @@
+﻿@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Backup");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Backup")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Backup")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body">
+                    <div class="text-center mt-4 mb-4">
+                        <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Backup Database")</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+<script>
+        $("#utilities-menu").addClass("active");
+        $("#backup-menu").addClass("active");
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Utilities/BackupDatabase',
+                    type: 'GET',
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Database Backup completed.")');
+                            window.location.href = "/Media/DatabaseBackup?name="+data.file;
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+</script>
+}

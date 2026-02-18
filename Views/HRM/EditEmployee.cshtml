@@ -1,0 +1,965 @@
+﻿@model Saffrat.Models.Employee
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Update Employee");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Update Employee")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="HRM" asp-action="Employees">@Localize("Employees")</a></li>
+                    <li class="breadcrumb-item">@Localize("Update Employee")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <ul class="nav nav-tabs nav-primary" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="employeedetails-tab" data-bs-toggle="tab" data-bs-target="#employeedetails" type="button" role="tab" aria-controls="employeedetails" aria-selected="true">@Localize("Employee Details")</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="payrolldetails-tab" data-bs-toggle="tab" data-bs-target="#payrolldetails" type="button" role="tab" aria-controls="payrolldetails" aria-selected="false">@Localize("Payroll")</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="attachmentdetails-tab" data-bs-toggle="tab" data-bs-target="#attachmentdetails" type="button" role="tab" aria-controls="attachmentdetails" aria-selected="false">@Localize("Attachments")</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content pt-2" id="myTabContent">
+                    <div class="tab-pane fade show active" id="employeedetails" role="tabpanel" aria-labelledby="employeedetails-tab">
+                        <form id="frm" class="needs-validation" novalidate>
+                            <input type="hidden" asp-for="Id" />
+                            <div class="row">
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Department") <code>*</code></label>
+                                    <select class="form-select" asp-for="DepartmentId" required>
+                                        @foreach (var item in ViewBag.Departments)
+                                        {
+                                            <option value="@item.Key">@item.Value</option>
+                                        }
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select department.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Designation") <code>*</code></label>
+                                    <select class="form-select" asp-for="DesignationId" required>
+                                        @foreach (var item in ViewBag.Designations)
+                                        {
+                                            <option value="@item.Key">@item.Value</option>
+                                        }
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select designation.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Shift") <code>*</code></label>
+                                    <select class="form-select" asp-for="ShiftId" required>
+                                        @foreach (var item in ViewBag.Shifts)
+                                        {
+                                            <option value="@item.Key">@item.Value</option>
+                                        }
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select shift.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Name") <code>*</code></label>
+                                    <input asp-for="Name" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter name.")
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Joining Date") <code>*</code></label>
+                                    <input asp-for="JoiningDate" type="date" class="form-control" onclick="this.showPicker()" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select date.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Leaving Date") </label>
+                                    <input asp-for="LeavingDate" type="date" class="form-control" />
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Email") <code>*</code></label>
+                                    <input asp-for="Email" type="email" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter email.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Phone") <code>*</code></label>
+                                    <input asp-for="Phone" type="tel" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter phone.")
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-md-6">
+                                    <label class="control-label">@Localize("Present Address") <code>*</code></label>
+                                    <textarea asp-for="PresentAddress" class="form-control" required></textarea>
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter present address.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label class="control-label">@Localize("Permanent Address") <code>*</code></label>
+                                    <textarea asp-for="PermanentAddress" class="form-control" required></textarea>
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter permanent address.")
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Emergency Contact") <code>*</code></label>
+                                    <input asp-for="EmergencyContact" type="tel" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter emergency contact.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("NID Number") <code>*</code></label>
+                                    <input asp-for="Nidnumber" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter NID number.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Gender") <code>*</code></label>
+                                    <select class="form-control selectpicker" asp-for="Gender" required>
+                                        <option value="male">@Localize("Male")</option>
+                                        <option value="female">@Localize("Female")</option>
+                                        <option value="other">@Localize("Other")</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select gender.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Religion") <code>*</code></label>
+                                    <input asp-for="Religion" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter religion.")
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Martial Status") <code>*</code></label>
+                                    <select class="form-control selectpicker" asp-for="MaritalStatus" required>
+                                        <option value="single">@Localize("Single")</option>
+                                        <option value="married">@Localize("Married")</option>
+                                        <option value="divorced">@Localize("Divorced")</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select martial status.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("DOB") <code>*</code></label>
+                                    <input asp-for="Dob" type="date" class="form-control" onclick="this.showPicker()" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select date.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Salary Type") <code>*</code></label>
+                                    <input asp-for="PayslipType" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter salary type.")
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="control-label">@Localize("Salary") <code>*</code></label>
+                                    <div class="input-group">
+                                        <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                        <input asp-for="Salary" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                                    </div>
+                                    <div class="invalid-feedback">
+                                        @Localize("Please enter salary.")
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" asp-for="Status">
+                                <label class="control-label" asp-for="Status">@Localize("Status (InActive/Active)")</label>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">@Localize("Image")</label>
+                                <div id="imagePreview" class="image-preview" style="background-image:url('/Media/EmployeeImage?name=@Model.Image')">
+                                    <label for="employeeimage">@Localize("Choose File")</label>
+                                    <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" id="employeeimage" name="EmployeeImage">
+                                </div>
+                            </div>
+                            <h4>@Localize("Bank Account")</h4>
+                            <div class="row">
+                                <div class="form-group col-md-4">
+                                    <label class="control-label">@Localize("Account Holder Name")</label>
+                                    <input asp-for="AccountHolderName" class="form-control" />
+                                </div>
+                                <div class="form-group col-md-4">
+                                    <label class="control-label">@Localize("Account Number")</label>
+                                    <input asp-for="AccountNumber" class="form-control" />
+                                </div>
+                                <div class="form-group col-md-4">
+                                    <label class="control-label">@Localize("Bank Name")</label>
+                                    <input asp-for="BankName" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-md-4">
+                                    <label class="control-label">@Localize("Bank Identifier Code")</label>
+                                    <input asp-for="BankIdentifierCode" class="form-control" />
+                                </div>
+                                <div class="form-group col-md-4">
+                                    <label class="control-label">@Localize("Branch Location")</label>
+                                    <input asp-for="BranchLocation" class="form-control" />
+                                </div>
+                                <div class="form-group col-md-4">
+                                    <label class="control-label">@Localize("Tax Payer Id")</label>
+                                    <input asp-for="TaxPayerId" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Update")</button>
+                                <a asp-controller="HRM" asp-action="Employees" class="btn btn-secondary mr-1">@Localize("Back To List")</a>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="payrolldetails" role="tabpanel" aria-labelledby="payrolldetails-tab">
+                        <div class="d-flex align-items-center my-2">
+                            <h4 class="mb-0">@Localize("Earnings")</h4>
+                            <div class="ms-auto">
+                                <button class="btn btn-primary" type="button" onclick="OpenIncomeModal(0);"><i class="fa fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("Title")</th>
+                                        <th>@Localize("Amount")</th>
+                                        <th>@Localize("Action")</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="incomes">
+                                    @foreach (var item in Model.EmployeeEarnings)
+                                    {
+                                        var id = "income" + item.Id;
+                                        <tr id="@id">
+                                            <td>@item.Title</td>
+                                            <td>
+                                                @if (item.IsPercentage)
+                                                {
+                                                    <div>@item.Amount %</div>
+                                                }
+                                                else
+                                                {
+                                                    <div>@GetCurrency(item.Amount)</div>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary mr-1" type="button" onclick="OpenIncomeModal(@item.Id);"><i class="fa fa-edit"></i></button>
+                                                <button class="btn btn-sm btn-danger mr-1" type="button" onclick="DeleteIncome(@item.Id);"><i class="fa fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex align-items-center my-2">
+                            <h4 class="mb-0">@Localize("Deduction")</h4>
+                            <div class="ms-auto">
+                                <button class="btn btn-primary" type="button" onclick="OpenDeductionModal(0);"><i class="fa fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("Title")</th>
+                                        <th>@Localize("Amount")</th>
+                                        <th>@Localize("Action")</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deductions">
+                                    @foreach (var item in Model.EmployeeDeductions)
+                                    {
+                                        var id = "deduction" + item.Id;
+                                        <tr id="@id">
+                                            <td>@item.Title</td>
+                                            <td>
+                                                @if (item.IsPercentage)
+                                                {
+                                                    <div>@item.Amount %</div>
+                                                }
+                                                else
+                                                {
+                                                    <div>@GetCurrency(item.Amount)</div>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary mr-1" type="button" onclick="OpenDeductionModal(@item.Id);"><i class="fa fa-edit"></i></button>
+                                                <button class="btn btn-sm btn-danger mr-1" type="button" onclick="DeleteDeduction(@item.Id);"><i class="fa fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="attachmentdetails" role="tabpanel" aria-labelledby="attachmentdetails-tab">
+                        <form id="attachmentfrm" class="needs-validation" novalidate>
+                            <input type="hidden" name="EmployeeId" value="@Model.Id" />
+                            <div class="file-upload">
+                                <input type="file" accept=".pdf, .jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" id="attachment" name="attachment">
+                                <div class="file-uploads">
+                                    <img src="~/images/upload.svg" alt="img">
+                                    <h4>@Localize("Drag and drop a file to upload")</h4>
+                                </div>
+                            </div>
+                            <div class="attachment-list" id="newattachment">
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-primary submit" type="submit">@Localize("Upload")</button>
+                            </div>
+                            <div class="attachment-list" id="oldattachment">
+                                @foreach (var item in Model.EmployeeAttachments)
+                                {
+                                    var id = "attachment" + item.Id;
+                                    <div class="item d-flex align-items-center" id="@id">
+                                        <div class="icon">
+                                            <i class="fa fa-file"></i>
+                                        </div>
+                                        <div class="content">
+                                            <h4>@item.AttachmentName</h4>
+                                            <a href="javascript:void(0);" class="btn btn-sm btn-danger" onclick="DeleteAttachment(@item.Id)"><i class="fa fa-trash"></i> @Localize("Delete")</a>
+                                            <a href="/Media/EmployeeAttachment?name=@item.AttachmentName" class="btn btn-sm btn-primary"><i class="fa fa-download"></i> @Localize("Download")</a>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section models{
+    <div class="modal fade" id="incomeModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="incomeModalTitle"></h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <form id="incomefrm" class="needs-validation" novalidate="">
+                    <div class="modal-body">
+                        <input type="hidden" name="Id" value="" />
+                        <input type="hidden" name="EmployeeId" value="@Model.Id" />
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Title") <code>*</code></label>
+                            <input name="Title" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter title.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Type") <code>*</code></label>
+                            <select name="IsPercentage" class="form-control selectpicker" required>
+                                <option value="true">@Localize("Percentage")</option>
+                                <option value="false">@Localize("Fixed")</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select type.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Amount") <code>*</code></label>
+                            <input name="Amount" type="text" class="form-control cleave-number" inputmode="numeric" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter amount.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-whitesmoke br">
+                        <button type="submit" class="btn btn-primary submit">Save</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deductionModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deductionModalTitle"></h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <form id="deductionfrm" class="needs-validation" novalidate="">
+                    <div class="modal-body">
+                        <input type="hidden" name="Id" value="" />
+                        <input type="hidden" name="EmployeeId" value="@Model.Id" />
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Title") <code>*</code></label>
+                            <input name="Title" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter title.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Type") <code>*</code></label>
+                            <select name="IsPercentage" class="form-control selectpicker" required>
+                                <option value="true">@Localize("Percentage")</option>
+                                <option value="false">@Localize("Fixed")</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select type.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Amount") <code>*</code></label>
+                            <input name="Amount" type="text" class="form-control cleave-number" inputmode="numeric" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter amount.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-whitesmoke br">
+                        <button type="submit" class="btn btn-primary submit">Save</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+
+@section scripts{
+    <script>
+        $("#hrm-menu").addClass("active");
+        $("#employeeList-menu").addClass("active");
+
+        employeeimage.onchange = evt => {
+            const [file] = employeeimage.files
+            if (file) {
+                $('#imagePreview').css('background-image', 'url("' + URL.createObjectURL(file) + '")');
+            }
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/HRM/UpdateEmployee',
+                    type: 'PUT',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Employee updated successfully.")');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+
+
+        // Manage Employee Income
+        function DeleteIncome(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            btn.addClass('disabled btn-progress');
+                            $.ajax({
+                                url: "/HRM/DeleteEarning",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Earning deleted successfully.")');
+                                        $("#income" + id).remove();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    btn.removeClass("disabled btn-progress");
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function OpenIncomeModal(id) {
+            $("#incomefrm").removeClass("was-validated");
+            if (id > 0) {
+                jQuery.ajax({
+                    url: "/HRM/EarningDetail",
+                    method: "GET",
+                    data: {
+                        Id: id
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            $("#incomeModalTitle").text('@Localize("Update Earning")');
+                            $("#incomefrm .submit").text('@Localize("Update")');
+                            $("#incomefrm input[name='Id']").val(result.id);
+                            $("#incomefrm input[name='Title']").val(result.title);
+                            $("#incomefrm input[name='Amount']").val(getNumber(result.amount));
+                            $("#incomefrm select[name='IsPercentage']").selectpicker('val', (result.isPercentage.toString()));
+                            $("#incomeModal").modal('show');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            } else {
+                $("#incomeModalTitle").text('@Localize("Add Earning")');
+                $("#incomefrm .submit").text('@Localize("Save")');
+                $("#incomefrm input[name='Id']").val('');
+                $("#incomefrm")[0].reset();
+                $("#incomeModal").modal('show');
+            }
+        }
+
+        $("#incomefrm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#incomefrm"))) {
+                $("#incomefrm .submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/HRM/SaveEarning',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Earning saved successfully.")');
+
+                            var id = data.id;
+                            var title = $("#incomefrm input[name='Title']").val();
+                            var amount = $("#incomefrm input[name='Amount']").val();
+                            var ispercentage = $("#incomefrm select[name='IsPercentage']").val();
+                            var html = '<tr id="income' + id + '"><td>' + title + '</td><td>';
+                            if (ispercentage == 'true') {
+                                html += '<div>' + amount + ' %</div>';
+                            }
+                            else {
+                                html += '<div>' + GetCurrency(amount) + '</div>';
+                            }
+                            html += '</td><td><button class="btn btn-sm btn-primary mr-1" type="button" onclick="OpenIncomeModal(' + id + ');"> <i class="fa fa-edit"> </i></button>';
+                            html += '<button class="btn btn-sm btn-danger mr-1" type="button" onclick="DeleteIncome(' + id + ');"> <i class="fa fa-trash"> </i></button></td></tr>';
+                            if (id > 0) { $('#incomes #income' + id).remove(); }
+                            $('#incomes').append(html);
+                            $("#incomeModal").modal('hide');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#incomefrm .submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+
+
+
+
+        // Manage Employee Deduction
+        function DeleteDeduction(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/HRM/DeleteDeduction",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Deduction deleted successfully.")');
+                                        $("#deduction" + id).remove();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function OpenDeductionModal(id) {
+            $("#deductionfrm").removeClass("was-validated");
+            if (id > 0) {
+                jQuery.ajax({
+                    url: "/HRM/DeductionDetail",
+                    method: "GET",
+                    data: {
+                        Id: id
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            $("#deductionModalTitle").text('@Localize("Update Deduction")');
+                            $("#deductionfrm .submit").text('@Localize("Update")');
+                            $("#deductionfrm input[name='Id']").val(result.id);
+                            $("#deductionfrm input[name='Title']").val(result.title);
+                            $("#deductionfrm input[name='Amount']").val(getNumber(result.amount));
+                            $("#deductionfrm select[name='IsPercentage']").selectpicker('val', (result.isPercentage.toString()));
+                            $("#deductionModal").modal('show');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            } else {
+                $("#deductionModalTitle").text('@Localize("Add Deduction")');
+                $("#deductionfrm .submit").text('@Localize("Save")');
+                $("#deductionfrm input[name='Id']").val('');
+                $("#deductionfrm")[0].reset();
+                $("#deductionModal").modal('show');
+            }
+        }
+
+        $("#deductionfrm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#deductionfrm"))) {
+                $("#deductionfrm .submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/HRM/SaveDeduction',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Deduction saved successfully.")');
+
+                            var id = data.id;
+                            var title = $("#deductionfrm input[name='Title']").val();
+                            var amount = $("#deductionfrm input[name='Amount']").val();
+                            var ispercentage = $("#deductionfrm select[name='IsPercentage']").val();
+                            var html = '<tr id="deduction' + id + '"><td>' + title + '</td><td>';
+                            if (ispercentage == 'true') {
+                                html += '<div>' + amount + ' %</div>';
+                            }
+                            else {
+                                html += '<div>' + GetCurrency(amount) + '</div>';
+                            }
+                            html += '</td><td><button class="btn btn-sm btn-primary mr-1" type="button" onclick="OpenDeductionModal(' + id + ');"> <i class="fa fa-edit"> </i></button>';
+                            html += '<button class="btn btn-sm btn-danger mr-1" type="button" onclick="DeleteDeduction(' + id + ');"> <i class="fa fa-trash"> </i></button></td></tr>';
+                            if (id > 0) { $('#deductions #deduction' + id).remove(); }
+                            $('#deductions').append(html);
+                            $("#deductionModal").modal('hide');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#deductionfrm .submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+
+        //Employee Attachments
+        $('#attachment').change(
+            function (e) {
+                fileSize = parseInt(e.currentTarget.files[0].size, 10) / 1024;
+                filesize = Math.round(fileSize);
+                var html = '<div class="item d-flex align-items-center"><div class="icon"><i class="fa fa-file"></i></div><div class="content">';
+                html += '<h4>' + e.currentTarget.files[0].name + ' (' + filesize + ' kb)</h4>';
+                html += '</div></div>';
+
+                $('#newattachment').html(html);
+            });
+
+
+        $("#attachmentfrm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#attachmentfrm"))) {
+                $("#attachmentfrm .submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/HRM/UploadAttachment',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            $('#newattachment').html('');
+                            $("#attachmentfrm")[0].reset();
+                            successMessage('@Localize("Attachment uploaded successfully.")');
+                            var html = '<div class="item d-flex align-items-center" id="attachment' + data.id + '"><div class="icon"><i class="fa fa-file"></i></div><div class="content">';
+                            html += '<h4>' + data.name + '</h4>';
+                            html += '<a href="javascript:void(0);" class="btn btn-sm btn-danger" onclick="DeleteAttachment(' + data.id + ')"><i class="fa fa-trash"></i> @Localize("Delete")</a>';
+                            html += '<a href="/Media/EmployeeAttachment?name=' + data.name + '" class="btn btn-sm btn-primary"><i class="fa fa-download"></i> @Localize("Download")</a>';
+                            html += '</div></div>';
+                            $('#oldattachment').append(html);
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#attachmentfrm .submit").removeClass("disabled btn-progress");
+                        $("#attachmentfrm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+
+        function DeleteAttachment(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/HRM/DeleteAttachment",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Attachment deleted successfully.")');
+                                        $("#attachment" + id).remove();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+}

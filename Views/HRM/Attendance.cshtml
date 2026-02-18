@@ -1,0 +1,216 @@
+﻿@model IEnumerable<Saffrat.Models.Attendance>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Attendance");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Attendance")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Attendance")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <a asp-controller="HRM" asp-action="AddAttendance" class="btn btn-primary">@Localize("Add Attendance")</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Attendance" asp-controller="HRM" method="get" class="needs-validation" novalidate="">
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Shift")</label>
+                            <select name="shift" class="form-control selectpicker" data-live-search="true">
+                                <option value="">@Localize("All")</option>
+                                @foreach (var item in ViewBag.shifts)
+                                {
+                                    <option value="@item.Key">@item.Value</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Date") <code>*</code></label>
+                            <input type="date" name="date" value="@ViewBag.date" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
+                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("#")</th>
+                                <th>@Localize("Employee")</th>
+                                <th>@Localize("Shift")</th>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Clock In")</th>
+                                <th>@Localize("Clock Out")</th>
+                                <th>@Localize("Status")</th>
+                                <th>@Localize("Updated At")</th>
+                                <th>@Localize("Updated By")</th>
+                                <th>@Localize("Action")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Id</td>
+                                    <td>
+                                        @String.Format("{0} (EMP-{1})", item.Employee.Name, item.Employee.Id) <br />
+                                        @String.Format("{0} - {1}", item.Employee.Department.Title, item.Employee.Designation.Title) <br />
+                                    </td>
+                                    <td>@item.Shift.Title</td>
+                                    <td>@item.AttendaceDate.ToShortDateString()</td>
+                                    <td>@item.ClockIn</td>
+                                    <td>@item.ClockOut</td>
+                                    <td>
+                                        @if (item.Status == "Present")
+                                        {
+                                            <div class="badge badge-primary">@Localize(item.Status)</div>
+                                        }
+                                        else if (item.Status == "Absent")
+                                        {
+                                            <div class="badge badge-danger">@Localize(item.Status)</div>
+                                        }
+                                        else if (item.Status == "Leave")
+                                        {
+                                            <div class="badge badge-dark">@Localize(item.Status)</div>
+                                        }
+                                        else if (item.Status == "Late")
+                                        {
+                                            <div class="badge badge-warning">@Localize(item.Status)</div>
+                                        }
+                                    </td>
+                                    <td>@item.UpdatedAt</td>
+                                    <td>&#64;@item.UpdatedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+        $('#shift').val('@ViewBag.shift');
+
+        $("#hrm-menu").addClass("active");
+        $("#attendaceList-menu").addClass("active");
+
+        var dt = $('#datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [9]
+                }
+            ],
+            'lengthMenu': [[50, 100, 150, -1], [50, 100, 150, "All"]],
+        });
+
+        function Delete(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/HRM/DeleteAttendance",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Attendance deleted successfully.")');
+                                        dt.row("#row" + id).remove().draw();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+}

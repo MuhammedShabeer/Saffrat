@@ -1,0 +1,118 @@
+﻿@model Saffrat.Models.Supplier
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Update Supplier");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Update Supplier")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="People" asp-action="Suppliers">@Localize("Suppliers")</a></li>
+                    <li class="breadcrumb-item">@Localize("Update Supplier")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body">
+                    <input asp-for="Id" type="hidden"/>
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Supplier Name") <code>*</code></label>
+                        <input asp-for="SupplierName" class="form-control" required />
+                        <div class="invalid-feedback">
+                            @Localize("Please enter supplier name.")
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Email")</label>
+                            <input asp-for="Email" type="email" class="form-control">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Phone Number") <code>*</code></label>
+                            <input asp-for="Phone" type="tel" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter phone number.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Address") <code>*</code></label>
+                        <textarea asp-for="Address" class="form-control" required></textarea>
+                        <div class="invalid-feedback">
+                            @Localize("Please enter adress.")
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Update")</button>
+                    <a asp-controller="People" asp-action="Suppliers" class="btn btn-secondary mr-1">@Localize("Back To List")</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+<script>
+    $("#people-menu").addClass("active");
+    $("#supplierList-menu").addClass("active");
+
+    $("#frm").submit(function (e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+
+        if(performValidation($("#frm"))){
+            $("#submit").addClass("disabled btn-progress");
+            $.ajax({
+                url: '/People/UpdateSupplier',
+                type: 'PUT',
+                data: formData,
+                dataType: "json",
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    if (data.status == "success") {
+                        successMessage('@Localize("Supplier updated successfully.")');
+                    }
+                    else {
+                        errorMessage(data.message);
+                    }
+                },
+                error: function (data) {
+                    if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                },
+                complete: function () {
+                    $("#submit").removeClass("disabled btn-progress");
+                    $("#frm").removeClass("was-validated");
+                }
+            });
+        }
+    });
+</script>
+}

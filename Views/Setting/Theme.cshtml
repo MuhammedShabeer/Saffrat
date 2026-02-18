@@ -1,0 +1,166 @@
+﻿@model Saffrat.Models.AppSetting
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Theme");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Theme")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Theme")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body theme-customizer">
+                    <input type="hidden" asp-for="ThemeColor" />
+                    <input type="hidden" asp-for="ThemeSidebar" />
+                    <input type="hidden" asp-for="ThemeNavbar" />
+                    <div class="form-group" id="themecolor">
+                        <label>Theme Color</label>
+                        <div class="indigator theme-default" data-id="theme-default"></div>
+                        @for (var i = 1; i < 17; i++)
+                        {
+                            var theme = "theme-" + i;
+                            <div class="indigator @theme" data-id="@theme"></div>
+                        }
+                    </div>
+                    <div class="form-group" id="themenavbar">
+                        <label>Navbar</label>
+                        <div class="indigator light" data-id="light"></div>
+                        <div class="indigator dark" data-id="dark"></div>
+                        <div class="indigator primary" data-id="t-primary"></div>
+                    </div>
+                    <div class="form-group" id="themesidebar">
+                        <label>Sidebar</label>
+                        <div class="indigator light" data-id="light"></div>
+                        <div class="indigator dark" data-id="dark"></div>
+                        <div class="indigator primary" data-id="t-primary"></div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Save Changes")</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+
+    <script>
+
+        $("#setting-menu").addClass("active");
+        $("#theme-menu").addClass("active");
+        MarkActive();
+        function MarkActive(){
+            $(".indigator").removeClass("active");
+            var themecolor = $("#frm input[name='ThemeColor']").val();
+            var themenavbar = $("#frm input[name='ThemeNavbar']").val();
+            var themesidebar = $("#frm input[name='ThemeSidebar']").val();
+
+            $("#themesidebar [data-id='"+themesidebar+"']").addClass("active");
+            $("#themenavbar [data-id='" + themenavbar + "']").addClass("active");
+            $("#themecolor [data-id='" + themecolor + "']").addClass("active");
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Setting/Theme',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Theme Setting saved successfully.")');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+
+        $('#themecolor .indigator').on('click', function (e) {
+            var themecolor = $(this).data('id');
+            if ($('body').hasClass('sidebar-gone')){
+                $('body').attr('class', 'sidebar-gone');
+                $('body').addClass(themecolor);
+            }
+            else{
+                $('body').attr('class', themecolor);
+            }
+            
+            $("#frm input[name='ThemeColor']").val(themecolor);
+
+            let thememode = localStorage.getItem("thememode");
+            if (thememode == 'dark') {
+                $('body').addClass('dark');
+                $('body').removeClass('light');
+            }
+            else {
+                $('body').addClass('light');
+                $('body').removeClass('dark');
+            }
+
+            MarkActive();
+        });
+
+        $('#themesidebar .indigator').on('click', function (e) {
+            var themesidebar = $(this).data('id');
+            $('.main-sidebar').attr('class', 'main-sidebar ' + themesidebar);
+            $("#frm input[name='ThemeSidebar']").val(themesidebar);
+
+            MarkActive();
+        });
+
+        $('#themenavbar .indigator').on('click', function (e) {
+            var themenavbar = $(this).data('id');
+            $('#navbar').attr('class', themenavbar);
+            $("#frm input[name='ThemeNavbar']").val(themenavbar);
+
+            MarkActive();
+        });
+
+    </script>
+}

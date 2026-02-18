@@ -1,0 +1,382 @@
+﻿@model IEnumerable<Saffrat.Models.TaxRate>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Tax Rates");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Tax Rates")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Tax Rates")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <button onclick="OpenMainModal(0);" class="btn btn-primary">@Localize("Add New")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("#")</th>
+                                <th>@Localize("Title")</th>
+                                <th>@Localize("Value")</th>
+                                <th>@Localize("Default")</th>
+                                <th>@Localize("Updated At")</th>
+                                <th>@Localize("Updated By")</th>
+                                <th>@Localize("Action")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Id</td>
+                                    <td>@item.Title</td>
+                                    <td>
+                                        @if (item.IsPercentage)
+                                        {
+                                            <div>@item.Value %</div>
+                                        }
+                                        else
+                                        {
+                                            <div>@GetCurrency(item.Value)</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.IsDefault)
+                                        {
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" checked disabled>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            var did = "d-check" + item.Id;
+                                            <div class="form-check form-switch">
+                                                <input id="@did" class="form-check-input" type="checkbox" onchange="MarkDefault('@item.Id');">
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>@item.UpdatedAt</td>
+                                    <td><span>&#64</span>@item.UpdatedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item btn" onclick="OpenMainModal(@item.Id);"><i class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
+                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section models{
+    <div class="modal fade" id="mainModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mainModalTitle"></h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <form id="frm" class="needs-validation" novalidate="">
+                    <div class="modal-body">
+                        <input type="hidden" name="Id" value="" />
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Title") <code>*</code></label>
+                            <input name="Title" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter title.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Type") <code>*</code></label>
+                            <select name="IsPercentage" class="form-control selectpicker" required>
+                                <option value="true">@Localize("Percentage")</option>
+                                <option value="false">@Localize("Fixed")</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select type.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Value") <code>*</code></label>
+                            <input name="Value" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter value.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-whitesmoke">
+                        <button type="submit" class="btn btn-primary" id="submit">Save</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section scripts{
+    <script>
+
+        $("#setting-menu").addClass("active");
+        $("#taxRateList-menu").addClass("active");
+
+        var dt = $('#datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [6]
+                }
+            ],
+            'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        });
+
+        function Delete(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/Setting/DeleteTaxRate",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Tax Rate deleted successfully.")');
+                                        dt.row("#row" + id).remove().draw();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function OpenMainModal(id) {
+            $("#frm").removeClass("was-validated");
+            if (id > 0) {
+                jQuery.ajax({
+                    url: "/Setting/TaxRateDetail",
+                    method: "GET",
+                    data: {
+                        Id: id
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            $("#mainModalTitle").text('@Localize("Update Tax Rate")');
+                            $("#submit").text('@Localize("Update")');
+                            $("#frm input[name='Id']").val(result.id);
+                            $("#frm input[name='Title']").val(result.title);
+                            $("#frm input[name='Value']").val(getNumber(result.value));
+                            $("#frm select[name='IsPercentage']").selectpicker('val', result.isPercentage.toString());
+                            $("#mainModal").modal('show');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            } else {
+                $("#mainModalTitle").text('@Localize("Add Tax Rate")');
+                $("#submit").text('@Localize("Save")');
+                $("#frm input[name='Id']").val('');
+                $("#frm")[0].reset();
+                $("#mainModal").modal('show');
+            }
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Setting/SaveTaxRate',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            setCookie("successMessage", '@Localize("Tax Rate saved successfully.")');
+                            window.location.reload(true);
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                    }
+                });
+            }
+        });
+
+        function MarkDefault(id) {
+            $.alert({
+                title: '@Localize("Set Default?")',
+                content: '@Localize("Are you sure want to set as default.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-check"></i> @Localize("Set Default")',
+                        btnClass: 'btn btn-primary',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/Setting/MarkDefaultTaxRate",
+                                type: 'POST',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                    $('#d-check' + id).prop("checked", false);
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        setCookie("successMessage", '@Localize("Tax Rate set as default successfully.")');
+                                        window.location.reload(true);
+                                    }
+                                    else {
+                                        $('#d-check' + id).prop("checked", false);
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                            $('#d-check' + id).prop("checked", false);
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+}

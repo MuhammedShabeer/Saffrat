@@ -1,0 +1,264 @@
+﻿@model Saffrat.Models.Purchase
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Add Purchase");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Add Purchase")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Purchase" asp-action="PurchaseHistory">@Localize("Purchases")</a></li>
+                    <li class="breadcrumb-item">@Localize("Add Purchase")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Supplier") <code>*</code></label>
+                            <select asp-for="SupplierId" class="form-control selectpicker" data-live-search="true" required>
+                                <option value="">@Localize("Choose Option")</option>
+                                @foreach (var item in ViewBag.suppliers)
+                                {
+                                    <option value="@item.Key">@item.Value</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select supplier.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Invoice No.") <code>*</code></label>
+                            <input asp-for="InvoiceNo" type="text" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter invoice number.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Payment method.") <code>*</code></label>
+                            <select asp-for="PaymentType" class="form-control selectpicker" required>
+                                <option value="">@Localize("Choose Option")</option>
+                                @foreach (var item in ViewBag.paymentMethods)
+                                {
+                                    <option value="@item.Value">@item.Value</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select payment method.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Purchase Date") <code>*</code></label>
+                            <input asp-for="PurchaseDate" type="date" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Description")</label>
+                        <textarea asp-for="Description" class="form-control"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Ingredient Item")</label>
+                        <select id="IngredientItem" class="form-control selectpicker" data-live-search="true" onchange="AddItemInCart();">
+                            <option value="">@Localize("Choose Option")</option>
+                            @foreach (var item in ViewBag.ingredients)
+                            {
+                                <option value="@item.Key">@item.Value</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("Item Name") </th>
+                                        <th>@Localize("Stock") </th>
+                                        <th>@Localize("Quantity") </th>
+                                        <th>@Localize("Price") </th>
+                                        <th>@Localize("Total") </th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cart">
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th colspan="3"></th>
+                                        <th>@Localize("Total Bill") </th>
+                                        <th id="totalBill">@GetCurrency(0)</th>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3"></td>
+                                        <th>@Localize("Paid")</th>
+                                        <th>
+                                            <div class="input-group">
+                                                <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                                <input asp-for="PaidAmount" onkeyup="CartItemChange();" type="text" class="form-control cleave-number" inputmode="numeric" required />
+                                            </div>
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="3"></th>
+                                        <th>@Localize("Due")</th>
+                                        <th id="dueAmount">@GetCurrency(0)</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Save")</button>
+                    <a asp-controller="Purchase" asp-action="PurchaseHistory" class="btn btn-secondary mr-1">@Localize("Back To List")</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section scripts{
+    <script>
+        $("#purchase-menu").addClass("active");
+        $("#addPurchase-menu").addClass("active");
+
+        function AddItemInCart() {
+            var IngredientItemId = $("#IngredientItem").val();
+
+            if (IngredientItemId > 0) {
+                jQuery.ajax({
+                    url: "/Ingredient/IngredientItemDetail",
+                    method: "GET",
+                    data: {
+                        Id: IngredientItemId
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var result = data.data;
+                            if ($("#cItem" + result.id).length) {
+                                errorMessage('@Localize("Ingredient Item already in cart.")');
+                            } else {
+                                var htmlText = '<tr id="cItem' + result.id + '"><td>' + result.itemName + '</td>';
+                                htmlText += '<td><input type="hidden" name="ItemId[]" value="' + result.id + '"/>' + result.quantity + ' ' + result.unit + '</td>';
+                                htmlText += '<td><div class="mt-1 mb-1"><input name="ItemQuantity[]" id="ItemQuantity' + result.id + '" onkeyup="CartItemChange();" value="1" type="text" class="form-control cleave-number" inputmode="numeric"  required /></div></td>';
+                                htmlText += '<td><div class="mt-1 mb-1"><input name="ItemRate[]" id="ItemRate' + result.id + '" onkeyup="CartItemChange();" type="text" class="form-control cleave-number" inputmode="numeric"  value="' + result.price + '" required /></div></td>';
+                                htmlText += '<td id="ItemTotal' + result.id + '">' + result.price + '</td>';
+                                htmlText += '<td><a href="javascript:void(0);" onclick="DeleteItemInCart(' + result.id + ');" class="btn btn-sm btn-danger mt-1 mr-1" title="Delete"><i class="fa fa-trash"></i></a></td></tr>';
+                                $("#cart").append(htmlText);
+
+                                InitCleaveNumber('#ItemQuantity' + result.id);
+                                InitCleaveNumber('#ItemRate' + result.id);
+                                CartItemChange();
+                            }
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                });
+            }
+        }
+
+        function DeleteItemInCart(id) {
+            $("#cItem" + id).remove();
+            CartItemChange(id);
+        }
+
+        function CartItemChange() {
+            var parent = document.getElementById('cart');
+            var children = Array.from(parent.children);
+
+            var totalAmount = 0;
+            var paidAmount = Number(getLocaleNumber($("#PaidAmount").val()));
+            var dueAmount = 0;
+            children.forEach(element => {
+                if (element.tagName === 'TR') {
+                    id = StrToNum(element.id);
+                    var quantity = Number(getLocaleNumber($("#ItemQuantity" + id).val()));
+                    var rate = Number(getLocaleNumber($("#ItemRate" + id).val()));
+                    var itemtotal = quantity * rate;
+                    totalAmount += itemtotal;
+                    $("#ItemTotal" + id).text(getNumber(itemtotal.toFixed(2)));
+                }
+            });
+
+            var dueAmount = totalAmount - paidAmount;
+            $("#totalBill").text(GetCurrency(getNumber(totalAmount.toFixed(2))));
+            $("#dueAmount").text(GetCurrency(getNumber(dueAmount.toFixed(2))));
+        }
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Purchase/AddPurchase',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Purchase created successfully.")');
+                            $('#cart').html('');
+                            $("#frm select[name='SupplierId']").selectpicker('val', '');
+                            $("#frm select[name='PaymentType']").selectpicker('val', '');
+                            $("#frm select[name='IngredientItem']").selectpicker('val', '');
+                            $("#frm")[0].reset();
+                            CartItemChange();
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+    </script>
+}

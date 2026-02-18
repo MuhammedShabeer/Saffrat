@@ -1,0 +1,196 @@
+﻿@model IEnumerable<Saffrat.Models.Transaction>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Transactions");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var start = "";
+    var end = "";
+    if (ViewBag.start != null && ViewBag.end != null)
+    {
+        start = ViewBag.start;
+        end = ViewBag.end;
+    }
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Transactions")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Transactions")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form asp-controller="Accounting" asp-action="Transactions" method="get" class="needs-validation" novalidate="">
+                    <div class="row">
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("Account") <code>*</code></label>
+                            <select class="form-control selectpicker" data-live-search="true" name="account" id="account" required>
+                                <option value="">@Localize("Choose Option")</option>
+                                @foreach (var item in ViewBag.Accounts)
+                                {
+                                    <option value="@item.Id">@item.AccountName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select account.")
+                            </div>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("From") <code>*</code></label>
+                            <input type="date" name="start" value="@start" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("To") <code>*</code></label>
+                            <input type="date" name="end" value="@end" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
+                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table" id="exportTable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("Account")</th>
+                                <th>@Localize("Type")</th>
+                                <th>@Localize("Reference")</th>
+                                <th>@Localize("Credit")</th>
+                                <th>@Localize("Debit")</th>
+                                <th>@Localize("Balance")</th>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Description")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                decimal balance = ViewBag.balance;
+                            }
+                            @foreach (var item in Model)
+                            {
+                                balance += (item.Credit - item.Debit);
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Account.AccountName</td>
+                                    <td>@item.TransactionType</td>
+                                    <td>@item.TransactionReference</td>
+                                    <td>@item.Credit</td>
+                                    <td>@item.Debit</td>
+                                    <td>@balance</td>
+                                    <td>@item.Date</td>
+                                    <td>@item.Description</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.html5.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.print.min.js"></script>
+
+    <script>
+        $('#account').val('@ViewBag.account');
+        $("#accounting-menu").addClass("active");
+        $("#transaction-menu").addClass("active");
+
+        var fileName = '@Localize("Transactions") (@Localize("From") @ViewBag.start @Localize("To") @ViewBag.end)';
+        $(document).ready(function () {
+            $('#exportTable').DataTable({
+                dom: 'B',
+                'language': {
+                    "processing": '@Localize("Processing...")',
+                    "loadingRecords": "@Localize("Loading...")",
+                    'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                    "zeroRecords": "@Localize("No Result Found")",
+                    "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                    "infoEmpty": '',
+                    "infoFiltered": '',
+                    "search": '@Localize("Search")',
+                    'paginate': {
+                        'previous': '<i class="fa fa-chevron-left"></i>',
+                        'next': '<i class="fa fa-chevron-right"></i>'
+                    }
+                },
+                "ordering": false,
+                paging: false,
+                buttons: [
+                    {
+                        extend: 'excel',
+                        title: fileName,
+                        text: '<i title="excel" class="fa fa-file-excel"></i>',
+                        className: 'btn',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    },
+                    {
+                        extend: 'pdf',
+                        title: fileName,
+                        text: '<i title="pdf" class="fa fa-file-pdf"></i>',
+                        className: 'btn',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        },
+                        customize: function (doc) {
+                            doc.content[1].table.widths =
+                                Array(doc.content[1].table.body[0].length + 1).join('*').split('');
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        title: fileName,
+                        text: '<i title="print" class="fa fa-print"></i>',
+                        className: 'btn',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    },
+                    {
+                        extend: 'csv',
+                        title: fileName,
+                        text: '<i title="csv" class="fa fa-file-csv"></i>',
+                        className: 'btn',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    },
+                ]
+            });
+        });
+    </script>
+}

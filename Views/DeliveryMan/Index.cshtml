@@ -1,0 +1,274 @@
+﻿@model IEnumerable<Saffrat.Models.RunningOrder>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Orders");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    string[] orderTypes = { "<span class=\"badge badge-light m-1\">None</span>", "<span class=\"badge badge-primary m-1\">" + Localize("Dine In") + "</span>", "<span class=\"badge badge-secondary m-1\">" + Localize("Pick Up") + "</span>", "<span class=\"badge badge-black m-1\">" + Localize("Delivery") + "</span>" };
+    string[] status = { "<span class=\"badge badge-red m-1\">" + Localize("Cancelled") + "</span>", "<span class=\"badge badge-secondary m-1\">" + Localize("In Progress") + "</span>", "<span class=\"badge badge-black m-1\">" + Localize("Cooked") + "</span>", "<span class=\"badge badge-primary m-1\">" + Localize("Served") + "</span>", "<span class=\"badge badge-primary m-1\">" + Localize("Delivered") + "</span>", "<span class=\"badge badge-light m-1\">" + Localize("Closed") + "</span>" };
+    string[] status1 = { "<span class=\"badge badge-red m-1\">" + Localize("Cancelled") + "</span>", "<span class=\"badge badge-secondary m-1\">" + Localize("In Progress") + "</span>", "<span class=\"badge badge-black m-1\">" + Localize("Cooked") + "</span>", "<span class=\"badge badge-light m-1\">" + Localize("Dispatched") + "</span>", "<span class=\"badge badge-primary m-1\">" + Localize("Delivered") + "</span>", "<span class=\"badge badge-light m-1\">" + Localize("Closed") + "</span>" };
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Orders")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="DeliveryMan" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Orders")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-md-8">
+        <h4 class="p-1">@Localize("Orders")</h4>
+        <div class="orders" id="openedOrders">
+            @foreach (var item in Model)
+            {
+                var id = "openedOrder" + item.Id;
+                <div class="item" id="@id" data-id="@item.Id">
+                    <div class="d-flex align-items-center">
+                        <h6>@Localize("Order No.") @item.Id</h6>
+                        <p class="text-muted ms-auto">@item.CreatedAt.ToString("hh:mm tt")</p>
+                    </div>
+                    @if (item.OrderType == 1)
+                    {
+                        <div class="d-flex align-items-center">
+                            <p><strong>@Localize("Table")</strong> @item.TableName</p>
+                            <p class="ms-auto"><strong>@Localize("Guest")</strong> @item.Guests</p>
+                        </div>
+                    }
+                    <div class="d-flex align-items-center">
+                        @if (item.OrderType == 3)
+                        {
+                            <p>@Html.Raw(status1[item.Status])</p>
+                        }
+                        else
+                        {
+                            <p>@Html.Raw(status[item.Status])</p>
+                        }
+                        <p class="ms-auto">
+                            <strong>@GetCurrency(item.Total)</strong>
+                            @Html.Raw(orderTypes[item.OrderType])
+                        </p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section models{
+    <!-- Modal -->
+    <div class="modal right fade" id="orderDetailModel" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary p-2">
+                    <strong class="modal-title text-white">@Localize("Order No.") <span id="m-Id"></span></strong>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <div class="modal-body p-0" id="m-body">
+                    <div class="order-items" id="m-items">
+                    </div>
+                    <div style="position:absolute; bottom:0; width:100%;">
+                        <div class="p-2">
+                            <div class="d-flex">
+                                <div>@Localize("Sub Total")</div>
+                                <div class="ms-auto" id="d-SubTotal"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div>@Localize("Discount")</div>
+                                <div class="ms-auto" id="d-Discount"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div>@Localize("Tax")</div>
+                                <div class="ms-auto" id="d-Tax"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div>@Localize("Charge")</div>
+                                <div class="ms-auto" id="d-Charges"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div><strong>@Localize("Total")</strong></div>
+                                <div class="ms-auto"><strong id="d-Total"></strong></div>
+                            </div>
+                        </div>
+                        <div class="bg-whitesmoke p-2">
+                            <button class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="DropDown">
+                                <i class="fas fa-user"></i><span class="d-CustomerName"></span> <i class="fas fa-eye"></i>
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="DropDown" style="padding:8px;">
+                                <p class="mb-0"><i class="fas fa-circle-user"></i> <span class="ml-2 d-CustomerName"></span></p>
+                                <p class="mb-0"><i class="fas fa-phone"></i> <span class="ml-2 d-CustomerPhone"></span></p>
+                                <p class="mb-0"><i class="fas fa-envelope"></i> <span class="ml-2 d-CustomerEmail"></span></p>
+                                <p class="mb-0"><i class="fas fa-location-dot"></i> <span class="ml-2 d-CustomerAddress"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- modal-content -->
+        </div><!-- modal-dialog -->
+    </div><!-- modal -->
+}
+
+@section scripts{
+    <script src="~/lib/signalr/dist/browser/signalr.js"></script>
+
+    <script>
+        const orderTypes = ['<span class="badge badge-light m-1">None</span>', '<span class="badge badge-primary m-1">@Localize("Dine In")</span>', '<span class="badge badge-secondary m-1">@Localize("Pick Up")</span>', '<span class="badge badge-black m-1">@Localize("Delivery")</span>'];
+        const ostatus = ['<span class="badge badge-red m-1">@Localize("Cancelled")</span>', '<span class="badge badge-secondary m-1">@Localize("In Progress")</span>', '<span class="badge badge-black m-1">@Localize("Cooked")</span>', '<span class="badge badge-primary m-1">@Localize("Served")</span>', '<span class="badge badge-primary m-1">@Localize("Delivered")</span>', '<span class="badge badge-light m-1">@Localize("Closed")</span>'];
+
+        var connection = new signalR.HubConnectionBuilder().withUrl("/notificationHub").build();
+        connection.on("OrderNotification", function (operation, orderId) {
+            console.log(operation);
+            if (operation == 'closed') {
+                $('#openedOrder' + orderId).remove();
+            }
+            else {
+                $.ajax({
+                    url: '/DeliveryMan/GetOrder',
+                    type: 'GET',
+                    data: {
+                        Id: orderId
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var order = JSON.parse(data.order);
+                            var date = new Date(Date.parse(order.CreatedAt));
+
+                            var htmlText = '';
+                            htmlText += '<div class="d-flex align-items-center">';
+                            htmlText += '<h6>@Localize("Order No.") ' + order.Id + '</h6>';
+                            htmlText += '<p class="text-muted ms-auto">' + formatAMPM(date) + '</p></div>';
+
+                            if (order.OrderType == 1) {
+                                htmlText += '<div class="d-flex align-items-center">';
+                                htmlText += '<p><strong>@Localize("Table")</strong>' + order.TableName + '</p>';
+                                htmlText += '<p class="ms-auto"><strong>@Localize("Guest")</strong>' + order.Guests + '</p></div>';
+                            }
+                            htmlText += '<div class="d-flex align-items-center">';
+
+                            htmlText += '<p>' + ostatus[order.Status] + '</p>';
+                            htmlText += '<p class="ms-auto"><strong>' + GetCurrency(order.Total) + '</strong>' + orderTypes[order.OrderType];
+                            htmlText += '</p></div>';
+
+                            if (operation == 'created' || operation == 'updated') {
+                                if ($('#openedOrder' + order.Id).length) {
+                                    $('#openedOrder' + order.Id).html(htmlText);
+                                }
+                                else {
+                                    var html = '<div class="item" id="openedOrder' + order.Id + '" data-id="' + order.Id + '">' + htmlText + '</div>';
+                                    $('#openedOrders').append(html);
+                                }
+                            }
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            }
+        });
+
+        connection.start().then(function () {
+            console.log("Connected to server successfully.");
+        }).catch(function (err) {
+            console.log("Error while connecting with server.");
+        });
+    </script>
+
+    <script>
+        $("#order-menu").addClass("active");
+        $("#openedOrders").on("click", "div.item", function () {
+            var id = $(this).data("id");
+            $("#orderDetailModel").modal('show');
+            $("#m-body").addClass("card-progress");
+            $("#m-items").html("");
+            $("#m-Id").text("");
+            $('#payment-btn').addClass('d-none');
+            $.ajax({
+                url: '/DeliveryMan/OrderDetail',
+                type: 'GET',
+                data: {
+                    Id: id
+                },
+                dataType: "json",
+                success: function (data) {
+                    if (data.status == "success") {
+                        var order = JSON.parse(data.order);
+                        var items = order.RunningOrderDetails;
+
+                        var htmlText = '<table class="table table-sm"><thead><tr><th>@Localize("Food Item")</th><th class="text-center">@Localize("Quantity")</th><th class="text-end">@Localize("Price")</th></tr></thead><tbody>';
+                        for (var i = 0; i < items.length; i++) {
+                            htmlText += '<tr><td><div>' + items[i].Item.ItemName + '</div><div>';
+                            var modifiers = items[i].RunningOrderItemModifiers;
+                            for (var j = 0; j < modifiers.length; j++) {
+                                htmlText += '<span class="badge badge-primary m-1">' + modifiers[j].Modifier.Title + '</span>';
+                            }
+                            htmlText += '</div></td>';
+                            htmlText += '<td class="text-center">' + items[i].Quantity + '</td>';
+                            htmlText += '<td class="text-end">' + items[i].Total + '</td></tr>';
+                        }
+                        htmlText += '</tbody></table>';
+                        $("#m-items").html(htmlText);
+
+                        $("#m-Id").text(order.Id);
+                        $("#d-SubTotal").text(GetCurrency(order.SubTotal));
+                        $("#d-Discount").text(GetCurrency(order.DiscountTotal));
+                        $("#d-Tax").text(GetCurrency(order.TaxTotal));
+                        $("#d-Charges").text(GetCurrency(order.ChargeTotal));
+                        $("#d-Total").text(GetCurrency(order.Total));
+                        $('.d-CustomerName').text(order.Customer.CustomerName);
+                        $('.d-CustomerEmail').text(order.Customer.Email);
+                        $('.d-CustomerPhone').text(order.Customer.Phone);
+                        $('.d-CustomerAddress').text(order.Customer.Address);
+                    }
+                    else {
+                        errorMessage(data.message);
+                        $("#orderDetailModel").modal('hide');
+                    }
+                },
+                error: function (data) {
+                    if(data.status == 401){
+                            window.location.href = '/Account/Login';
+                        }
+                        else if(data.status == 403){
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else{
+                            console.log(JSON.stringify(data));
+                        }
+                    $("#orderDetailModel").modal('hide');
+                },
+                complete: function () {
+                    $("#m-body").removeClass("card-progress");
+                }
+            });
+        });
+    </script>
+}

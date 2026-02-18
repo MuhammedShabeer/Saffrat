@@ -1,0 +1,450 @@
+﻿@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Dashboard");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col-xl-3 col-lg-6">
+        <div class="card">
+            <div class="card-body card-type-3">
+                <div class="row">
+                    <div class="col">
+                        <h6 class="mb-0">@Localize("Total Orders")</h6>
+                        <p class="mb-0">@ViewBag.TotalOrders</p>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card-circle">
+                            <i class="fas fa-store"></i>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-3 mb-0 text-sm">
+                    <span class="text-success mr-2"><i class="fa fa-arrow-trend-up"></i></span>
+                    <span class="text-nowrap">@Localize("All Time")</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6">
+        <div class="card">
+            <div class="card-body card-type-3">
+                <div class="row">
+                    <div class="col">
+                        <h6 class="mb-0">@Localize("Total Sales")</h6>
+                        <p class="mb-0">@GetCurrency(ViewBag.TotalSales)</p>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card-circle">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-3 mb-0 text-sm">
+                    <span class="text-success mr-2"><i class="fa fa-arrow-trend-up"></i></span>
+                    <span class="text-nowrap">@Localize("All Time")</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6">
+        <div class="card">
+            <div class="card-body card-type-3">
+                <div class="row">
+                    <div class="col">
+                        <h6 class="mb-0">@Localize("Total Purchases")</h6>
+                        <p class="mb-0">@GetCurrency(ViewBag.TotalPurchases)</p>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card-circle">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-3 mb-0 text-sm">
+                    <span class="text-success mr-2"><i class="fa fa-arrow-trend-up"></i></span>
+                    <span class="text-nowrap">@Localize("All Time")</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6">
+        <div class="card">
+            <div class="card-body card-type-3">
+                <div class="row">
+                    <div class="col">
+                        <h6 class="mb-0">@Localize("Total Expenses")</h6>
+                        <p class="mb-0">@GetCurrency(ViewBag.TotalExpenses)</p>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card-circle">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-3 mb-0 text-muted text-sm">
+                    <span class="text-success mr-2"><i class="fa fa-arrow-trend-up"></i></span>
+                    <span class="text-nowrap">@Localize("All Time")</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body" id="card-1" style="min-height:300px;">
+                <div id="chart1" style="width:100%;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>@Localize("Today Report")</h4>
+            </div>
+            <div class="card-body p-0 mb-4 mt-4">
+                <div class="row g-0">
+                    <div class="col-6 border-rb-primary p-4">
+                        <p class="mb-1"><strong>@Localize("Sales")</strong></p>
+                        <h6 id="d-Sales"></h6>
+                    </div>
+                    <div class="col-6 border-b-primary p-4">
+                        <p class="mb-1">
+                            <strong>@Localize("Orders")</strong>
+                        </p>
+                        <h6 id="d-Orders"></h6>
+                    </div>
+                    <div class="col-6 border-rb-primary p-4">
+                        <p class="mb-1">
+                            <strong>@Localize("Purchases")</strong>
+                        </p>
+                        <h6 id="d-Purchases"></h6>
+                    </div>
+                    <div class="col-6 border-b-primary p-4">
+                        <p class="mb-1">
+                            <strong>@Localize("Expenses")</strong>
+                        </p>
+                        <h6 id="d-Expenses"></h6>
+                    </div>
+                    <div class="col-6 border-r-primary p-4">
+                        <p class="mb-1">
+                            <strong>@Localize("Customer Due")</strong>
+                        </p>
+                        <h6 id="d-CustomersDue"></h6>
+                    </div>
+                    <div class="col-6 p-4">
+                        <p class="mb-1">
+                            <strong>@Localize("Supplier Due")</strong>
+                        </p>
+                        <h6 id="d-SuppliersDue"></h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body" id="card-2" style="min-height:300px;">
+                <div id="chart2" style="width:100%;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>@Localize("Sale By Order Type (This Month)")</h4>
+            </div>
+            <div class="card-body pb-5 pt-5" id="card-3" style="min-height:300px;">
+                <div id="chart3" style="width:100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script src="~/lib/apexchart/apexcharts.min.js"></script>
+    <script>
+        $("#dashboard-menu").addClass("active");
+
+        const monthNames = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        LoadDailyReport();
+        LoadMonthlyReport();
+        LoadOrderTypes();
+
+        function LoadDailyReport() {
+            $("#card1").addClass("card-progress");
+            $.ajax({
+                url: '/Home/TodayReport',
+                type: 'GET',
+                dataType: "json",
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    if (data.status == "success") {
+                        $('#d-Sales').text(GetCurrency(getNumber(data.totalSales)));
+                        $('#d-Orders').text(getNumber(data.totalOrders));
+                        $('#d-Purchases').text(GetCurrency(getNumber(data.totalPurchases)));
+                        $('#d-CustomersDue').text(GetCurrency(getNumber(data.customersDue)));
+                        $('#d-SuppliersDue').text(GetCurrency(getNumber(data.suppliersDue)));
+                        $('#d-Expenses').text(GetCurrency(getNumber(data.totalExpenses)));
+                    }
+                    else {
+                        errorMessage(data.message);
+                    }
+                },
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.href = '/Account/Login';
+                    }
+                    else if (data.status == 403) {
+                        errorMessage('@Localize("Access denied.")');
+                    }
+                    else {
+                        console.log(JSON.stringify(data));
+                    }
+                },
+                complete: function () {
+                    $("#card1").removeClass("card-progress");
+                }
+            });
+        }
+
+        function LoadMonthlyReport() {
+            $("#card2").addClass("card-progress");
+            $.ajax({
+                url: '/Home/MonthlyReport',
+                type: 'GET',
+                dataType: "json",
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    if (data.status == "success") {
+                        var sales = JSON.parse(data.sales);
+                        var tax = JSON.parse(data.taxes);
+                        var discount = JSON.parse(data.discounts);
+                        var charges = JSON.parse(data.charges);
+                        var orders = JSON.parse(data.totalOrders);
+                        var purchases = JSON.parse(data.purchases);
+                        var expenses = JSON.parse(data.expenses);
+
+                        var months = [];
+                        var salesTotal = [];
+                        var taxTotal = [];
+                        var discountTotal = [];
+                        var chargesTotal = [];
+                        var ordersTotal = [];
+                        var purchasesTotal = [];
+                        var expensesTotal = [];
+
+                        for (var i = 11; i > -1; i--) {
+                            var current_date = monthNames[sales[i].Month] + ' ' + sales[i].Year;
+                            months.push(current_date);
+
+                            salesTotal.push(sales[i].Total);
+                            expensesTotal.push(expenses[i].Total);
+                            purchasesTotal.push(purchases[i].Total);
+                            discountTotal.push(discount[i].Total);
+                            chargesTotal.push(charges[i].Total);
+                            ordersTotal.push(parseInt(orders[i].Total));
+                            taxTotal.push(tax[i].Total);
+                        }
+                        chart1(salesTotal, purchasesTotal, expensesTotal, months);
+                        chart2(months, salesTotal, ordersTotal, taxTotal, discountTotal, chargesTotal);
+                    }
+                    else {
+                        errorMessage(data.message);
+                    }
+                },
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.href = '/Account/Login';
+                    }
+                    else if (data.status == 403) {
+                        errorMessage('@Localize("Access denied.")');
+                    }
+                    else {
+                        console.log(JSON.stringify(data));
+                    }
+                },
+                complete: function () {
+                    $("#card2").removeClass("card-progress");
+                }
+            });
+        }
+
+        function LoadOrderTypes() {
+            $("#card3").addClass("card-progress");
+            $.ajax({
+                url: '/Home/SaleByOrderType',
+                type: 'GET',
+                dataType: "json",
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    if (data.status == "success") {
+                        chart3(Number(data.dineIn), Number(data.pickUp), Number(data.delivery));
+                    }
+                    else {
+                        errorMessage(data.message);
+                    }
+                },
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.href = '/Account/Login';
+                    }
+                    else if (data.status == 403) {
+                        errorMessage('@Localize("Access denied.")');
+                    }
+                    else {
+                        console.log(JSON.stringify(data));
+                    }
+                },
+                complete: function () {
+                    $("#card3").removeClass("card-progress");
+                }
+            });
+        }
+
+        function chart1(sales, purchases, expenses, months, orders) {
+            var options = {
+                series: [
+                    {
+                        name: '@Localize("Sales")',
+                        data: sales
+                    },
+                    {
+                        name: '@Localize("Purchases")',
+                        data: purchases
+                    },
+                    {
+                        name: '@Localize("Expenses")',
+                        data: expenses
+                    }
+                ],
+                chart: {
+                    type: 'area',
+                    height: 350,
+                },
+                colors: ['#008FFB', '#00E396', '#CED4DC'],
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth'
+                },
+                xaxis: {
+                    type: 'category',
+                    categories: months
+                },
+                tooltip: {
+                    y: {
+                        formatter: function (val) {
+                            return GetCurrency(getNumber(val))
+                        }
+                    }
+                }
+            };
+
+            var chart = new ApexCharts(document.querySelector("#chart1"), options);
+            chart.render();
+        }
+        function chart2(months, sales, orders, taxes, discounts, charges) {
+            var options = {
+                series: [{
+                    name: '@Localize("Sales")',
+                    data: sales
+                }, {
+                    name: '@Localize("Taxes")',
+                    data: taxes
+                }, {
+                    name: '@Localize("Discounts")',
+                    data: discounts
+                }, {
+                    name: '@Localize("Charges")',
+                    data: charges
+                }, {
+                    name: '@Localize("Orders")',
+                    data: orders
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 350
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '55%',
+                        endingShape: 'rounded'
+                    },
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    show: true,
+                    width: 2,
+                    colors: ['transparent']
+                },
+                yaxis: {
+                    title: {
+                        text: GetCurrency('')
+                    }
+                },
+                xaxis: {
+                    categories: months,
+                },
+                fill: {
+                    opacity: 1
+                },
+                tooltip: {
+                    y: {
+                        formatter: function (val) {
+                            return getNumber(val)
+                        }
+                    }
+                }
+            };
+
+            var chart = new ApexCharts(document.querySelector("#chart2"), options);
+            chart.render();
+        }
+        function chart3(dineIn, pickUp, delivery) {
+            var options = {
+                series: [dineIn, pickUp, delivery],
+                chart: {
+                    width: 380,
+                    type: 'pie',
+                },
+                tooltip: {
+                    y: {
+                        formatter: function (val) {
+                            return GetCurrency(getNumber(val))
+                        }
+                    }
+                },
+                labels: ['@Localize("Dine In")', '@Localize("Pick Up")', '@Localize("Delivery")'],
+                responsive: [{
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            width: 200
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
+            };
+
+            var chart = new ApexCharts(document.querySelector("#chart3"), options);
+            chart.render();
+        }
+    </script>
+}

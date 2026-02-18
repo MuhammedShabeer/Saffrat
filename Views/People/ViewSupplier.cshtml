@@ -1,0 +1,88 @@
+﻿@model Saffrat.Models.Supplier
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Supplier Detail");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Styles{
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/dataTables.bootstrap5.min.css" />
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Supplier Detail")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="People" asp-action="Suppliers">@Localize("Suppliers")</a></li>
+                    <li class="breadcrumb-item">@Localize("Suppler Detail")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row mt-5">
+    <div class="col-12 col-sm-8 offset-sm-2">
+        <div class="card profile-widget">
+            <div class="profile-widget-header">
+                <img alt="image" src="~/uploads/user_icon.png" class="rounded-circle profile-widget-picture">
+                <div class="profile-widget-items">
+                    <div class="profile-widget-item">
+                        <div class="profile-widget-item-label">@Localize("Orders"):</div>
+                        <div class="profile-widget-item-value">@ViewBag.totalOrders</div>
+                    </div>
+                    <div class="profile-widget-item">
+                        <div class="profile-widget-item-label">@Localize("Purchases")</div>
+                        <div class="profile-widget-item-value">@GetCurrency(ViewBag.totalPurchases)</div>
+                    </div>
+                    <div class="profile-widget-item">
+                        <div class="profile-widget-item-label">@Localize("Due")</div>
+                        <div class="profile-widget-item-value">@GetCurrency(ViewBag.totalDue)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-widget-description pb-0">
+                <div class="profile-widget-name">
+                    @Model.SupplierName
+                </div>
+                <dl class="row">
+                    <dt class="col-sm-3">
+                        @Localize("Email"):
+                    </dt>
+                    <dd class="col-sm-9">
+                        @Html.DisplayFor(model => model.Email)
+                    </dd>
+                    <dt class="col-sm-3">
+                        @Localize("Phone Number"):
+                    </dt>
+                    <dd class="col-sm-9">
+                        @Html.DisplayFor(model => model.Phone)
+                    </dd>
+                    <dt class="col-sm-3">
+                        @Localize("Address"):
+                    </dt>
+                    <dd class="col-sm-9">
+                        @Html.DisplayFor(model => model.Address)
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts{
+    <script>
+        $("#people-menu").addClass("active");
+        $("#supplierList-menu").addClass("active");
+    </script>
+}

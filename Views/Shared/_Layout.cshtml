@@ -1,0 +1,414 @@
+﻿@using Microsoft.AspNetCore.Builder
+@using Microsoft.AspNetCore.Localization
+@using System.Globalization
+@using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Http.Extensions
+@using Saffrat.Helpers
+@using Saffrat.Resources
+
+@inherits LocService<TModel>
+@inject IOptions<RequestLocalizationOptions> LocOptions
+@{
+    var uicultureList = LocOptions.Value.SupportedUICultures.OrderBy(x => x.NativeName).ToList();
+
+    string returnUrl = ViewContext.HttpContext.Request.Path + ViewContext.HttpContext.Request.QueryString;
+
+    var dir = "ltr";
+    if (CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft)
+    {
+        dir = "rtl";
+    }
+    var lang = CultureInfo.CurrentUICulture.Name;
+}
+
+<!DOCTYPE html>
+<html lang="@lang" dir="@dir">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
+    <meta name="robots" content="noindex nofollow">
+    <title>@ViewData["Title"] - @GetSetting.AppName</title>
+    <!-- General CSS Files -->
+    <link rel="stylesheet" href="~/fonts/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="~/lib/jquery-confirm/jquery-confirm.min.css">
+    <link rel="stylesheet" href="~/lib/izitoast/css/iziToast.min.css">
+    @if (dir == "ltr")
+    {
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    }
+    else
+    {
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    }
+    <link rel="stylesheet" href="~/lib/datatable/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap-select.min.css" />
+    @await RenderSectionAsync("styles", required: false)
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <!-- Favicon and Touch Icons -->
+    <link rel="shortcut icon" href="@GetSetting.Favicon">
+    <link rel="icon" type="image/png" href="@GetSetting.Favicon" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="@GetSetting.Favicon">
+</head>
+
+<body class="@GetSetting.ThemeColor">
+    <div class="loader" style="background: url('@GetSetting.Preloader') 50% 50% no-repeat var(--colorBackground);"></div>
+    <div id="app">
+        <div class="main-wrapper">
+            <!--top navbar start-->
+            <div class="@GetSetting.ThemeNavbar" id="navbar">
+                <div class="navbar-bg"></div>
+                <nav class="navbar navbar-expand-lg main-navbar sticky">
+                    <div class="form-inline mr-auto">
+                        <ul class="navbar-nav pr-3">
+                            <li class="top-icon">
+                                <a href="javascript:void(0)" class="nav-link collapse-btn" data-toggle="sidebar">
+                                    <i class="fas fa-bars"></i>
+                                </a>
+                            </li>
+                            @if (User.IsInRole("admin") || User.IsInRole("staff"))
+                            {
+                                <li>
+                                    <a asp-controller="POS" asp-action="Index" class="btn btn-outline-primary">
+                                        <i class="fas fa-cart-shopping"></i> @Localize("POS")
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="top-icon">
+                            <a href="javascript:void(0)" class="nav-link fullscreen-btn" data-toggle="tooltip" title="Full Screen">
+                                <i class="fas fa-expand"></i>
+                            </a>
+                        </li>
+                        <li class="top-icon">
+                            <a href="javascript:void(0)" id="switchTheme" class="nav-link" data-toggle="tooltip" title="Night Mode">
+                                <i class="fas fa-moon"></i>
+                            </a>
+                        </li>
+                        <li class="top-icon">
+                            <a href="javascript:void(0)" id="switchLanguage" class="nav-link" data-toggle="tooltip" title="Language">
+                                <i class="fas fa-globe"></i>
+                            </a>
+                        </li>
+                        <li class="dropdown">
+                            <a href="#" id="accountDropDown" class="nav-link dropdown-toggle nav-link-lg nav-link-user me-2"
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <img alt="image" src="~/uploads/user_icon.png" class="avatar">
+                                <span class="username d-none d-md-inline">@Localize("My Account") <i class="fa fa-chevron-down"></i></span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end pullDown" aria-labelledby="accountDropDown">
+                                <div class="dropdown-title">@User.Identity.Name </div>
+                                <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item has-icon">
+                                    <i class="fas fa-cog"></i>
+                                    @Localize("Change Password")
+                                </a>
+                                <a asp-controller="Account" asp-action="LogOut" class="dropdown-item has-icon text-danger">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    @Localize("Logout")
+                                </a>
+                            </div>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <!--top navbar end-->
+
+            <div class="main-sidebar @GetSetting.ThemeSidebar">
+                <div class="sidebar-brand">
+                    <a href="/">
+                        <img alt="image" src="@GetSetting.Favicon" class="header-logo-mini" />
+                        <img alt="image" src="@GetSetting.Logo" class="header-logo" />
+                    </a>
+                </div>
+                <aside id="sidebar-wrapper">
+                    <ul class="sidebar-menu">
+                        <li class="menu-header">@Localize("Main Menu")</li>
+                        @if (User.IsInRole("admin"))
+                        {
+                            <li id="dashboard-menu"><a asp-controller="Home" asp-action="Index" class="nav-link"><i class="fas fa-tachometer-alt"></i><span>@Localize("Dashboard")</span></a></li>
+                            <li class="dropdown" id="pos-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-box"></i><span>@Localize("Sale")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="nav-link" asp-controller="POS" asp-action="Index">@Localize("POS")</a></li>
+                                    <li><a class="nav-link" asp-controller="POS" asp-action="Kitchen">@Localize("Kitchen")</a></li>
+                                    <li><a class="nav-link" asp-controller="WorkPeriod" asp-action="Index">@Localize("Cash Register")</a></li>
+                                    <li id="orderList-menu"><a class="nav-link" asp-controller="POS" asp-action="OrderHistory">@Localize("Order History")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="purchase-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-credit-card"></i><span>@Localize("Purchase")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addPurchase-menu"><a class="nav-link" asp-controller="Purchase" asp-action="AddPurchase">@Localize("Add Purchase")</a></li>
+                                    <li id="purchaseList-menu"><a class="nav-link" asp-controller="Purchase" asp-action="PurchaseHistory">@Localize("Purchase History")</a></li>
+                                </ul>
+                            </li>
+                            <li id="tableList-menu">
+                                <a asp-controller="Table" asp-action="Index" class="nav-link"><i class="fas fa-table"></i><span>@Localize("Tables")</span></a>
+                            </li>
+                            <li class="dropdown" id="food-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-utensils"></i><span>@Localize("Foods")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addFood-menu"><a class="nav-link" asp-controller="Food" asp-action="AddFoodItem">@Localize("Add Food Item")</a></li>
+                                    <li id="foodList-menu"><a class="nav-link" asp-controller="Food" asp-action="FoodItems">@Localize("Food Items")</a></li>
+                                    <li id="foodGroupList-menu"><a class="nav-link" asp-controller="Food" asp-action="FoodGroups">@Localize("Food Groups")</a></li>
+                                    <li id="modifierList-menu"><a class="nav-link" asp-controller="Food" asp-action="Modifiers">@Localize("Modifiers")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="ingredient-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-carrot"></i><span>@Localize("Ingredients")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addIngredient-menu"><a class="nav-link" asp-controller="Ingredient" asp-action="AddIngredient">@Localize("Add Ingredient")</a></li>
+                                    <li id="ingredientList-menu"><a class="nav-link" asp-controller="Ingredient" asp-action="Index">@Localize("Ingredients")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="accounting-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-calculator"></i><span>@Localize("Accounting")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="accountList-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Accounts">@Localize("Accounts")</a></li>
+                                    <li id="depositList-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Deposits">@Localize("Deposits")</a></li>
+                                    <li id="transferList-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Transfers">@Localize("Transfers")</a></li>
+                                    <li id="expenseList-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Expenses">@Localize("Expenses")</a></li>
+                                    <li id="transaction-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Transactions">@Localize("Transactions")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="people-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-users"></i><span>@Localize("People")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addCustomer-menu"><a class="nav-link" asp-controller="People" asp-action="AddCustomer">@Localize("Add Customer")</a></li>
+                                    <li id="customerList-menu"><a class="nav-link" asp-controller="People" asp-action="Customers">@Localize("Customers")</a></li>
+                                    <li id="addSupplier-menu"><a class="nav-link" asp-controller="People" asp-action="AddSupplier">@Localize("Add Supplier")</a></li>
+                                    <li id="supplierList-menu"><a class="nav-link" asp-controller="People" asp-action="Suppliers">@Localize("Suppliers")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="report-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-file-lines"></i><span>@Localize("Reports")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="workPeriodReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="WorkPeriod">@Localize("Work Period Report")</a></li>
+                                    <li id="saleReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SaleReport">@Localize("Sale Report")</a></li>
+                                    <li id="itemSaleReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="ItemSaleReport">@Localize("Item Sale Report")</a></li>
+                                    <li id="saleSummaryReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SaleSummaryReport">@Localize("Sale Summary Report")</a></li>
+                                    <li id="saleDetailedReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SaleDetailedReport">@Localize("Sale Detailed Report")</a></li>
+                                    <li id="purchaseReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="PurchaseReport">@Localize("Purchase Report")</a></li>
+                                    <li id="expenseReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="ExpenseReport">@Localize("Expense Report")</a></li>
+                                    <li id="stockAlertReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="StockAlert">@Localize("Stock Alert Report")</a></li>
+                                    <li id="customerDueReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="CustomerDue">@Localize("Customer Due Report")</a></li>
+                                    <li id="supplierDueReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SupplierDue">@Localize("Supplier Due Report")</a></li>
+                                    <li id="attendanceReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="AttendanceReport">@Localize("Attendance Report")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="hrm-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-briefcase"></i><span>@Localize("HRM")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="departmentList-menu"><a class="nav-link" asp-controller="HRM" asp-action="Departments">@Localize("Departments")</a></li>
+                                    <li id="designationList-menu"><a class="nav-link" asp-controller="HRM" asp-action="Designations">@Localize("Designations")</a></li>
+                                    <li id="shiftList-menu"><a class="nav-link" asp-controller="HRM" asp-action="OfficeShift">@Localize("Office Shift")</a></li>
+                                    <li id="employeeList-menu"><a class="nav-link" asp-controller="HRM" asp-action="Employees">@Localize("Employees")</a></li>
+                                    <li id="payrollList-menu"><a class="nav-link" asp-controller="HRM" asp-action="Payroll">@Localize("Payroll")</a></li>
+                                    <li id="attendaceList-menu"><a class="nav-link" asp-controller="HRM" asp-action="Attendance">@Localize("Attendance")</a></li>
+                                    <li id="leaveRequestList-menu"><a class="nav-link" asp-controller="HRM" asp-action="LeaveRequests">@Localize("Leave Requests")</a></li>
+                                    <li id="holidayList-menu"><a class="nav-link" asp-controller="HRM" asp-action="Holidays">@Localize("Holidays")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="users-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-user"></i><span>@Localize("Users")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addUser-menu"><a class="nav-link" asp-controller="Users" asp-action="AddUser">@Localize("Add User")</a></li>
+                                    <li id="userList-menu"><a class="nav-link" asp-controller="Users" asp-action="Index">@Localize("User List")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="utilities-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-screwdriver-wrench"></i><span>@Localize("Utilities")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="backup-menu"><a class="nav-link" asp-controller="Utilities" asp-action="Backup">@Localize("Backup")</a></li>
+                                    <li id="auditlog-menu"><a class="nav-link" asp-controller="Utilities" asp-action="AuditLog">@Localize("Audit Log")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="setting-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-gear"></i><span>@Localize("Setting")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="general-menu"><a class="nav-link" asp-controller="Setting" asp-action="General">@Localize("General")</a></li>
+                                    <li id="currency-menu"><a class="nav-link" asp-controller="Setting" asp-action="System">@Localize("System")</a></li>
+                                    <li id="company-menu"><a class="nav-link" asp-controller="Setting" asp-action="Company">@Localize("Company")</a></li>
+                                    <li id="email-menu"><a class="nav-link" asp-controller="Setting" asp-action="Email">@Localize("Email")</a></li>
+                                    <li id="language-menu"><a class="nav-link" asp-controller="Setting" asp-action="Languages">@Localize("Language")</a></li>
+                                    <li id="paymentMethod-menu"><a class="nav-link" asp-controller="Setting" asp-action="PaymentMethods">@Localize("Payment Methods")</a></li>
+                                    <li id="taxRateList-menu"><a class="nav-link" asp-controller="Setting" asp-action="TaxRates">@Localize("Tax Rates")</a></li>
+                                    <li id="discountList-menu"><a class="nav-link" asp-controller="Setting" asp-action="Discounts">@Localize("Discounts")</a></li>
+                                    <li id="chargeList-menu"><a class="nav-link" asp-controller="Setting" asp-action="Charges">@Localize("Charges")</a></li>
+                                    <li id="emailtemplatelist-menu"><a class="nav-link" asp-controller="Setting" asp-action="EmailTemplates">@Localize("Email Templates")</a></li>
+                                    <li id="theme-menu"><a class="nav-link" asp-controller="Setting" asp-action="Theme">@Localize("Theme")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="account-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-user-circle"></i><span>@Localize("My Account")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="changePassword-menu"><a class="nav-link" asp-controller="Account" asp-action="ChangePassword">@Localize("Change Password")</a></li>
+                                    <li><a class="nav-link" asp-controller="Account" asp-action="LogOut">@Localize("Logout")</a></li>
+                                </ul>
+                            </li>
+                        }
+                        else if (User.IsInRole("staff"))
+                        {
+                            <li id="dashboard-menu"><a asp-controller="Home" asp-action="Index" class="nav-link"><i class="fas fa-tachometer-alt"></i><span>@Localize("Dashboard")</span></a></li>
+                            <li class="dropdown" id="pos-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-box"></i><span>@Localize("Sale")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="nav-link" asp-controller="POS" asp-action="Index">@Localize("POS")</a></li>
+                                    <li><a class="nav-link" asp-controller="POS" asp-action="Kitchen">@Localize("Kitchen")</a></li>
+                                    <li><a class="nav-link" asp-controller="WorkPeriod" asp-action="Index">@Localize("Register")</a></li>
+                                    <li id="orderList-menu"><a class="nav-link" asp-controller="POS" asp-action="OrderHistory">@Localize("Order History")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="account-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-user-circle"></i><span>@Localize("My Account")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="changePassword-menu"><a class="nav-link" asp-controller="Account" asp-action="ChangePassword">@Localize("Change Password")</a></li>
+                                    <li><a class="nav-link" asp-controller="Account" asp-action="LogOut">@Localize("Logout")</a></li>
+                                </ul>
+                            </li>
+                        }
+                        else if (User.IsInRole("waiter"))
+                        {
+                            <li id="order-menu"><a asp-controller="Waiter" asp-action="Index" class="nav-link"><i class="fas fa-box"></i><span>@Localize("Orders")</span></a></li>
+                            <li class="dropdown" id="account-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-user-circle"></i><span>@Localize("My Account")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="changePassword-menu"><a class="nav-link" asp-controller="Account" asp-action="ChangePassword">@Localize("Change Password")</a></li>
+                                    <li><a class="nav-link" asp-controller="Account" asp-action="LogOut">@Localize("Logout")</a></li>
+                                </ul>
+                            </li>
+                        }
+                        else if (User.IsInRole("deliveryman"))
+                        {
+                            <li id="order-menu"><a asp-controller="DeliveryMan" asp-action="Index" class="nav-link"><i class="fas fa-box"></i><span>@Localize("Orders")</span></a></li>
+                            <li class="dropdown" id="account-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-user-circle"></i><span>@Localize("My Account")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="changePassword-menu"><a class="nav-link" asp-controller="Account" asp-action="ChangePassword">@Localize("Change Password")</a></li>
+                                    <li><a class="nav-link" asp-controller="Account" asp-action="LogOut">@Localize("Logout")</a></li>
+                                </ul>
+                            </li>
+                        }
+                    </ul>
+                    <div class="footer">
+                        @Html.Raw(GetSetting.Copyright)
+                    </div>
+                </aside>
+            </div>
+            <!-- Main Content -->
+            <div class="main-content">
+                <section class="section">
+                    <div class="section-body">
+
+                        @RenderBody()
+
+                    </div>
+                </section>
+
+                <div class="modal language fade" id="LanguageModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="btn btn-light" data-toggle="tooltip" title="Back" data-dismiss="modal">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <h5 class="modal-title">@Localize("Change Language")</h5>
+                                <span></span>
+                            </div>
+                            <div class="modal-body">
+                                <ul>
+                                    @foreach (var item in uicultureList)
+                                    {
+                                        var img = "/images/flags/" + General.GetTwoLetterCountryCode(item) + ".svg";
+                                        <li>
+                                            <a href="/Home/ChangeLanguage?culture=@item.Name&name=@item.EnglishName&returnUrl=@returnUrl">
+                                                <img src="@img" />
+                                                @item.NativeName
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @await RenderSectionAsync("models", required: false)
+
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-confirm/jquery-confirm.min.js"></script>
+    <script src="~/lib/izitoast/js/iziToast.min.js"></script>
+    <script src="~/lib/cleave/cleave.min.js"></script>
+    <script src="~/lib/datatable/js/jquery.dataTables.min.js"></script>
+    <script src="~/lib/datatable/js/dataTables.bootstrap5.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap-select.min.js"></script>
+
+    <script>
+        const lang = {
+            region: '@Html.Raw(CultureInfo.CurrentCulture.Name)',
+            success: '@Localize("Success")',
+            error: '@Localize("Error")',
+            warning: '@Localize("Warning")',
+            noresult: '@Localize("No Result Found")',
+        };
+
+        const currencyformat = {
+            position: '@GetSetting.CurrencyPosition',
+            symbol: '@Html.Raw(GetSetting.CurrencySymbol)',
+            decimalseparator: '@Html.Raw(CultureInfo.CurrentCulture.NumberFormat.CurrencyDecimalSeparator)',
+            groupseparator: '@Html.Raw(CultureInfo.CurrentCulture.NumberFormat.CurrencyGroupSeparator)',
+        };
+
+        const numberformat = {
+            decimalseparator: '@Html.Raw(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)',
+            groupseparator: '@Html.Raw(CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator)',
+        };
+
+    </script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Page Specific JS File -->
+    @await RenderSectionAsync("scripts", required: false)
+
+</body>
+</html>

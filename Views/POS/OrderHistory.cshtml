@@ -1,0 +1,401 @@
+﻿@model IEnumerable<Saffrat.Models.Order>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Order History");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var start = Convert.ToDateTime(ViewBag.start).ToString("yyyy-MM-dd");
+    var end = Convert.ToDateTime(ViewBag.end).ToString("yyyy-MM-dd");
+
+    string[] orderTypes = { "None", "Dine In", "Pick Up", "Delivery" };
+    orderTypes[1] = Localize("Dine In").ToString();
+    orderTypes[2] = Localize("Pick Up").ToString();
+    orderTypes[3] = Localize("Delivery").ToString();
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Order History")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Order History")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="OrderHistory" asp-controller="POS" method="get" class="needs-validation" novalidate="">
+                    <div class="row">
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("From") <code>*</code></label>
+                            <input type="date" name="start" value="@start" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("To") <code>*</code></label>
+                            <input type="date" name="end" value="@end" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("Payment Status")</label>
+                            <select class="form-control selectpicker" id="status" name="status">
+                                <option value="">@Localize("All")</option>
+                                <option value="paid">@Localize("Paid")</option>
+                                <option value="unpaid">@Localize("Unpaid")</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
+                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("#")</th>
+                                <th>@Localize("Customer")</th>
+                                <th>@Localize("Order Type")</th>
+                                <th>@Localize("Total")</th>
+                                <th>@Localize("Paid")</th>
+                                <th>@Localize("Due")</th>
+                                <th>@Localize("Created At")</th>
+                                <th>@Localize("Actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Id</td>
+                                    @if (User.IsInRole("admin"))
+                                    {
+                                        <td><a asp-controller="People" asp-action="ViewCustomer" asp-route-Id="@item.CustomerId">@item.Customer.CustomerName</a></td>
+                                    }
+                                    else
+                                    {
+                                        <td>@item.Customer.CustomerName</td>
+                                    }
+                                    <td>@orderTypes[item.OrderType]</td>
+                                    <td>@GetCurrency(item.Total)</td>
+                                    <td>@GetCurrency(item.PaidAmount)</td>
+                                    <td>@GetCurrency(item.DueAmount)</td>
+                                    <td>@item.CreatedAt</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <div class="dropdown-menu">
+                                            @if (item.DueAmount > 0)
+                                            {
+                                                <a class="dropdown-item btn" href="javascript:void(0);" onclick="ReceiveDue(@item.Id);"><i class="fas fa-money-bill"></i> <span class="ml-2">@Localize("Receive Due Amount")</span></a>
+                                            }
+                                            <a class="dropdown-item btn" href="javascript:void(0);" onclick="OpenModal(@item.Id);"><i class="fas fa-eye"></i> <span class="ml-2">@Localize("View")</span></a>
+                                            <a class="dropdown-item btn" href="javascript:void(0);" onclick="PrintFinalInvoice(@item.Id);"><i class="fas fa-print"></i> <span class="ml-2">@Localize("Print Invoice")</span></a>
+                                            @if (User.IsInRole("admin"))
+                                            {
+                                                <a class="dropdown-item btn" href="javascript:void(0);" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section models{
+    <!-- Modal -->
+    <div class="modal right fade" id="orderDetailModel" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary p-2">
+                    <strong class="modal-title text-white">@Localize("Order No.") <span id="m-Id"></span></strong>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <div class="modal-body p-0" id="m-body">
+                    <div class="order-items" id="m-items">
+                    </div>
+                    <div style="position:absolute; bottom:0; width:100%;">
+                        <div class="p-2 mt-4">
+                            <div class="d-flex">
+                                <div>@Localize("Sub Total")</div>
+                                <div class="ms-auto" id="d-SubTotal"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div>@Localize("Discount")</div>
+                                <div class="ms-auto" id="d-Discount"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div>@Localize("Tax")</div>
+                                <div class="ms-auto" id="d-Tax"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div>@Localize("Charge")</div>
+                                <div class="ms-auto" id="d-Charges"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div><strong>@Localize("Total")</strong></div>
+                                <div class="ms-auto"><strong id="d-Total"></strong></div>
+                            </div>
+                        </div>
+                        <div class="bg-whitesmoke p-2">
+                            <button class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="DropDown">
+                                <i class="fas fa-user"></i><span class="d-CustomerName"></span> <i class="fas fa-eye"></i>
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="DropDown" style="padding:8px;">
+                                <p class="mb-0"><i class="fas fa-circle-user"></i> <span class="ml-2 d-CustomerName"></span></p>
+                                <p class="mb-0"><i class="fas fa-phone"></i> <span class="ml-2 d-CustomerPhone"></span></p>
+                                <p class="mb-0"><i class="fas fa-envelope"></i> <span class="ml-2 d-CustomerEmail"></span></p>
+                                <p class="mb-0"><i class="fas fa-location-dot"></i> <span class="ml-2 d-CustomerAddress"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- modal-content -->
+        </div><!-- modal-dialog -->
+    </div><!-- modal -->
+}
+
+@section scripts{
+    <script>
+        $("#status").val('@ViewBag.status');
+
+        $("#pos-menu").addClass("active");
+        $("#orderList-menu").addClass("active");
+
+        var dt = $('#datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            order: [['0', 'desc']],
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [7]
+                }
+            ],
+            'lengthMenu': [[50, 100, 150, 250, -1], [50, 100, 150, 250, "All"]],
+        });
+
+        function OpenModal(id) {
+            $("#orderDetailModel").modal('show');
+            $("#m-body").addClass("card-progress");
+            $("#m-items").html("");
+            $("#m-Id").text("");
+            $.ajax({
+                url: '/POS/GetClosedOrderDetail',
+                type: 'GET',
+                data: {
+                    Id: id
+                },
+                dataType: "json",
+                success: function (data) {
+                    if (data.status == "success") {
+                        var order = JSON.parse(data.order);
+                        var items = order.OrderDetails;
+
+                        var htmlText = '<table class="table table-sm"><thead><tr><th>@Localize("Food Item")</th><th class="text-center">@Localize("Quantity")</th><th class="text-end">@Localize("Price")</th></tr></thead><tbody>';
+                        for (var i = 0; i < items.length; i++) {
+                            htmlText += '<tr><td><div>' + items[i].Item.ItemName + '</div><div>';
+                            var modifiers = items[i].OrderItemModifiers;
+                            for (var j = 0; j < modifiers.length; j++) {
+                                htmlText += '<span class="badge badge-primary m-1">' + modifiers[j].Modifier.Title + '</span>';
+                            }
+                            htmlText += '</div></td>';
+                            htmlText += '<td class="text-center">' + items[i].Quantity + '</td>';
+                            htmlText += '<td class="text-end">' + GetCurrency(items[i].Total) + '</td></tr>';
+                        }
+                        htmlText += '</tbody></table>';
+                        $("#m-items").html(htmlText);
+
+                        $("#m-Id").text(order.Id);
+                        $("#d-SubTotal").text(GetCurrency(order.SubTotal));
+                        $("#d-Discount").text(GetCurrency(order.DiscountTotal));
+                        $("#d-Tax").text(GetCurrency(order.TaxTotal));
+                        $("#d-Charges").text(GetCurrency(order.ChargeTotal));
+                        $("#d-Total").text(GetCurrency(order.Total));
+                        $('.d-CustomerName').text(order.Customer.CustomerName);
+                        $('.d-CustomerEmail').text(order.Customer.Email);
+                        $('.d-CustomerPhone').text(order.Customer.Phone);
+                        $('.d-CustomerAddress').text(order.Customer.Address);
+                    }
+                    else {
+                        errorMessage(data.message);
+                        $("#orderDetailModel").modal('hide');
+                    }
+                },
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.href = '/Account/Login';
+                    }
+                    else if (data.status == 403) {
+                        errorMessage('@Localize("Access denied.")');
+                    }
+                    else {
+                        console.log(JSON.stringify(data));
+                    }
+                    $("#orderDetailModel").modal('hide');
+                },
+                complete: function () {
+                    $("#m-body").removeClass("card-progress");
+                }
+            });
+        }
+
+        function Delete(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/POS/DeleteOrder",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Order deleted successfully.")');
+                                        dt.row("#row" + id).remove().draw();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function ReceiveDue(id) {
+            $.alert({
+                title: '@Localize("Receive Due Amount?")',
+                content: '@Localize("Are you sure want to receive due amount.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-check"></i> @Localize("Receive")',
+                        btnClass: 'btn btn-primary',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/POS/ReceiveDue",
+                                type: 'PUT',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Due amount received successfully.")');
+                                        window.location.reload(true);
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function PrintFinalInvoice(id) {
+            var strWindowFeatures = "location=yes,height=570,width=520,scrollbars=yes,status=yes";
+            var link = "/POS/PrintFinalInvoice/" + id;
+            var win = window.open(link, "_blank", strWindowFeatures);
+        }
+    </script>
+}

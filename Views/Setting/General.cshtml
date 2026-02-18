@@ -1,0 +1,208 @@
+﻿@model Saffrat.Models.AppSetting
+
+@using Saffrat.Resources
+@using System.Collections.ObjectModel;
+@inherits LocService<TModel>
+
+@{
+    ReadOnlyCollection<TimeZoneInfo> tz = TimeZoneInfo.GetSystemTimeZones();
+}
+@{
+    ViewData["Title"] = @Localize("General Setting");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("General Setting")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("General Setting")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("App Name") <code>*</code></label>
+                            <input asp-for="AppName" type="text" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter app name.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Default Customer") <code>*</code></label>
+                            <select asp-for="DefaultCustomer" class="form-control selectpicker" data-live-search="true" required>
+                                @foreach (var item in ViewBag.customers)
+                                {
+                                    <option value="@item.Id">@item.CustomerName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select default customer.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Sale Account") <code>*</code></label>
+                            <select asp-for="SaleAccount" class="form-control selectpicker" data-live-search="true" required>
+                                @foreach (var item in ViewBag.accounts)
+                                {
+                                    <option value="@item.Id">@item.AccountName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select sale account.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Purchase Account") <code>*</code></label>
+                            <select asp-for="PurchaseAccount" class="form-control selectpicker" data-live-search="true" required>
+                                @foreach (var item in ViewBag.accounts)
+                                {
+                                    <option value="@item.Id">@item.AccountName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select purchase account.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Payroll Account") <code>*</code></label>
+                            <select asp-for="PayrollAccount" class="form-control selectpicker" data-live-search="true" required>
+                                @foreach (var item in ViewBag.accounts)
+                                {
+                                    <option value="@item.Id">@item.AccountName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select payroll account.")
+                            </div>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label class="control-label">@Localize("Copyright") <code>*</code></label>
+                            <input type="text" asp-for="Copyright" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter copyright.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" asp-for="SendInvoiceEmail">
+                        <label class="control-label" asp-for="SendInvoiceEmail">@Localize("Send Invoice Email")</label>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 col-lg-3 form-group">
+                            <label class="control-label">@Localize("Logo")</label>
+                            <div id="imagePreview1" class="image-preview" style="background-image:url('@Model.Logo')">
+                                <label>@Localize("Choose File")</label>
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" asp-for="Logo">
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3 form-group">
+                            <label class="control-label">@Localize("Favicon")</label>
+                            <div id="imagePreview3" class="image-preview" style="background-image:url('@Model.Favicon')">
+                                <label>@Localize("Choose File")</label>
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" asp-for="Favicon">
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3 form-group">
+                            <label class="control-label">@Localize("Preloader")</label>
+                            <div id="imagePreview4" class="image-preview" style="background-image:url('@Model.Preloader')">
+                                <label>@Localize("Choose File")</label>
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico" asp-for="Preloader">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Save Changes")</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+
+    <script>
+        Logo.onchange = evt => {
+            const [file] = Logo.files
+            if (file) {
+                $('#imagePreview1').css('background-image', 'url("' + URL.createObjectURL(file) + '")');
+            }
+        }
+
+        Favicon.onchange = evt => {
+            const [file] = Favicon.files
+            if (file) {
+                $('#imagePreview3').css('background-image', 'url("' + URL.createObjectURL(file) + '")');
+            }
+        }
+
+        Preloader.onchange = evt => {
+            const [file] = Preloader.files
+            if (file) {
+                $('#imagePreview4').css('background-image', 'url("' + URL.createObjectURL(file) + '")');
+            }
+        }
+
+        $("#setting-menu").addClass("active");
+        $("#general-menu").addClass("active");
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Setting/General',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("General Setting saved successfully.")');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+    </script>
+}

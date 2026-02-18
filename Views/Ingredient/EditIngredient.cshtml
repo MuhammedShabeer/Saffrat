@@ -1,0 +1,138 @@
+﻿@model Saffrat.Models.IngredientItem
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Update Ingredient");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Update Ingredient")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Ingredient" asp-action="Index">@Localize("Ingredients")</a></li>
+                    <li class="breadcrumb-item">@Localize("Update Ingredient")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <form id="frm" class="needs-validation" novalidate="">
+                <div class="card-body">
+                    <input asp-for="Id" type="hidden" />
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Item Name") <code>*</code></label>
+                        <input asp-for="ItemName" type="text" class="form-control" required />
+                        <div class="invalid-feedback">
+                            @Localize("Please enter item name.")
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">@Localize("Description")</label>
+                        <textarea asp-for="Description" class="form-control"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Price") <code>*</code></label>
+                            <div class="input-group">
+                                <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                <input asp-for="Price" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                            </div>
+                            <div class="invalid-feedback">
+                                @Localize("Please enter price.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Quantity") <code>*</code></label>
+                            <input asp-for="Quantity" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter quantity.")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Unit") <code>*</code></label>
+                            <input asp-for="Unit" type="text" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("please enter unit.")
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Alert Quantity") <code>*</code></label>
+                            <input asp-for="AlertQuantity" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter alert quantity.")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary mr-1" type="submit" id="submit">@Localize("Update")</button>
+                    <a asp-controller="Ingredient" asp-action="Index" class="btn btn-secondary mr-1">@Localize("Back To List")</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+        $("#ingredient-menu").addClass("active");
+        $("#ingredientList-menu").addClass("active");
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            if (performValidation($("#frm"))) {
+                $("#submit").addClass("disabled btn-progress");
+                $.ajax({
+                    url: '/Ingredient/UpdateIngredient',
+                    type: 'PUT',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage('@Localize("Ingredient Item updated successfully.")');
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    },
+                    complete: function () {
+                        $("#submit").removeClass("disabled btn-progress");
+                        $("#frm").removeClass("was-validated");
+                    }
+                });
+            }
+        });
+    </script>
+}

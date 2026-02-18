@@ -1,0 +1,272 @@
+﻿@model IEnumerable<Saffrat.Models.Purchase>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Purchase History");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Purchase History")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Purchase History")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <a asp-controller="Purchase" asp-action="AddPurchase" class="btn btn-primary">
+                        @Localize("Add New")
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="PurchaseHistory" asp-controller="Purchase" method="get" class="needs-validation" novalidate="">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="control-label">@Localize("Supplier")</label>
+                            <select class="form-control selectpicker" name="supplier" id="supplier">
+                                <option value="">@Localize("All")</option>
+                                @foreach (var item in ViewBag.suppliers)
+                                {
+                                    <option value="@item.Key">@item.Value</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("From") <code>*</code></label>
+                            <input type="date" name="start" value="@ViewBag.start" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("To") <code>*</code></label>
+                            <input type="date" name="end" value="@ViewBag.end" onclick="this.showPicker()" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please select date.")
+                            </div>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label class="control-label">@Localize("Payment Status")</label>
+                            <select class="form-control selectpicker" id="status" name="status">
+                                <option value="">@Localize("All")</option>
+                                <option value="paid">@Localize("Paid")</option>
+                                <option value="unpaid">@Localize("Unpaid")</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
+                    </div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("#")</th>
+                                <th>@Localize("Supplier")</th>
+                                <th>@Localize("Invoice No.")</th>
+                                <th>@Localize("Total")</th>
+                                <th>@Localize("Paid")</th>
+                                <th>@Localize("Due")</th>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Updated By")</th>
+                                <th>@Localize("Actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var id = "row" + item.Id;
+                                <tr id="@id">
+                                    <td>@item.Id</td>
+                                    <td><a asp-controller="People" asp-action="ViewSupplier" asp-route-Id="@item.SupplierId">@item.Supplier.SupplierName</a></td>
+                                    <td>@item.InvoiceNo</td>
+                                    <td>@GetCurrency(item.TotalAmount)</td>
+                                    <td>@GetCurrency(item.PaidAmount)</td>
+                                    <td>@GetCurrency(item.DueAmount)</td>
+                                    <td>@item.PurchaseDate.ToShortDateString()</td>
+                                    <td>@item.UpdatedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <div class="dropdown-menu">
+                                            @if (item.DueAmount > 0)
+                                            {
+                                                <a class="dropdown-item btn" onclick="PayDue(@item.Id);"><i class="fas fa-money-bill"></i> <span class="ml-2">@Localize("Pay Due Amount")</span></a>
+                                            }
+                                            <a class="dropdown-item btn" asp-controller="Purchase" asp-action="EditPurchase" asp-route-Id="@item.Id"><i class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
+                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section scripts{
+    <script>
+        $("#status").val('@ViewBag.status');
+        $("#supplier").val('@ViewBag.supplier');
+
+        $("#purchase-menu").addClass("active");
+        $("#purchaseList-menu").addClass("active");
+
+        var dt = $('#datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            order: [['0', 'desc']],
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [8]
+                }
+            ],
+            'lengthMenu': [[50, 100, 150, 250, -1], [50, 100, 150, 250, "All"]],
+        });
+
+        function Delete(id) {
+            $.alert({
+                title: '@Localize("Are you sure want to delete?")',
+                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-trash"></i> @Localize("Delete")',
+                        btnClass: 'btn btn-danger',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/Purchase/DeletePurchase",
+                                type: 'DELETE',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Purchase deleted successfully.")');
+                                        dt.row("#row" + id).remove().draw();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+
+        function PayDue(id) {
+            $.alert({
+                title: '@Localize("Pay Due Amount?")',
+                content: '@Localize("Are you sure want to pay due amount.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-check"></i> @Localize("Pay Now")',
+                        btnClass: 'btn btn-primary',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/Purchase/PayDue",
+                                type: 'PUT',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        setCookie('successMessage', '@Localize("Due Amount paid successfully.")');
+                                        window.location.reload(true);
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+}

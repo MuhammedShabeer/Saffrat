@@ -1,0 +1,325 @@
+﻿@model IEnumerable<Saffrat.Models.RunningOrder>
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Kitchen");
+    Layout = "~/Views/Shared/_POSLayout.cshtml";
+    string[] orderTypes = { "None", "Dine In", "Pick Up", "Delivery" };
+    orderTypes[1] = Localize("Dine In").ToString();
+    orderTypes[2] = Localize("Pick Up").ToString();
+    orderTypes[3] = Localize("Delivery").ToString();
+}
+@section styles{
+}
+
+<nav class="top-nav" style="margin-top:71px; margin-bottom:3px;">
+    <div class="row g-0">
+        <div class="col-12">
+            <ul class="list-items text-black" id="orderTypes">
+                <li class="item" id="all" data-orderType="0">
+                    <i class="fas fa-rectangle-list"></i>
+                    <span>@Localize("All")</span>
+                </li>
+                <li class="item" id="dinein" data-orderType="1">
+                    <i class="fas fa-store"></i>
+                    <span>@Localize("Dine In")</span>
+                </li>
+                <li class="item" id="pickup" data-orderType="2">
+                    <i class="fas fa-person-walking"></i>
+                    <span>@Localize("Pick Up")</span>
+                </li>
+                <li class="item" id="delivery" data-orderType="3">
+                    <i class="fas fa-truck"></i>
+                    <span>@Localize("Delivery")</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="kitchen p-2">
+    <div class="row g-3" id="openedOrders">
+        @foreach (var item in Model)
+        {
+            var id = "openedOrder" + item.Id;
+            var ordertype = "ordertype" + item.OrderType;
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3 @ordertype" id="@id">
+                <div class="card mb-0">
+                    <div class="card-header bg-primary p-2">
+                        <div class="order-header-btns">
+                            <a class="btn btn-icon icon-left">
+                                <i class="fas fa-hashtag"></i> @item.Id
+                            </a>
+                            <a class="btn btn-icon icon-left">
+                                <i class="fas fa-cube"></i> @orderTypes[item.OrderType]
+                            </a>
+                            <a class="btn btn-icon icon-left">
+                                <i class="fas fa-user"></i><span>@item.Customer.CustomerName</span>
+                            </a>
+                            @if (item.OrderType == 1)
+                            {
+                                <a class="btn btn-icon icon-left">
+                                    <i class="fas fa-users"></i><span>@Localize("Guest") @item.Guests</span>
+                                </a>
+                                <a class="btn btn-icon icon-left">
+                                    <i class="fa table-white"></i><span>@item.TableName</span>
+                                </a>
+                            }
+                            @if (!String.IsNullOrEmpty(item.WaiterOrDriver))
+                            {
+                                <a class="btn btn-icon icon-left">
+                                    <i class="fas fa-building-user"></i><span>@item.WaiterOrDriver</span>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="order-detail">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("Food Item")</th>
+                                        <th class="text-center">@Localize("Quantity")</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var orderDetail in item.RunningOrderDetails)
+                                    {
+                                        decimal price = Convert.ToDecimal(orderDetail.ModifierTotal + orderDetail.Price);
+                                        price = Math.Round(Convert.ToDecimal(price * orderDetail.Quantity), 2);
+                                        <tr>
+                                            <td>
+                                                <div>@orderDetail.Item.ItemName</div>
+                                                <div>
+                                                    @foreach (var modifier in orderDetail.RunningOrderItemModifiers)
+                                                    {
+                                                        <span class="badge badge-primary m-1">@modifier.Modifier.Title</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="text-center">@orderDetail.Quantity</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-whitesmoke p-2">
+                        <div class="d-flex justify-content-between">
+                            <div class="pt-1">
+                                <strong>@Localize("Note")</strong> @item.Note
+                            </div>
+                            <div class="ms-auto action-btn">
+                                @if (item.Status == 1)
+                                {
+                                    <button class="btn btn-primary ms-auto" onclick="MarkOrderReady(@item.Id);">@Localize("Mark Ready")</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section scripts{
+    <script src="~/lib/signalr/dist/browser/signalr.js"></script>
+
+    <script>
+        var selectOrderType = 0;
+        $('#all').addClass("active");
+        $("#orderTypes").on("click", "li.item", function () {
+            var orderType = $(this).data("ordertype");
+            selectedOrderType = orderType;
+            DisplayOrders(selectedOrderType);
+        });
+
+        function DisplayOrders(orderType) {
+            if (orderType == 0) {
+                $('#all').addClass("active");
+                $('#dinein').removeClass("active");
+                $('#pickup').removeClass("active");
+                $('#delivery').removeClass("active");
+                $(".ordertype1").removeClass('d-none');
+                $(".ordertype2").removeClass('d-none');
+                $(".ordertype3").removeClass('d-none');
+            }
+            else if (orderType == 1) {
+                $('#all').removeClass("active");
+                $('#dinein').addClass("active");
+                $('#pickup').removeClass("active");
+                $('#delivery').removeClass("active");
+                $(".ordertype1").removeClass('d-none');
+                $(".ordertype2").addClass('d-none');
+                $(".ordertype3").addClass('d-none');
+            }
+            else if (orderType == 2) {
+                $('#all').removeClass("active");
+                $('#dinein').removeClass("active");
+                $('#pickup').addClass("active");
+                $('#delivery').removeClass("active");
+                $(".ordertype1").addClass('d-none');
+                $(".ordertype2").removeClass('d-none');
+                $(".ordertype3").addClass('d-none');
+            }
+            else if (orderType == 3) {
+                $('#all').removeClass("active");
+                $('#dinein').removeClass("active");
+                $('#pickup').removeClass("active");
+                $('#delivery').addClass("active");
+                $(".ordertype1").addClass('d-none');
+                $(".ordertype2").addClass('d-none');
+                $(".ordertype3").removeClass('d-none');
+            }
+        }
+
+
+        var orderTypes = ['None', '@Localize("Dine In")', '@Localize("Pick Up")', '@Localize("Delivery")'];
+        var connection = new signalR.HubConnectionBuilder().withUrl("/notificationHub").build();
+
+        connection.on("OrderNotification", function (operation, orderId) {
+            console.log(operation);
+            if (operation == 'closed' || operation == 'ready') {
+                $("#openedOrder" + orderId).remove();
+            }
+            else {
+                $.ajax({
+                    url: '/POS/GetRunningOrderDetail',
+                    type: 'GET',
+                    data: {
+                        Id: orderId
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status == "success") {
+                            var order = JSON.parse(data.order);
+                            var items = order.RunningOrderDetails;
+                            if (order.Status != 1) {
+                                return;
+                            }
+
+                            var htmlText = '';
+                            htmlText += '<div class="card mb-0"><div class="card-header bg-primary p-2"><div class="order-header-btns"></a>';
+                            htmlText += '<a class="btn btn-icon icon-left"><i class="fas fa-hashtag"></i>' + order.Id + '</a>';
+                            htmlText += '<a class="btn btn-icon icon-left"><i class="fas fa-cube"></i>' + orderTypes[order.OrderType] + '</a>';
+                            htmlText += '<a class="btn btn-icon icon-left"><i class="fas fa-user"></i>' + order.Customer.CustomerName + '</a>';
+
+                            if (order.OrderType == 1) {
+                                htmlText += '<a class="btn btn-icon icon-left"><i class="fas fa-users"></i>@Localize("Guest") ' + order.Guests + '</a>';
+                                htmlText += '<a class="btn btn-icon icon-left"><i class="fa table-white"></i>' + order.TableName + '</a>';
+                            }
+                            if (order.WaiterOrDriver != '') {
+                                htmlText += '<a class="btn btn-icon icon-left"><i class="fas fa-building-user"></i>' + order.WaiterOrDriver + '</a>';
+                            }
+                            htmlText += '</div></div><div class="card-body p-0"><div class="order-detail"><table class="table table-sm"><thead><tr><th>@Localize("Food Item")</th><th class="text-center">@Localize("Quantity")</th></tr></thead><tbody>';
+
+                            for (var i = 0; i < items.length; i++) {
+                                htmlText += '<tr><td><div>' + items[i].Item.ItemName + '</div><div>';
+                                var modifiers = items[i].RunningOrderItemModifiers;
+                                for (var j = 0; j < modifiers.length; j++) {
+                                    htmlText += '<span class="badge badge-primary m-1">' + modifiers[j].Modifier.Title + '</span>';
+                                }
+                                htmlText += '</div></td>';
+                                htmlText += '<td class="text-center">' + items[i].Quantity + '</td>';
+                            }
+                            htmlText += '</tbody></table></div></div>';
+                            htmlText += '<div class="card-footer bg-whitesmoke p-2"><div class="d-flex justify-content-between"><div class="pt-1">';
+                            htmlText += '<strong>@Localize("Note")</strong> ' + order.Note + '</div><div class="ms-auto action-btn">';
+                            if (order.Status == 1) {
+                                htmlText += '<button class="btn btn-primary ms-auto" onclick="MarkOrderReady(' + order.Id + ');">@Localize("Mark Ready")</button>';
+                            }
+                            htmlText += '</div></div></div></div>';
+
+                            if (!$('#openedOrder' + order.Id).length) {
+                                var html = '<div class="col-12 col-sm-6 col-md-4 col-lg-3 ordertype' + order.OrderType + '" id="openedOrder' + order.Id + '" data-id="' + order.Id + '">' + htmlText + '</div>';
+                                $('#openedOrders').append(html);
+                                DisplayOrders(selectedOrderType);
+                            } else {
+                                $('#openedOrder' + order.Id).html(htmlText);
+                            }
+                        }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
+                        }
+                    }
+                });
+            }
+        });
+
+        connection.start().then(function () {
+            console.log("Connected to server successfully.");
+        }).catch(function (err) {
+            console.log("Error while connecting with server.");
+        });
+    </script>
+
+    <script>
+        function MarkOrderReady(id) {
+            $.alert({
+                title: '@Localize("Mark Order Ready?")',
+                content: '@Localize("Are you sure want to mark order ready.")',
+                rtl: isRTL(),
+                theme: 'modern',
+                buttons: {
+                    confirm: {
+                        text: '<i class="fa fa-check"></i> @Localize("Mark Ready")',
+                        btnClass: 'btn btn-primary',
+                        action: function (btn) {
+                            var self = this;
+                            self.showLoading(true);
+                            $.ajax({
+                                url: "/POS/MarkOrderReady",
+                                type: 'POST',
+                                data: {
+                                    Id: id
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Order status marked as ready successfully.")');
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    self.close();
+                                }
+                            });
+                            return false;
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+}
