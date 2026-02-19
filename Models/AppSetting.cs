@@ -38,5 +38,8 @@ namespace Saffrat.Models
         public string ThemeColor { get; set; }
         public string ThemeSidebar { get; set; }
         public string ThemeNavbar { get; set; }
+        public int PrinterMethod { get; set; } // 0: Browser, 1: USB
+        public int PrinterPaperWidth { get; set; } // 80 or 58
+        public string InvoiceLogo { get; set; }
     }
 }

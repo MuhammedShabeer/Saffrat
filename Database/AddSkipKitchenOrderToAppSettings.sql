@@ -1,2 +1,0 @@
-ALTER TABLE AppSettings ADD SkipKitchenOrder BIT NOT NULL DEFAULT 0;
-GO

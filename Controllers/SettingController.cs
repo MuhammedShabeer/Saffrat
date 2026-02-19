@@ -37,6 +37,54 @@ namespace Saffrat.Controllers
             return View(GetSetting);
         }
 
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public IActionResult Printer()
+        {
+            return View(GetSetting);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> Printer(int PrinterMethod, int PrinterPaperWidth, IFormFile InvoiceLogo)
+        {
+            var response = new Dictionary<string, string>();
+            if (GetSetting != null)
+            {
+                if (InvoiceLogo != null)
+                {
+                    string fileName = Uploader.UploadImage(InvoiceLogo);
+                    if (fileName == null)
+                    {
+                        response.Add("status", "error");
+                        response.Add("message", "Logo file not supported.");
+                        return Json(response);
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(GetSetting.InvoiceLogo))
+                            Uploader.DeleteFile(GetSetting.InvoiceLogo);
+                        GetSetting.InvoiceLogo = fileName;
+                    }
+                }
+
+                GetSetting.PrinterMethod = PrinterMethod;
+                GetSetting.PrinterPaperWidth = PrinterPaperWidth;
+
+                _dbContext.AppSettings.Update(GetSetting);
+                await _dbContext.SaveChangesAsync();
+
+                response.Add("status", "success");
+                response.Add("message", "success");
+            }
+            else
+            {
+                response.Add("status", "error");
+                response.Add("message", "Something went wrong.");
+            }
+            return Json(response);
+        }
+
         [HttpPost]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> General([Required] string AppName,

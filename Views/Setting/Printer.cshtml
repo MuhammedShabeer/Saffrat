@@ -1,0 +1,195 @@
+@model Saffrat.Models.AppSetting
+@using Saffrat.Resources
+@inherits LocService<TModel>
+@{
+    ViewData["Title"] = @Localize("Printer Setting");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Printer Setting")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i
+                                class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Printer Setting")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>@Localize("Printer Configuration")</h4>
+            </div>
+            <div class="card-body">
+                <form id="frm" class="needs-validation" novalidate="">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Printing Method")</label>
+                            <select asp-for="PrinterMethod" class="form-control selectpicker" id="PrinterMethod">
+                                <option value="0">@Localize("Browser Print (Default)")</option>
+                                <option value="1">@Localize("Direct USB Print (Silent)")</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Paper Width")</label>
+                            <select asp-for="PrinterPaperWidth" class="form-control selectpicker" id="PrinterPaperWidth">
+                                <option value="80">80mm</option>
+                                <option value="58">58mm</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="usb-settings" class="d-none">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> @Localize("Direct USB Print requires a compatible thermal printer attached via USB. You must use Chrome, Edge, or a browser that supports WebUSB.")
+                        </div>
+                        <div class="form-group">
+                            <button type="button" class="btn btn-outline-primary" id="btnConnectPrinter">
+                                <i class="fas fa-plug"></i> @Localize("Connect to Printer")
+                            </button>
+                            <span id="connectionStatus" class="ml-2 text-muted">@Localize("Not Connected")</span>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" class="btn btn-outline-success" id="btnTestPrint">
+                                <i class="fas fa-print"></i> @Localize("Test Print")
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 col-lg-3 form-group">
+                            <label class="control-label">@Localize("Invoice Logo")</label>
+                            <div id="imagePreview1" class="image-preview" style="background-image:url('@Model.InvoiceLogo')">
+                                <label>@Localize("Choose File")</label>
+                                <input type="file" accept=".jpg, .jpeg, .png, .gif, .svg, .webp, .Jpg, .ico"
+                                    asp-for="InvoiceLogo">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group text-right">
+                        <button type="submit" class="btn btn-primary" id="btnSave">@Localize("Save Changes")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <!-- Generic ESC/POS Encoder Library -->
+    <script src="https://unpkg.com/esc-pos-encoder@1.2.0/dist/esc-pos-encoder.min.js"></script>
+
+    <script>
+        $("#setting-menu").addClass("active");
+        $("#printer-menu").addClass("active");
+
+        var printerDevice = null;
+
+        $(document).ready(function() {
+            toggleUsbSettings();
+
+            $('#PrinterMethod').change(function() {
+                toggleUsbSettings();
+            });
+
+            InvoiceLogo.onchange = evt => {
+                const [file] = InvoiceLogo.files
+                if (file) {
+                    $('#imagePreview1').css('background-image', 'url("' + URL.createObjectURL(file) + '")');
+                }
+            }
+        });
+
+        function toggleUsbSettings() {
+            if ($('#PrinterMethod').val() == '1') {
+                $('#usb-settings').removeClass('d-none');
+            } else {
+                $('#usb-settings').addClass('d-none');
+            }
+        }
+
+        $("#btnConnectPrinter").click(async function() {
+            try {
+                if (navigator.usb) {
+                    printerDevice = await navigator.usb.requestDevice({ filters: [] });
+                    await printerDevice.open();
+                    await printerDevice.selectConfiguration(1);
+                    await printerDevice.claimInterface(0);
+                    $("#connectionStatus").text("Connected: " + printerDevice.productName).removeClass("text-muted").addClass("text-success");
+                    successMessage("@Localize("Printer connected successfully.")");
+                } else {
+                    errorMessage("@Localize("WebUSB is not supported in this browser.")");
+                }
+            } catch (error) {
+                console.error(error);
+                errorMessage("@Localize("Failed to connect to printer:") " + error);
+            }
+        });
+
+        $("#btnTestPrint").click(async function() {
+            if ($('#PrinterMethod').val() == '1') {
+                if (!printerDevice) {
+                    errorMessage("@Localize("Please connect directly to the printer first.")");
+                    return;
+                }
+                try {
+                    var encoder = new EscPosEncoder();
+                    var result = encoder
+                        .initialize()
+                        .text('Test Print Success\n')
+                        .text('--------------------------------\n')
+                        .text('Printer: ' + printerDevice.productName + '\n')
+                        .text('Date: ' + new Date().toLocaleString() + '\n')
+                        .text('\n\n')
+                        .cut()
+                        .encode();
+
+                    await printerDevice.transferOut(1, result); // Endpoint 1 is common for OUT
+                } catch (error) {
+                     console.error(error);
+                     errorMessage("Print failed: " + error);
+                }
+            } else {
+                // Browser print test
+                window.print();
+            }
+        });
+
+        $("#frm").submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            $("#btnSave").addClass("disabled btn-progress");
+            $.ajax({
+                url: '/Setting/Printer',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    if (data.status == "success") {
+                        successMessage('@Localize("Printer settings saved successfully.")');
+                    }
+                    else {
+                        errorMessage(data.message);
+                    }
+                },
+                complete: function () {
+                    $("#btnSave").removeClass("disabled btn-progress");
+                }
+            });
+        });
+    </script>
+}

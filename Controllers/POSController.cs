@@ -1410,6 +1410,59 @@ namespace Saffrat.Controllers
             return Json(response);
         }
 
+        [HttpGet]
+        [Authorize(Roles = "admin,staff")]
+        public async Task<JsonResult> GetOrderJson(int Id)
+        {
+            var order = await _dbContext.Orders.Where(x => x.Id == Id)
+                    .Include(x => x.Customer)
+                    .Include(x => x.OrderDetails)
+                    .ThenInclude(x => x.Item)
+                    .Include(x => x.OrderDetails)
+                    .ThenInclude(x => x.OrderItemModifiers)
+                    .ThenInclude(x => x.Modifier)
+                    .FirstOrDefaultAsync();
+
+            if (order == null)
+            {
+                return Json(new { status = "error", message = "Order not found" });
+            }
+
+            string[] orderTypes = { "", Localize("Dine In"), Localize("Pick Up"), Localize("Delivery") };
+
+            var items = order.OrderDetails.Select(x => new
+            {
+                ItemName = x.Item.ItemName + (string.IsNullOrEmpty(x.Item.ArabicName) ? "" : " - " + x.Item.ArabicName),
+                Quantity = x.Quantity,
+                Total = GetCurrency(x.Total ?? 0),
+                Modifiers = x.OrderItemModifiers.Select(m => m.Modifier.Title).ToList()
+            }).ToList();
+
+            var result = new
+            {
+                CompanyName = GetSetting.CompanyName,
+                CompanyAddress = GetSetting.CompanyAddress,
+                CompanyPhone = GetSetting.CompanyPhone,
+                CompanyTax = GetSetting.CompanyTaxNum,
+                Customer = order.Customer.CustomerName,
+                BillNo = order.Id.ToString(),
+                Date = order.CreatedAt.ToString(),
+                Type = orderTypes[order.OrderType],
+                Table = order.OrderType == 1 ? order.TableName : "",
+                Items = items,
+                SubTotal = GetCurrency(order.SubTotal),
+                Discount = GetCurrency(order.DiscountTotal),
+                Charge = GetCurrency(order.ChargeTotal),
+                Tax = GetCurrency(order.TaxTotal),
+                Total = GetCurrency(order.Total),
+                CreatedBy = order.CreatedBy,
+                ClosedBy = order.ClosedBy,
+                Lang = GetSetting.DefaultLanguage,
+                IsRTL = CultureInfo.GetCultureInfo(GetSetting.DefaultLanguage).TextInfo.IsRightToLeft
+            };
+
+            return Json(result);
+        }
         // Print Closed Order Invoice
         [HttpGet]
         [Authorize(Roles = "admin,staff")]
@@ -1462,12 +1515,86 @@ namespace Saffrat.Controllers
         // Return Left To Right Order Invoice in html format
         private string LTRInvoice(Order order, int lang)
         {
-            var html = @"<!DOCTYPE html><html><head> <meta charset=""UTF-8""> <meta name=""viewport"" content=""width=device-width, initial-scale=1.0""> <meta http-equiv=""X-UA-Compatible"" content=""ie=edge""> <title>Invoice</title> <style>*{font-size: 12px; font-family: 'Arial, Helvetica, sans-serif';}p{margin: 0; margin-bottom: 4px;}table{width: 100%; border-collapse: collapse;}.items tr{border-bottom: 1px solid #000000;}table tr td, table tr th{padding: 3px;}td, th{text-align: left;}.centered{text-align: center; align-content: center;}.right{text-align: right; align-content: right;}.ticket{background-color: #ffffff; max-width: 600px; padding: 1px; margin-left: auto; margin-right: auto;}.logo{display: block; margin-left: auto; margin-right: auto;}.bordered{border: 1px solid #d6dbd9;}.border-top{border-top: 1px dashed #d6dbd9; margin: 6px 0;}.total{border-top: 1px dashed #d6dbd9;}.total .title{font-weight: bold; font-size: 18px;}.total .amount{font-weight: bold; font-size: 18px;}.section{margin-bottom: 10px; padding: 5px;}</style></head><body> <div class=""ticket""> <img src=""{Logo}"" alt=""{CompanyName}"" class=""logo"" height=""80""> <div class=""section bordered""> <p class=""centered""><strong>{TaxInvoiceTitle}</strong></p><p class=""centered""><strong>{CompanyTaxNumber}</strong></p><p class=""border-top""></p><p class=""centered""><strong>{CompanyName}</strong></p><p class=""centered"">{CompanyAddress}</p><p class=""centered"">{PhoneTitle}:{CompanyPhone}</p></div><div class=""section bordered""> <table> <tr> <th>{CustomerTitle}:</th> <td class=""right"">{Customer}</td></tr><tr> <th>{BillNoTitle}:</th> <td class=""right"">{BillNo}</td></tr><tr> <th>{DateTitle}:</th> <td class=""right"">{Date}</td></tr><tr> <th>{TypeTitle}:</th> <td class=""right"">{Type}</td></tr><tr> <th>{TableTitle}</th> <td class=""right"">{Table}</td></tr></table> </div><div class=""section""> <table class=""items""> <tr> <th>{ItemTitle}</th> <th class=""centered"">{QtyTitle}</th> <th class=""right"">{AmountTitle}</th> </tr>{Items}</table> </div><div class=""section bordered""> <table> <tr> <th>{SubTotalTitle}:</th> <td class=""right"">{SubTotal}</td></tr><tr> <th>{DiscountTitle}:</th> <td class=""right"">{Discount}</td></tr><tr> <th>{ChargeTitle}:</th> <td class=""right"">{Charge}</td></tr><tr> <th>{TaxTitle}:</th> <td class=""right"">{Tax}</td></tr><tr> <td colspan=""2""></td></tr><tr class=""total""> <th class=""amount"">{TotalTitle}:</th> <td class=""title right"">{Total}</td></tr></table> </div><div class=""section bordered""> <table> <tr> <th>{CreatedByTitle}:</th> <td class=""right"">{CreatedBy}</td></tr><tr> <th>{ClosedByTitle}:</th> <td class=""right"">{ClosedBy}</td></tr></table> </div></div></body></html>";
+            var logoUrl = !string.IsNullOrEmpty(GetSetting.InvoiceLogo) ? GetSetting.InvoiceLogo : GetSetting.Logo;
+
+            var html = @"<!DOCTYPE html><html><head>
+<meta charset=""UTF-8"">
+<meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+<title>Invoice</title>
+<style>
+@page { size: auto; margin: 0mm; }
+body { margin: 0px; padding: 0px; font-family: 'Arial', sans-serif; font-size: 12px; color: #000; }
+.ticket { width: 100%; max-width: 80mm; margin: 0 auto; padding: 2mm; background-color: #fff; box-sizing: border-box; }
+.centered { text-align: center; }
+.right { text-align: right; }
+.logo { display: block; margin: 0 auto 5px auto; max-width: 100px; height: auto; }
+p { margin: 2px 0; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 4px 0; text-align: left; vertical-align: top; font-size: 12px; }
+.items th { border-bottom: 1px dashed #000; padding: 5px 0; }
+.items td { border-bottom: 1px dashed #eee; padding: 5px 0; }
+.total td, .total th { border-top: 1px dashed #000; font-weight: bold; padding-top: 5px; font-size: 14px; }
+.divider { border-top: 1px dashed #000; margin: 5px 0; }
+</style>
+</head>
+<body>
+<div class=""ticket"">
+    <img src=""{Logo}"" alt=""Logo"" class=""logo"">
+    <div class=""centered"">
+        <p style=""font-weight:bold; font-size:14px;"">{CompanyName}</p>
+        <p>{CompanyAddress}</p>
+        <p>{PhoneTitle}: {CompanyPhone}</p>
+        <p>{CompanyTaxNumber}</p>
+    </div>
+    <div class=""divider""></div>
+    <table>
+        <tr><td>{CustomerTitle}:</td><td class=""right"">{Customer}</td></tr>
+        <tr><td>{BillNoTitle}:</td><td class=""right"">{BillNo}</td></tr>
+        <tr><td>{DateTitle}:</td><td class=""right"">{Date}</td></tr>
+        <tr><td>{TypeTitle}:</td><td class=""right"">{Type}</td></tr>
+        <tr><td>{TableTitle}</td><td class=""right"">{Table}</td></tr>
+    </table>
+    <div class=""divider""></div>
+    <table class=""items"">
+        <thead>
+            <tr>
+                <th>{ItemTitle}</th>
+                <th class=""centered"">{QtyTitle}</th>
+                <th class=""right"">{AmountTitle}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {Items}
+        </tbody>
+    </table>
+    <div class=""divider""></div>
+    <table>
+        <tr><td>{SubTotalTitle}:</td><td class=""right"">{SubTotal}</td></tr>
+        <tr><td>{DiscountTitle}:</td><td class=""right"">{Discount}</td></tr>
+        <tr><td>{ChargeTitle}:</td><td class=""right"">{Charge}</td></tr>
+        <tr><td>{TaxTitle}:</td><td class=""right"">{Tax}</td></tr>
+        <tr class=""total"">
+            <th>{TotalTitle}:</th>
+            <td class=""right"">{Total}</td>
+        </tr>
+    </table>
+    <div class=""divider""></div>
+    <table>
+        <tr><td style=""font-weight:bold;"">{PaymentMethodTitle}:</td><td class=""right"">{PaymentMethod}</td></tr>
+        <tr><td style=""font-weight:bold;"">{PaidAmountTitle}:</td><td class=""right"">{PaidAmount}</td></tr>
+    </table>
+    <div class=""centered"">
+        <p>{CreatedByTitle}: {CreatedBy}</p>
+        <p>{ClosedByTitle}: {ClosedBy}</p>
+        <p style=""margin-top:10px;"">*** Thank You ***</p>
+    </div>
+</div>
+</body></html>";
 
             var itemHtml = "";
             foreach (var item in order.OrderDetails)
             {
-                itemHtml += @"<td>" + item.Item.ItemName + (string.IsNullOrEmpty(item.Item.ArabicName) ? "" : " - " + item.Item.ArabicName);
+                itemHtml += @"<tr><td>" + item.Item.ItemName + (string.IsNullOrEmpty(item.Item.ArabicName) ? "" : " - " + item.Item.ArabicName);
                 if (item.OrderItemModifiers.Count > 0)
                     itemHtml += "<br> - ";
                 var i = 1;
@@ -1488,7 +1615,7 @@ namespace Saffrat.Controllers
             var host = HttpContext.Request.Host;
             using (MemoryStream memoryStream = new())
             {
-                html = html.Replace("{Logo}", String.Format("https://{0}{1}", host, GetSetting.Logo));
+                html = html.Replace("{Logo}", String.Format("https://{0}{1}", host, logoUrl));
                 html = html.Replace("{CompanyTaxNumber}", GetSetting.CompanyTaxNum);
                 html = html.Replace("{CompanyName}", GetSetting.CompanyName);
                 html = html.Replace("{CompanyEmail}", GetSetting.CompanyEmail);
@@ -1518,10 +1645,17 @@ namespace Saffrat.Controllers
                 html = html.Replace("{Tax}", GetCurrency(order.TaxTotal));
                 html = html.Replace("{Total}", GetCurrency(order.Total));
 
+                // Payment Info
+                var paymentMethodName = order.PaymentMethod == "1" ? Localize("Cash", lang) : order.PaymentMethod == "2" ? Localize("Card", lang) : Localize("Other", lang);
+                html = html.Replace("{PaymentMethodTitle}", Localize("Payment Method", lang));
+                html = html.Replace("{PaymentMethod}", paymentMethodName);
+                html = html.Replace("{PaidAmountTitle}", Localize("Paid Amount", lang));
+                html = html.Replace("{PaidAmount}", GetCurrency(order.PaidAmount));
+
+
                 html = html.Replace("{CreatedBy}", order.CreatedBy);
                 html = html.Replace("{ClosedBy}", order.ClosedBy);
 
-                html = html.Replace("{TaxInvoiceTitle}", Localize("Tax Invoice", lang));
                 html = html.Replace("{PhoneTitle}", Localize("Phone", lang));
                 html = html.Replace("{BillNoTitle}", Localize("Order No.", lang));
                 html = html.Replace("{DateTitle}", Localize("Date", lang));
@@ -1542,14 +1676,86 @@ namespace Saffrat.Controllers
         // Return Right To Left Order Invoice in html format
         private string RTLInvoice(Order order, int lang)
         {
-            var html = @"<!DOCTYPE html><html><head> <meta charset=""UTF-8""> <meta name=""viewport"" content=""width=device-width, initial-scale=1.0""> <meta http-equiv=""X-UA-Compatible"" content=""ie=edge""> <title>Invoice</title> <style>*{font-size: 12px; font-family: 'Arial, Helvetica, sans-serif';}p{margin: 0; margin-bottom: 4px;}table{width: 100%; border-collapse: collapse;}.items tr{border-bottom: 1px solid #000000;}table tr td, table tr th{padding: 3px;}td, th{text-align: left;}.centered{text-align: center; align-content: center;}.right{text-align: right; align-content: right;}.ticket{background-color: #ffffff; max-width: 600px; padding: 1px; margin-left: auto; margin-right: auto;}.logo{display: block; margin-left: auto; margin-right: auto;}.bordered{border: 1px solid #d6dbd9;}.border-top{border-top: 1px dashed #d6dbd9; margin: 6px 0;}.total{border-top: 1px dashed #d6dbd9;}.total .title{font-weight: bold; font-size: 18px;}.total .amount{font-weight: bold; font-size: 18px;}.section{margin-bottom: 10px; padding: 5px;}</style></head><body> <div class=""ticket""> <img src=""{Logo}"" alt=""{CompanyName}"" class=""logo"" height=""80""> <div class=""section bordered""> <p class=""centered""><strong>{TaxInvoiceTitle}</strong></p><p class=""centered""><strong>{CompanyTaxNumber}</strong></p><p class=""border-top""></p><p class=""centered""><strong>{CompanyName}</strong></p><p class=""centered"">{CompanyAddress}</p><p class=""centered"">{CompanyPhone}:{PhoneTitle}</p></div><div class=""section bordered""> <table> <tr> <td>{Customer}</td><th class=""right"">:{CustomerTitle}</th> </tr><tr> <td>{BillNo}</td><th class=""right"">:{BillNoTitle}</th> </tr><tr> <td>{Date}</td><th class=""right"">:{DateTitle}</th> </tr><tr> <td>{Type}</td><th class=""right"">:{TypeTitle}</th> </tr><tr> <td>{Table}</td><th class=""right"">{TableTitle}</th> </tr></table> </div><div class=""section""> <table class=""items""> <tr> <th>{AmountTitle}</th> <th class=""centered"">{QtyTitle}</th> <th class=""right"">{ItemTitle}</th> </tr>{Items}</table> </div><div class=""section bordered""> <table> <tr> <td>{SubTotal}</td><th class=""right"">:{SubTotalTitle}</th> </tr><tr> <td>{Discount}</td><th class=""right"">:{DiscountTitle}</th> </tr><tr> <td>{Charge}</td><th class=""right"">:{ChargeTitle}</th> </tr><tr> <td>{Tax}</td><th class=""right"">:{TaxTitle}</th> </tr><tr> <td colspan=""2""></td></tr><tr class=""total""> <td class=""title"">{Total}</td><th class=""right amount"">:{TotalTitle}</th> </tr></table> </div><div class=""section bordered""> <table> <tr> <td>{CreatedBy}</td><th class=""right"">:{CreatedByTitle}</th> </tr><tr> <td>{ClosedBy}</td><th class=""right"">:{ClosedByTitle}</th> </tr></table> </div></div></body></html>";
+            var logoUrl = !string.IsNullOrEmpty(GetSetting.InvoiceLogo) ? GetSetting.InvoiceLogo : GetSetting.Logo;
+
+            var html = @"<!DOCTYPE html><html><head>
+<meta charset=""UTF-8"">
+<meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+<title>Invoice</title>
+<style>
+@page { size: auto; margin: 0mm; }
+body { margin: 0px; padding: 0px; font-family: 'Arial', sans-serif; font-size: 12px; color: #000; direction: rtl; }
+.ticket { width: 100%; max-width: 80mm; margin: 0 auto; padding: 2mm; background-color: #fff; box-sizing: border-box; }
+.centered { text-align: center; }
+.right { text-align: left; } /* in RTL right is left */
+.logo { display: block; margin: 0 auto 5px auto; max-width: 100px; height: auto; }
+p { margin: 2px 0; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 4px 0; text-align: right; vertical-align: top; font-size: 12px; }
+.items th { border-bottom: 1px dashed #000; padding: 5px 0; }
+.items td { border-bottom: 1px dashed #eee; padding: 5px 0; }
+.total td, .total th { border-top: 1px dashed #000; font-weight: bold; padding-top: 5px; font-size: 14px; }
+.divider { border-top: 1px dashed #000; margin: 5px 0; }
+</style>
+</head>
+<body>
+<div class=""ticket"">
+    <img src=""{Logo}"" alt=""Logo"" class=""logo"">
+    <div class=""centered"">
+        <p style=""font-weight:bold; font-size:14px;"">{CompanyName}</p>
+        <p>{CompanyAddress}</p>
+        <p>{PhoneTitle}: {CompanyPhone}</p>
+        <p>{CompanyTaxNumber}</p>
+    </div>
+    <div class=""divider""></div>
+    <table>
+        <tr><td>{CustomerTitle}:</td><td class=""right"">{Customer}</td></tr>
+        <tr><td>{BillNoTitle}:</td><td class=""right"">{BillNo}</td></tr>
+        <tr><td>{DateTitle}:</td><td class=""right"">{Date}</td></tr>
+        <tr><td>{TypeTitle}:</td><td class=""right"">{Type}</td></tr>
+        <tr><td>{TableTitle}</td><td class=""right"">{Table}</td></tr>
+    </table>
+    <div class=""divider""></div>
+    <table class=""items"">
+        <thead>
+            <tr>
+                <th>{ItemTitle}</th>
+                <th class=""centered"">{QtyTitle}</th>
+                <th class=""right"">{AmountTitle}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {Items}
+        </tbody>
+    </table>
+    <div class=""divider""></div>
+    <table>
+        <tr><td>{SubTotalTitle}:</td><td class=""right"">{SubTotal}</td></tr>
+        <tr><td>{DiscountTitle}:</td><td class=""right"">{Discount}</td></tr>
+        <tr><td>{ChargeTitle}:</td><td class=""right"">{Charge}</td></tr>
+        <tr><td>{TaxTitle}:</td><td class=""right"">{Tax}</td></tr>
+        <tr class=""total"">
+            <th>{TotalTitle}:</th>
+            <td class=""right"">{Total}</td>
+        </tr>
+    </table>
+    <div class=""divider""></div>
+    <table>
+        <tr><td style=""font-weight:bold;"">{PaymentMethodTitle}:</td><td class=""right"">{PaymentMethod}</td></tr>
+        <tr><td style=""font-weight:bold;"">{PaidAmountTitle}:</td><td class=""right"">{PaidAmount}</td></tr>
+    </table>
+    <div class=""centered"">
+        <p>{CreatedByTitle}: {CreatedBy}</p>
+        <p>{ClosedByTitle}: {ClosedBy}</p>
+        <p style=""margin-top:10px;"">*** Thank You ***</p>
+    </div>
+</div>
+</body></html>";
 
             var itemHtml = "";
             foreach (var item in order.OrderDetails)
             {
-                itemHtml += @"<tr><td>" + item.Total + "</td>";
-                itemHtml += @"<td class=""centered"">" + item.Quantity + "</td>";
-                itemHtml += @"<td class=""right"">" + item.Item.ItemName + (string.IsNullOrEmpty(item.Item.ArabicName) ? "" : " - " + item.Item.ArabicName);
+                itemHtml += @"<tr><td>" + item.Item.ItemName + (string.IsNullOrEmpty(item.Item.ArabicName) ? "" : " - " + item.Item.ArabicName);
                 if (item.OrderItemModifiers.Count > 0)
                     itemHtml += "<br> - ";
                 var i = 1;
@@ -1562,13 +1768,15 @@ namespace Saffrat.Controllers
                     }
                     i++;
                 }
-                itemHtml += "</td></tr>";
+                itemHtml += "</td>";
+                itemHtml += @"<td class=""centered"">" + item.Quantity + "</td>";
+                itemHtml += @"<td class=""right"">" + item.Total + "</td></tr>";
             }
             string[] orderTypes = { "", Localize("Dine In"), Localize("Pick Up"), Localize("Delivery") };
             var host = HttpContext.Request.Host;
             using (MemoryStream memoryStream = new())
             {
-                html = html.Replace("{Logo}", String.Format("https://{0}{1}", host, GetSetting.Logo));
+                html = html.Replace("{Logo}", String.Format("https://{0}{1}", host, logoUrl));
                 html = html.Replace("{CompanyTaxNumber}", GetSetting.CompanyTaxNum);
                 html = html.Replace("{CompanyName}", GetSetting.CompanyName);
                 html = html.Replace("{CompanyEmail}", GetSetting.CompanyEmail);
@@ -1581,7 +1789,7 @@ namespace Saffrat.Controllers
                 html = html.Replace("{Customer}", Localize(order.Customer.CustomerName));
                 if (order.OrderType == 1)
                 {
-                    html = html.Replace("{TableTitle}", ":" + Localize("Table", lang));
+                    html = html.Replace("{TableTitle}", Localize("Table", lang) + ":");
                     html = html.Replace("{Table}", order.TableName);
                 }
                 else
@@ -1598,10 +1806,17 @@ namespace Saffrat.Controllers
                 html = html.Replace("{Tax}", GetCurrency(order.TaxTotal));
                 html = html.Replace("{Total}", GetCurrency(order.Total));
 
+                // Payment Info
+                var paymentMethodName = order.PaymentMethod == "1" ? Localize("Cash", lang) : order.PaymentMethod == "2" ? Localize("Card", lang) : Localize("Other", lang);
+                html = html.Replace("{PaymentMethodTitle}", Localize("Payment Method", lang));
+                html = html.Replace("{PaymentMethod}", paymentMethodName);
+                html = html.Replace("{PaidAmountTitle}", Localize("Paid Amount", lang));
+                html = html.Replace("{PaidAmount}", GetCurrency(order.PaidAmount));
+
                 html = html.Replace("{CreatedBy}", order.CreatedBy);
                 html = html.Replace("{ClosedBy}", order.ClosedBy);
 
-                html = html.Replace("{TaxInvoiceTitle}", Localize("Tax Invoice", lang));
+                html = html.Replace("{PhoneTitle}", Localize("Phone", lang));
                 html = html.Replace("{BillNoTitle}", Localize("Order No.", lang));
                 html = html.Replace("{DateTitle}", Localize("Date", lang));
                 html = html.Replace("{TypeTitle}", Localize("Type", lang));
