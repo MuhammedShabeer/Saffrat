@@ -17,6 +17,7 @@ namespace Saffrat.Models
         public int PayrollAccount { get; set; }
         public string Copyright { get; set; }
         public bool SendInvoiceEmail { get; set; }
+        public bool SkipKitchenOrder { get; set; }
         public string Timezone { get; set; }
         public string DefaultLanguage { get; set; }
         public string DefaultRegion { get; set; }

@@ -41,7 +41,7 @@ namespace Saffrat.Controllers
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> General([Required] string AppName,
             [Required] int DefaultCustomer, [Required] int DefaultOrderType, [Required] int SaleAccount, [Required] int PurchaseAccount, [Required] int PayrollAccount,
-            [Required] string Copyright, [Required] bool SendInvoiceEmail, IFormFile Logo, IFormFile Favicon, IFormFile Preloader)
+            [Required] string Copyright, [Required] bool SendInvoiceEmail, [Required] bool SkipKitchenOrder, IFormFile Logo, IFormFile Favicon, IFormFile Preloader)
         {
             var response = new Dictionary<string, string>();
 
@@ -134,6 +134,7 @@ namespace Saffrat.Controllers
                 }
 
                 GetSetting.SendInvoiceEmail = SendInvoiceEmail;
+                GetSetting.SkipKitchenOrder = SkipKitchenOrder;
                 GetSetting.AppName = AppName;
                 GetSetting.Copyright = Copyright;
                 GetSetting.DefaultOrderType = DefaultOrderType;

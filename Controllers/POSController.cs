@@ -162,7 +162,7 @@ namespace Saffrat.Controllers
                         WaiterOrDriver = WaiterOrDriver,
                         Guests = Guests,
                         OrderType = OrderType,
-                        Status = 1,
+                        Status = GetSetting.SkipKitchenOrder ? 2 : 1,
                         Note = !String.IsNullOrEmpty(Note) ? Note : String.Empty,
                         CreatedBy = userName,
                         CreatedAt = CurrentDateTime(),
@@ -202,7 +202,7 @@ namespace Saffrat.Controllers
                                 WaiterOrDriver = WaiterOrDriver,
                                 Guests = Guests,
                                 OrderType = OrderType,
-                                Status = 1,
+                                Status = GetSetting.SkipKitchenOrder ? 2 : 1,
                                 Note = !String.IsNullOrEmpty(Note) ? Note : String.Empty,
                                 CreatedBy = userName,
                                 CreatedAt = CurrentDateTime(),
@@ -857,6 +857,93 @@ namespace Saffrat.Controllers
             }
 
             return Json(response);
+        }
+
+
+        [HttpGet]
+        [Authorize(Roles = "admin,staff")]
+        public async Task<IActionResult> PrintInvoice(int? Id)
+        {
+            var order = await _dbContext.Orders.Where(x => x.Id == Id)
+                    .Include(x => x.Customer)
+                    .Include(x => x.OrderDetails)
+                    .ThenInclude(x => x.Item)
+                    .Include(x => x.OrderDetails)
+                    .ThenInclude(x => x.OrderItemModifiers)
+                    .ThenInclude(x => x.Modifier)
+                    .FirstOrDefaultAsync();
+
+            if (order == null)
+                return NotFound();
+
+            var html = String.Empty;
+            var lang = _dbContext.Languages.FirstOrDefault(x => x.Culture == GetSetting.DefaultLanguage);
+            if (CultureInfo.GetCultureInfo(GetSetting.DefaultLanguage).TextInfo.IsRightToLeft)
+            {
+                html = RTLInvoice(order, lang.Id);
+            }
+            else
+            {
+                html = LTRInvoice(order, lang.Id);
+            }
+
+            if (GetSetting.SendInvoiceEmail && GetSetting.DefaultCustomer != order.CustomerId)
+            {
+                var doc = new HtmlToPdfDocument()
+                {
+                    GlobalSettings = {
+                        ColorMode = ColorMode.Color,
+                        Orientation = Orientation.Portrait,
+                        PaperSize = new PechkinPaperSize("88mm", "250mm"),
+                    },
+                    Objects = {
+                        new ObjectSettings() {
+                            HtmlContent = html,
+                        }
+                    }
+                };
+
+                byte[] pdf = _converter.Convert(doc);
+
+                var host = HttpContext.Request.Host;
+                var template = _dbContext.EmailTemplates.FirstOrDefault(x => x.Name == "Payment Success");
+                if (General.IsValidEmail(order.Customer.Email))
+                {
+                    var isSend = SendEmail.PaymentSuccess(GetSetting, order.Customer.CustomerName, order.Customer.Email, String.Format("https://{0}", host), order.CreatedAt.ToString(), order.Id.ToString(), order.PaymentMethod, order.Total.ToString(), order.DueAmount.ToString(), order.PaidAmount.ToString(), template.Template, template.Subject, pdf);
+
+                    if (!isSend)
+                    {
+                        AuditLog log = new()
+                        {
+                            Username = order.ClosedBy,
+                            Ip = HttpContext.Connection.RemoteIpAddress == null ? "-" : HttpContext.Connection.RemoteIpAddress.ToString(),
+                            Service = "POS",
+                            Action = "Close Order",
+                            Status = "error",
+                            CreatedAt = CurrentDateTime(),
+                            Description = "Email failed to send. Order #" + order.Id.ToString()
+                        };
+                        SaveLog(log, _dbContext);
+                    }
+                }
+                else
+                {
+                    AuditLog log = new()
+                    {
+                        Username = order.ClosedBy,
+                        Ip = HttpContext.Connection.RemoteIpAddress == null ? "-" : HttpContext.Connection.RemoteIpAddress.ToString(),
+                        Service = "POS",
+                        Action = "Close Order",
+                        Status = "error",
+                        CreatedAt = CurrentDateTime(),
+                        Description = "Email failed to send. Order #" + order.Id.ToString()
+                    };
+                    SaveLog(log, _dbContext);
+                }
+            }
+
+            html += "<script>window.onload = function() { window.print(); }</script>";
+            return Content(html, "text/html");
         }
 
         [HttpGet]

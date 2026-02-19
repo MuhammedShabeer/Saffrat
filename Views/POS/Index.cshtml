@@ -1553,7 +1553,7 @@
             GetOpenedOrder(Id);
         });
 
-        function GetOpenedOrder(Id) {
+        function GetOpenedOrder(Id, openPayment = false) {
             $("body").addClass('card-progress');
             jQuery.ajax({
                 url: "/POS/GetRunningOrderDetail",
@@ -1565,7 +1565,7 @@
                 success: function (data) {
                     if (data.status == "success") {
                         order = JSON.parse(data.order);
-                        LoadOpenedOrder(order);
+                        LoadOpenedOrder(order, openPayment);
                     }
                     else {
                         errorMessage(data.message);
@@ -1587,7 +1587,7 @@
                 }
             });
         }
-        function LoadOpenedOrder(order) {
+        function LoadOpenedOrder(order, openPayment = false) {
             $("body").addClass('card-progress');
             ResetControls();
             var splitItems = '';
@@ -1666,6 +1666,10 @@
 
             CalculateTotal();
             $("body").removeClass('card-progress');
+
+            if (openPayment) {
+                OpenPaymentModel();
+            }
         }
 
         // Split Bill
@@ -1728,9 +1732,10 @@
 
         //Payment
         function OpenPaymentModel() {
-            $('#PaymentAmount').val('');
-            $(".d-OrderTotalAmount").text(GetCurrency(getNumber(ExistingTotalAmount.toFixed(2))));
-            $(".d-OrderDueAmount").text(GetCurrency(getNumber(ExistingTotalAmount.toFixed(2))));
+            var total = getNumber(ExistingTotalAmount.toFixed(2));
+            $('#PaymentAmount').val(total);
+            $(".d-OrderTotalAmount").text(GetCurrency(total));
+            $(".d-OrderDueAmount").text(GetCurrency(0));
             $("#PaymentModel").modal('show');
         }
 
@@ -1775,73 +1780,52 @@
         });
 
         function CloseOrder() {
-            $.alert({
-                title: '@Localize("Close Order?")',
-                content: '@Localize("Are you sure want to close order.")',
-                rtl: isRTL(),
-                theme: 'modern',
-                buttons: {
-                    confirm: {
-                        text: '<i class="fa fa-check"></i> @Localize("Close Order")',
-                        btnClass: 'btn btn-primary',
-                        action: function (btn) {
-                            var self = this;
-                            var pMethod = $('#PaymentMethod').val();
-                            var pAmount = Number(getLocaleNumber($('#PaymentAmount').val()));
-                            if (pMethod == '') {
-                                errorMessage('@Localize("Please select payment method.")');
-                            }
-                            else if (pAmount < 0 || pAmount > ExistingTotalAmount) {
-                                errorMessage('@Localize("Enter valid amount.")');
-                            }
-                            else {
-                                self.showLoading(true);
-                                $.ajax({
-                                    url: "/POS/CloseOrder",
-                                    type: 'POST',
-                                    dataType: "json",
-                                    data: {
-                                        Id: OrderId,
-                                        PaymentMethod: pMethod,
-                                        PaidAmount: getNumber(pAmount)
-                                    },
-                                    error: function (data) {
-                                        if (data.status == 401) {
-                                            window.location.href = '/Account/Login';
-                                        }
-                                        else if (data.status == 403) {
-                                            errorMessage('@Localize("Access denied.")');
-                                        }
-                                        else {
-                                            console.log(JSON.stringify(data));
-                                        }
-                                    },
-                                    success: function (data) {
-                                        if (data.status == "success") {
-                                            successMessage("Order closed successfully.");
-                                            $("#PaymentModel").modal('hide');
-                                            ResetControls();
-                                            PrintFinalInvoice(data.id);
-                                        }
-                                        else {
-                                            errorMessage(data.message);
-                                        }
-                                    },
-                                    complete: function () {
-                                        self.close();
-                                    }
-                                });
-                            }
-                            return false;
+            var pMethod = $('#PaymentMethod').val();
+            var pAmount = Number(getLocaleNumber($('#PaymentAmount').val()));
+            if (pMethod == '') {
+                errorMessage('@Localize("Please select payment method.")');
+            }
+            else if (pAmount < 0 || pAmount > ExistingTotalAmount) {
+                errorMessage('@Localize("Enter valid amount.")');
+            }
+            else {
+                $("#closeOrderBtn").addClass("disabled btn-progress");
+                $.ajax({
+                    url: "/POS/CloseOrder",
+                    type: 'POST',
+                    dataType: "json",
+                    data: {
+                        Id: OrderId,
+                        PaymentMethod: pMethod,
+                        PaidAmount: getNumber(pAmount)
+                    },
+                    error: function (data) {
+                        if (data.status == 401) {
+                            window.location.href = '/Account/Login';
+                        }
+                        else if (data.status == 403) {
+                            errorMessage('@Localize("Access denied.")');
+                        }
+                        else {
+                            console.log(JSON.stringify(data));
                         }
                     },
-                    cancel: {
-                        text: '@Localize("Cancel")',
-                        action: function () {
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage("Order closed successfully.");
+                            $("#PaymentModel").modal('hide');
+                            ResetControls();
+                            PrintFinalInvoice(data.id);
                         }
+                        else {
+                            errorMessage(data.message);
+                        }
+                    },
+                    complete: function () {
+                        $("#closeOrderBtn").removeClass("disabled btn-progress");
                     }
-                }
-            });
+                });
+            }
         }
 
         //Calculate Total
@@ -1943,7 +1927,13 @@
                     success: function (data) {
                         if (data.status == "success") {
                             successMessage('@Localize("Order submitted successfully.")');
-                            if (OrderId == 0)
+
+                            var skipKitchen = '@GetSetting.SkipKitchenOrder' == 'True';
+                            if (skipKitchen) {
+                                if (data.id) OrderId = data.id;
+                                GetOpenedOrder(OrderId, true);
+                            }
+                            else if (OrderId == 0)
                                 ResetControls();
                             else
                                 GetOpenedOrder(OrderId);
@@ -1971,9 +1961,19 @@
         }
 
         function PrintFinalInvoice(id) {
-            var strWindowFeatures = "location=yes,height=570,width=520,scrollbars=yes,status=yes";
-            var link = "/POS/SendInvoiceEmail/" + id;
-            var win = window.open(link, "_blank", strWindowFeatures);
+            var iframe = document.getElementById('invisiblePrintFrame');
+            if(!iframe){
+                iframe = document.createElement('iframe');
+                iframe.id = 'invisiblePrintFrame';
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                document.body.appendChild(iframe);
+            }
+            iframe.src = "/POS/PrintInvoice/" + id;
         }
     </script>
 }
