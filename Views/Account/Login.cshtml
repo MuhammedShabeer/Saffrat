@@ -6,11 +6,12 @@
     ViewData["Title"] = Localize("Login");
 }
 
+<div class="login-bg-animate"></div>
 <div class="container mt-5">
     <div class="container">
         <div class="row">
             <div class="col-12 col-sm-8 offset-sm-2 col-md-6 offset-md-3 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
-                <div class="card">
+                <div class="card login-card animate-fade-in-up">
                     <div class="card-header">
                         <h4>@Localize("Login")</h4>
                         <div class="card-header-action ms-auto">
@@ -23,25 +24,25 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="text-center mb-2">
+                        <div class="text-center mb-2 animate-fade-in delay-100">
                             <img src="@GetSetting.Logo" height="70" alt="Logo" />
                         </div>
-                        <div class="text-muted">
+                        <div class="text-muted animate-fade-in delay-200">
                             @Localize("Welcome Back, Please login to your account.")
                         </div>
-                        <form method="post" asp-controller="Account" asp-action="Login" class="needs-validation" novalidate="">
+                        <form method="post" asp-controller="Account" asp-action=Login" class="needs-validation" novalidate="">
                             @if (!String.IsNullOrEmpty(ViewBag.Msg))
                             {
-                                <div class="text-danger">@ViewBag.Msg</div>
+                                    <div class="text-danger">@ViewBag.Msg</div>
                             }
-                            <div class="form-group">
+                            <div class="form-group animate-fade-in delay-300">
                                 <label for="email">@Localize("Email Or Username")</label>
                                 <input id="email" type="text" class="form-control" name="email" required autofocus>
                                 <div class="invalid-feedback">
                                     @Localize("Please enter email or username.")
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group animate-fade-in delay-400">
                                 <div class="d-block">
                                     <label for="password" class="control-label">@Localize("Password")</label>
                                     <div class="float-right">
@@ -60,7 +61,7 @@
                                 <label class="form-check-label" for="remember">@Localize("Remember Me")</label>
                             </div>
                             @Html.AntiForgeryToken()
-                            <div class="form-group">
+                            <div class="form-group animate-fade-in delay-500">
                                 <button type="submit" class="btn btn-primary btn-lg w-100">
                                     @Localize("Login")
                                 </button>
