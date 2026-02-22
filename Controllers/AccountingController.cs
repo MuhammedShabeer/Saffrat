@@ -338,7 +338,7 @@ namespace Saffrat.Controllers
                             Credit = 0,
                             Debit = expense.Amount,
                             Amount = expense.Amount,
-                            Date =  expense.ExpenseDate,
+                            Date = expense.ExpenseDate,
                         };
 
                         _ = await _transactionService.UpdateTransaction(statement);
@@ -375,7 +375,7 @@ namespace Saffrat.Controllers
             else
             {
                 response.Add("status", "error");
-                response.Add("message", "Enter required fields."+expense.Amount);
+                response.Add("message", "Enter required fields." + expense.Amount);
             }
             return Json(response);
         }
@@ -515,10 +515,10 @@ namespace Saffrat.Controllers
 
                             var statements = _dbContext.Transactions.Where(x => x.TransactionReference == "transfer-" + transfer.Id).ToList();
 
-                            foreach(var item in statements)
+                            foreach (var item in statements)
                             {
                                 Transaction statement = new();
-                                if(item.Credit > 0)
+                                if (item.Credit > 0)
                                 {
                                     statement.Id = item.Id;
                                     statement.AccountId = Convert.ToInt32(toAccount.Id);
@@ -651,7 +651,7 @@ namespace Saffrat.Controllers
 
             var deposits = await _dbContext.Deposits
                 .Where(e => e.DepositDate >= from && e.DepositDate <= to)
-                .Include(x=> x.Account)
+                .Include(x => x.Account)
                 .OrderByDescending(x => x.Id)
                 .ToListAsync();
 
@@ -804,6 +804,34 @@ namespace Saffrat.Controllers
             }
 
             return Json(results);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> SearchExpenseCategories(string q)
+        {
+            var query = _dbContext.Expenses.Where(e => !string.IsNullOrEmpty(e.Category));
+            if (!string.IsNullOrEmpty(q))
+            {
+                query = query.Where(e => e.Category.Contains(q));
+            }
+            var categories = await query.Select(e => e.Category).Distinct().Take(20).ToListAsync();
+            var results = categories.Select(c => new { id = c, text = c });
+            return Json(new { results = results });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> SearchExpenseItems(string q)
+        {
+            var query = _dbContext.Expenses.Where(e => !string.IsNullOrEmpty(e.Item));
+            if (!string.IsNullOrEmpty(q))
+            {
+                query = query.Where(e => e.Item.Contains(q));
+            }
+            var items = await query.Select(e => e.Item).Distinct().Take(20).ToListAsync();
+            var results = items.Select(i => new { id = i, text = i });
+            return Json(new { results = results });
         }
 
         /*

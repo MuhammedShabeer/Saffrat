@@ -65,15 +65,35 @@
                         <label class="control-label">@Localize("Description")</label>
                         <textarea asp-for="Description" class="form-control"></textarea>
                     </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Price") <code>*</code></label>
+                            <div class="input-group">
+                                <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                <input asp-for="Price" type="text" class="form-control cleave-number" inputmode="numeric" required />
+                            </div>
+                            <div class="invalid-feedback">
+                                @Localize("Please enter price.")
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Van Sale Price")</label>
+                            <div class="input-group">
+                                <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                <input asp-for="VanSalePrice" type="text" class="form-control cleave-number" inputmode="numeric" />
+                            </div>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="control-label">@Localize("Whole Sale Price")</label>
+                            <div class="input-group">
+                                <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                <input asp-for="WholeSalePrice" type="text" class="form-control cleave-number" inputmode="numeric" />
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-group">
-                        <label class="control-label">@Localize("Price") <code>*</code></label>
-                        <div class="input-group">
-                            <div class="input-group-text">@GetSetting.CurrencySymbol</div>
-                            <input asp-for="Price" type="text" class="form-control cleave-number" inputmode="numeric" required />
-                        </div>
-                        <div class="invalid-feedback">
-                            @Localize("Please enter price.")
-                        </div>
+                        <label class="control-label">@Localize("Barcode")</label>
+                        <input asp-for="Barcode" type="text" class="form-control" />
                     </div>
                     <div class="form-group">
                         <label class="control-label">@Localize("Image")</label>

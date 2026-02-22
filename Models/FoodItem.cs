@@ -22,6 +22,9 @@ namespace Saffrat.Models
         public string Description { get; set; }
         [Required]
         public decimal Price { get; set; }
+        public decimal VanSalePrice { get; set; }
+        public decimal WholeSalePrice { get; set; }
+        public string Barcode { get; set; }
         public string Image { get; set; }
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }

@@ -11,6 +11,15 @@
     var end = ViewBag.end;
 }
 
+@section styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .select2-container .select2-selection--single { height: 42px; padding: 6px 12px; border: 1px solid #e4e6fc; }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 42px; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 28px; }
+    </style>
+}
+
 <div class="page-header">
     <div class="page-block">
         <div class="row align-items-center">
@@ -21,7 +30,8 @@
                     </h4>
                 </div>
                 <ul class="breadcrumb">
-                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i
+                                class="fa fa-home me-1"></i>@Localize("Home")</a></li>
                     <li class="breadcrumb-item">@Localize("Expenses")</li>
                 </ul>
             </div>
@@ -39,11 +49,13 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <form asp-controller="Accounting" asp-action="Expenses" method="get" class="needs-validation" novalidate="">
+                <form asp-controller="Accounting" asp-action="Expenses" method="get" class="needs-validation"
+                    novalidate="">
                     <div class="row">
                         <div class="col-md-3 form-group">
                             <label class="control-label">@Localize("Account")</label>
-                            <select class="form-control selectpicker" data-live-search="true" name="account" id="account">
+                            <select class="form-control selectpicker" data-live-search="true" name="account"
+                                id="account">
                                 <option value="">@Localize("All")</option>
                                 @foreach (var item in ViewBag.accounts)
                                 {
@@ -53,21 +65,24 @@
                         </div>
                         <div class="col-md-3 form-group">
                             <label class="control-label">@Localize("From") <code>*</code></label>
-                            <input type="date" name="start" value="@start" onclick="this.showPicker()" class="form-control" required />
+                            <input type="date" name="start" value="@start" onclick="this.showPicker()"
+                                class="form-control" required />
                             <div class="invalid-feedback">
                                 @Localize("Please select date.")
                             </div>
                         </div>
                         <div class="col-md-3 form-group">
                             <label class="control-label">@Localize("To") <code>*</code></label>
-                            <input type="date" name="end" value="@end" onclick="this.showPicker()" class="form-control" required />
+                            <input type="date" name="end" value="@end" onclick="this.showPicker()" class="form-control"
+                                required />
                             <div class="invalid-feedback">
                                 @Localize("Please select date.")
                             </div>
                         </div>
                         <div class="col-md-3 form-group">
                             <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
-                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
+                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i>
+                                @Localize("Filter")</button>
                         </div>
                     </div>
                 </form>
@@ -78,6 +93,8 @@
                                 <th>@Localize("#")</th>
                                 <th>@Localize("Account")</th>
                                 <th>@Localize("Date")</th>
+                                <th>@Localize("Category")</th>
+                                <th>@Localize("Item")</th>
                                 <th>@Localize("Amount")</th>
                                 <th>@Localize("Note")</th>
                                 <th>@Localize("Updated At")</th>
@@ -93,15 +110,21 @@
                                     <td>@item.Id</td>
                                     <td>@item.Account.AccountName</td>
                                     <td>@item.ExpenseDate.ToShortDateString()</td>
+                                    <td>@item.Category</td>
+                                    <td>@item.Item</td>
                                     <td>@GetCurrency(item.Amount)</td>
                                     <td>@item.Note</td>
                                     <td>@item.UpdatedAt</td>
                                     <td>&#64;@item.UpdatedBy</td>
                                     <td>
-                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown"
+                                            aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
                                         <div class="dropdown-menu">
-                                            <a class="dropdown-item btn" onclick="OpenMainModal(@item.Id);"><i class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
-                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                            <a class="dropdown-item btn" onclick="OpenMainModal(@item.Id);"><i
+                                                    class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
+                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i
+                                                    class="fas fa-trash"></i> <span
+                                                    class="ml-2">@Localize("Delete")</span></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -144,17 +167,29 @@
                             </div>
                             <div class="col-md-6 form-group">
                                 <label class="control-label">@Localize("Expense Date") <code>*</code></label>
-                                <input name="ExpenseDate" type="date" onclick="this.showPicker()" class="form-control" required />
+                                <input name="ExpenseDate" type="date" onclick="this.showPicker()" class="form-control"
+                                    required />
                                 <div class="invalid-feedback">
                                     @Localize("Please select date.")
                                 </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label class="control-label">@Localize("Category")</label>
+                                <select name="Category" id="categorySelect" class="form-control" style="width: 100%;"></select>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label class="control-label">@Localize("Item")</label>
+                                <select name="Item" id="itemSelect" class="form-control" style="width: 100%;"></select>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="control-label">@Localize("Amount") <code>*</code></label>
                             <div class="input-group">
                                 <div class="input-group-text">@GetSetting.CurrencySymbol</div>
-                                <input name="Amount" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                                <input name="Amount" type="text" inputmode="numeric" class="form-control cleave-number"
+                                    required />
                             </div>
                             <div class="invalid-feedback">
                                 @Localize("Please enter amount.")
@@ -177,11 +212,42 @@
 
 
 @section scripts{
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
 
         $('#account').val('@ViewBag.account');
         $("#accounting-menu").addClass("active");
         $("#expenseList-menu").addClass("active");
+
+        $('#categorySelect').select2({
+            tags: true,
+            dropdownParent: $('#mainModal'),
+            ajax: {
+                url: '/Accounting/SearchExpenseCategories',
+                dataType: 'json',
+                delay: 250,
+                processResults: function (data) {
+                    return {
+                        results: data.results
+                    };
+                }
+            }
+        });
+
+        $('#itemSelect').select2({
+            tags: true,
+            dropdownParent: $('#mainModal'),
+            ajax: {
+                url: '/Accounting/SearchExpenseItems',
+                dataType: 'json',
+                delay: 250,
+                processResults: function (data) {
+                    return {
+                        results: data.results
+                    };
+                }
+            }
+        });
 
         var dt = $('#datatable').DataTable({
             'language': {
@@ -202,7 +268,7 @@
             'columnDefs': [
                 {
                     "orderable": false,
-                    'targets': [5]
+                    'targets': [7]
                 }
             ],
             'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
@@ -282,6 +348,30 @@
                             $("#frm select[name='AccountId']").selectpicker('val', String(result.accountId));
                             $("#frm input[name='ExpenseDate']").val(getDate(result.expenseDate));
                             $("#frm input[name='Amount']").val(getNumber(result.amount));
+                            $("#frm input[name='Amount']").val(getNumber(result.amount));
+
+                            if (result.category) {
+                                if ($('#categorySelect').find("option[value='" + result.category + "']").length) {
+                                    $('#categorySelect').val(result.category).trigger('change');
+                                } else { 
+                                    var newCatOption = new Option(result.category, result.category, true, true);
+                                    $('#categorySelect').append(newCatOption).trigger('change');
+                                }
+                            } else {
+                                $('#categorySelect').val(null).trigger('change');
+                            }
+
+                            if (result.item) {
+                                if ($('#itemSelect').find("option[value='" + result.item + "']").length) {
+                                    $('#itemSelect').val(result.item).trigger('change');
+                                } else { 
+                                    var newItemOption = new Option(result.item, result.item, true, true);
+                                    $('#itemSelect').append(newItemOption).trigger('change');
+                                }
+                            } else {
+                                $('#itemSelect').val(null).trigger('change');
+                            }
+
                             $("#frm textarea[name='Note']").val(result.note);
                             $("#mainModal").modal('show');
                         }
@@ -306,6 +396,8 @@
                 $("#submit").text('@Localize("Save")');
                 $("#frm input[name='Id']").val('');
                 $("#frm select[name='AccountId']").selectpicker('val', '');
+                $('#categorySelect').val(null).trigger('change');
+                $('#itemSelect').val(null).trigger('change');
                 $("#frm")[0].reset();
                 $("#mainModal").modal('show');
             }

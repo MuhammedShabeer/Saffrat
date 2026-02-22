@@ -948,6 +948,81 @@ namespace Saffrat.Controllers
 
         [HttpGet]
         [Authorize(Roles = "admin,staff")]
+        public async Task<IActionResult> PrintSticker(int? Id)
+        {
+            var runningOrder = await _dbContext.RunningOrders.Where(x => x.Id == Id)
+                    .Include(x => x.Customer)
+                    .Include(x => x.RunningOrderDetails)
+                    .ThenInclude(x => x.Item)
+                    .Include(x => x.RunningOrderDetails)
+                    .ThenInclude(x => x.RunningOrderItemModifiers)
+                    .ThenInclude(x => x.Modifier)
+                    .FirstOrDefaultAsync();
+
+            string html = "<html dir='ltr'><head><style>@media print { body { font-family: sans-serif; margin: 0; padding: 10px; font-size: 14px; width: 60mm; height: 40mm; } .page-break { display: block; page-break-after: always; } } </style></head><body>";
+            int count = 1;
+
+            if (runningOrder != null)
+            {
+                foreach (var item in runningOrder.RunningOrderDetails)
+                {
+                    for (int i = 0; i < (item.Quantity ?? 1); i++)
+                    {
+                        if (count > 1) html += "<div class='page-break'></div>";
+                        html += $"<div style='padding: 5px; text-align: center;'>";
+                        html += $"<h3 style='margin: 0;'>Order #{runningOrder.Id}</h3>";
+                        html += $"<p style='margin: 2px 0; font-size: 12px'><strong>{runningOrder.Customer.CustomerName}</strong></p>";
+                        html += $"<h4 style='margin: 2px 0;'>{item.Item.ItemName}</h4>";
+                        var mods = item.RunningOrderItemModifiers.Select(m => m.Modifier.Title).ToList();
+                        if (mods.Count > 0)
+                        {
+                            html += $"<p style='margin: 2px 0; font-size: 10px;'>Modifiers: {string.Join(", ", mods)}</p>";
+                        }
+                        html += $"</div>";
+                        count++;
+                    }
+                }
+            }
+            else
+            {
+                var closedOrder = await _dbContext.Orders.Where(x => x.Id == Id)
+                    .Include(x => x.Customer)
+                    .Include(x => x.OrderDetails)
+                    .ThenInclude(x => x.Item)
+                    .Include(x => x.OrderDetails)
+                    .ThenInclude(x => x.OrderItemModifiers)
+                    .ThenInclude(x => x.Modifier)
+                    .FirstOrDefaultAsync();
+
+                if (closedOrder == null)
+                    return NotFound();
+
+                foreach (var item in closedOrder.OrderDetails)
+                {
+                    for (int i = 0; i < (item.Quantity ?? 1); i++)
+                    {
+                        if (count > 1) html += "<div class='page-break'></div>";
+                        html += $"<div style='padding: 5px; text-align: center;'>";
+                        html += $"<h3 style='margin: 0;'>Order #{closedOrder.Id}</h3>";
+                        html += $"<p style='margin: 2px 0; font-size: 12px'><strong>{closedOrder.Customer.CustomerName}</strong></p>";
+                        html += $"<h4 style='margin: 2px 0;'>{item.Item.ItemName}</h4>";
+                        var mods = item.OrderItemModifiers.Select(m => m.Modifier.Title).ToList();
+                        if (mods.Count > 0)
+                        {
+                            html += $"<p style='margin: 2px 0; font-size: 10px;'>Modifiers: {string.Join(", ", mods)}</p>";
+                        }
+                        html += $"</div>";
+                        count++;
+                    }
+                }
+            }
+
+            html += "<script>window.onload = function() { window.print(); }</script></body></html>";
+            return Content(html, "text/html");
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> SendInvoiceEmail(int? Id)
         {
             var order = await _dbContext.Orders.Where(x => x.Id == Id)
