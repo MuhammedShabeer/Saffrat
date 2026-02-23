@@ -815,18 +815,56 @@ namespace Saffrat.Controllers
                         await _dbContext.SaveChangesAsync();
                         await transaction.CommitAsync();
 
-                        Transaction statement = new()
+                        // Find or create Sales Revenue Account
+                        var revenueAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Sales Account" || x.AccountGroup == "Revenue");
+                        int revenueAccountId = 0;
+                        if (revenueAccount != null)
+                        {
+                            revenueAccountId = Convert.ToInt32(revenueAccount.Id);
+                        }
+                        else
+                        {
+                            var newRevAccount = new Account
+                            {
+                                AccountName = "Sales Account",
+                                AccountNumber = "4000",
+                                AccountGroup = "Revenue",
+                                AccountType = "Income",
+                                Credit = 0,
+                                Debit = 0,
+                                Balance = 0,
+                                UpdatedAt = CurrentDateTime()
+                            };
+                            _dbContext.Accounts.Add(newRevAccount);
+                            _dbContext.SaveChanges();
+                            revenueAccountId = Convert.ToInt32(newRevAccount.Id);
+                        }
+
+                        Transaction debitAssetTrans = new()
                         {
                             AccountId = Convert.ToInt32(GetSetting.SaleAccount),
                             TransactionReference = "sale-" + order.Id,
                             TransactionType = "sale",
-                            Description = "-",
+                            Description = "Payment Recieved",
+                            Credit = 0,
+                            Debit = order.Total,
+                            Amount = order.Total,
+                            Date = CurrentDateTime(),
+                        };
+
+                        Transaction creditRevenueTrans = new()
+                        {
+                            AccountId = revenueAccountId,
+                            TransactionReference = "sale-" + order.Id,
+                            TransactionType = "sale",
+                            Description = "Order Sales Revenue",
                             Credit = order.Total,
                             Debit = 0,
                             Amount = order.Total,
                             Date = CurrentDateTime(),
                         };
-                        _ = await _transactionService.AddTransaction(statement);
+
+                        _ = await _transactionService.AddDoubleEntryTransaction(debitAssetTrans, creditRevenueTrans);
 
                         await _hub.Clients.Group("admin").SendAsync("OrderNotification", "closed", order.Id);
                         await _hub.Clients.Group("staff").SendAsync("OrderNotification", "closed", order.Id);
@@ -1428,11 +1466,10 @@ namespace Saffrat.Controllers
                 var existing = await _dbContext.Orders.FindAsync(Id);
                 if (existing != null)
                 {
-                    var statement = _dbContext.Transactions.FirstOrDefault(x => x.TransactionReference == "sale-" + existing.Id);
                     _dbContext.Orders.Remove(existing);
                     await _dbContext.SaveChangesAsync();
 
-                    _ = await _transactionService.DeleteTransaction(statement);
+                    _ = await _transactionService.DeleteTransactionsByReference("sale-" + existing.Id);
 
                     response.Add("status", "success");
                     response.Add("message", "success");

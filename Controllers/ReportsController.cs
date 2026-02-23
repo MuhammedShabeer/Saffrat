@@ -432,7 +432,7 @@ namespace Saffrat.Controllers
         // Attendance Report
         [HttpGet]
         [Authorize(Roles = "admin")]
-        public async Task <IActionResult> AttendanceReport(int? employee, DateTime? start, DateTime? end)
+        public async Task<IActionResult> AttendanceReport(int? employee, DateTime? start, DateTime? end)
         {
             DateTime from = StartOfDay(start);
             DateTime to = EndOfDay(end);
@@ -451,6 +451,45 @@ namespace Saffrat.Controllers
             ViewBag.employee = employee;
 
             return View(attendances);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> TrialBalance(DateTime? start, DateTime? end)
+        {
+            var from = StartOfDay(start);
+            var to = EndOfDay(end);
+
+            ViewBag.start = from.ToString("yyyy-MM-dd");
+            ViewBag.end = to.ToString("yyyy-MM-dd");
+
+            var accounts = await _dbContext.Accounts.ToListAsync();
+            var transactions = await _dbContext.Transactions
+                .Where(x => x.Date >= from && x.Date <= to)
+                .ToListAsync();
+
+            var reportData = new List<Saffrat.ViewModels.TrialBalanceModel>();
+
+            foreach (var account in accounts)
+            {
+                var trans = transactions.Where(x => x.AccountId == account.Id).ToList();
+                var debit = trans.Sum(x => x.Debit);
+                var credit = trans.Sum(x => x.Credit);
+
+                if (debit > 0 || credit > 0)
+                {
+                    reportData.Add(new Saffrat.ViewModels.TrialBalanceModel
+                    {
+                        AccountId = Convert.ToInt32(account.Id),
+                        AccountName = account.AccountName,
+                        AccountGroup = string.IsNullOrEmpty(account.AccountGroup) ? "Uncategorized" : account.AccountGroup,
+                        TotalDebit = debit,
+                        TotalCredit = credit
+                    });
+                }
+            }
+
+            return View(reportData);
         }
 
         private Dictionary<int, string> GetEmployees()

@@ -97,6 +97,11 @@ namespace Saffrat.Models
                 entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
                 entity.Property(e => e.UpdatedBy).HasMaxLength(150);
+
+                entity.HasOne(d => d.ParentAccount)
+                    .WithMany(p => p.ChildAccounts)
+                    .HasForeignKey(d => d.ParentAccountId)
+                    .HasConstraintName("FK_Accounts_Accounts");
             });
 
             modelBuilder.Entity<AccountMoneyTransfer>(entity =>

@@ -937,7 +937,7 @@ namespace Saffrat.Controllers
                         {
                             _dbContext.Payrolls.Remove(existing);
                             var trans = _dbContext.Transactions.FirstOrDefault(x => x.TransactionReference == "payroll-" + existing.Id);
-                            if(trans != null)
+                            if (trans != null)
                                 await _transactionService.DeleteTransaction(trans);
                         }
 
@@ -1041,19 +1041,55 @@ namespace Saffrat.Controllers
                     payroll.PaymentStatus = "Paid";
                     _dbContext.Payrolls.Update(payroll);
                     await _dbContext.SaveChangesAsync();
-                    Transaction statement = new()
+                    var salaryAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Salaries" && (x.AccountGroup == "Expenses" || x.AccountGroup == "Expense"));
+                    int salaryAccountId = 0;
+                    if (salaryAccount != null)
                     {
-                        AccountId = Convert.ToInt32(GetSetting.PayrollAccount),
+                        salaryAccountId = Convert.ToInt32(salaryAccount.Id);
+                    }
+                    else
+                    {
+                        var newExpAccount = new Account
+                        {
+                            AccountName = "Salaries",
+                            AccountNumber = "5000",
+                            AccountGroup = "Expenses",
+                            AccountType = "Expense",
+                            Credit = 0,
+                            Debit = 0,
+                            Balance = 0,
+                            UpdatedAt = CurrentDateTime()
+                        };
+                        _dbContext.Accounts.Add(newExpAccount);
+                        _dbContext.SaveChanges();
+                        salaryAccountId = Convert.ToInt32(newExpAccount.Id);
+                    }
+
+                    Transaction debitSalaryTrans = new()
+                    {
+                        AccountId = salaryAccountId,
                         TransactionReference = "payroll-" + payroll.Id,
                         TransactionType = "payroll",
-                        Description = "-",
+                        Description = "Salary Payment",
                         Credit = 0,
                         Debit = payroll.NetSalary,
                         Amount = payroll.NetSalary,
                         Date = CurrentDateTime(),
                     };
 
-                    _ = await _transactionService.AddTransaction(statement);
+                    Transaction creditAssetTrans = new()
+                    {
+                        AccountId = Convert.ToInt32(GetSetting.PayrollAccount),
+                        TransactionReference = "payroll-" + payroll.Id,
+                        TransactionType = "payroll",
+                        Description = "Salary Payment",
+                        Credit = payroll.NetSalary,
+                        Debit = 0,
+                        Amount = payroll.NetSalary,
+                        Date = CurrentDateTime(),
+                    };
+
+                    _ = await _transactionService.AddDoubleEntryTransaction(debitSalaryTrans, creditAssetTrans);
 
                     return Json(new
                     {
@@ -1135,8 +1171,7 @@ namespace Saffrat.Controllers
                     _dbContext.Payrolls.Remove(existing);
                     await _dbContext.SaveChangesAsync();
 
-                    var statement = _dbContext.Transactions.FirstOrDefault(x => x.TransactionReference == "payroll-" + existing.Id);
-                    _ = await _transactionService.DeleteTransaction(statement);
+                    _ = await _transactionService.DeleteTransactionsByReference("payroll-" + existing.Id);
 
                     results.Add("status", "success");
                     results.Add("message", "success");

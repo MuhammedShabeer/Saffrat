@@ -10,6 +10,7 @@ namespace Saffrat.Models
             Deposits = new HashSet<Deposit>();
             Expenses = new HashSet<Expense>();
             Transactions = new HashSet<Transaction>();
+            ChildAccounts = new HashSet<Account>();
         }
 
         [Key]
@@ -24,6 +25,17 @@ namespace Saffrat.Models
         public string Note { get; set; }
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
+
+        [StringLength(100)]
+        public string AccountGroup { get; set; }
+        [StringLength(100)]
+        public string AccountType { get; set; }
+        public int? ParentAccountId { get; set; }
+
+        [JsonIgnore]
+        public virtual Account ParentAccount { get; set; }
+        [JsonIgnore]
+        public virtual ICollection<Account> ChildAccounts { get; set; }
 
         [JsonIgnore]
         public virtual ICollection<Deposit> Deposits { get; set; }

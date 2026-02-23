@@ -10,18 +10,18 @@ namespace Saffrat.Controllers
 {
     public class PurchaseController : BaseController
     {
-		private readonly ILogger<PurchaseController> _logger;
-		private readonly RestaurantDBContext _dbContext;
+        private readonly ILogger<PurchaseController> _logger;
+        private readonly RestaurantDBContext _dbContext;
         private readonly ITransactionService _transactionService;
 
         public PurchaseController(ILogger<PurchaseController> logger, RestaurantDBContext dbContext, ITransactionService transactionService,
             ILanguageService languageService, ILocalizationService localizationService)
         : base(languageService, localizationService)
         {
-			_logger = logger;
-			_dbContext = dbContext;
+            _logger = logger;
+            _dbContext = dbContext;
             _transactionService = transactionService;
-		}
+        }
 
         /*
          * Purchase Views
@@ -124,7 +124,7 @@ namespace Saffrat.Controllers
                             }
                         }
 
-                        if(purchase.PaidAmount < 0 || purchase.PaidAmount > total)
+                        if (purchase.PaidAmount < 0 || purchase.PaidAmount > total)
                         {
                             response.Add("status", "error");
                             response.Add("message", "Please enter valid amount.");
@@ -154,9 +154,33 @@ namespace Saffrat.Controllers
                             await _dbContext.SaveChangesAsync();
                             await transaction.CommitAsync();
 
-                            Transaction statement = new()
+                            var purchasesAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Purchases" && (x.AccountGroup == "Expenses" || x.AccountGroup == "Expense"));
+                            int purchasesAccountId = 0;
+                            if (purchasesAccount != null)
                             {
-                                AccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
+                                purchasesAccountId = Convert.ToInt32(purchasesAccount.Id);
+                            }
+                            else
+                            {
+                                var newPurAccount = new Account
+                                {
+                                    AccountName = "Purchases",
+                                    AccountNumber = "5000",
+                                    AccountGroup = "Expenses",
+                                    AccountType = "Expense",
+                                    Credit = 0,
+                                    Debit = 0,
+                                    Balance = 0,
+                                    UpdatedAt = CurrentDateTime()
+                                };
+                                _dbContext.Accounts.Add(newPurAccount);
+                                _dbContext.SaveChanges();
+                                purchasesAccountId = Convert.ToInt32(newPurAccount.Id);
+                            }
+
+                            Transaction debitPurchaseTrans = new()
+                            {
+                                AccountId = purchasesAccountId,
                                 TransactionReference = "pur-" + purchase.Id,
                                 TransactionType = "purchase",
                                 Description = purchase.Description,
@@ -165,7 +189,20 @@ namespace Saffrat.Controllers
                                 Amount = purchase.TotalAmount,
                                 Date = CurrentDateTime(),
                             };
-                            _ = await _transactionService.AddTransaction(statement);
+
+                            Transaction creditAssetTrans = new()
+                            {
+                                AccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
+                                TransactionReference = "pur-" + purchase.Id,
+                                TransactionType = "purchase",
+                                Description = purchase.Description,
+                                Credit = purchase.TotalAmount,
+                                Debit = 0,
+                                Amount = purchase.TotalAmount,
+                                Date = CurrentDateTime(),
+                            };
+
+                            _ = await _transactionService.AddDoubleEntryTransaction(debitPurchaseTrans, creditAssetTrans);
 
                             response.Add("status", "success");
                             response.Add("message", "success");
@@ -183,11 +220,11 @@ namespace Saffrat.Controllers
                     response.Add("message", "Enter required fields.");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync();
                 response.Add("status", "error");
-                response.Add("message", "Something went wrong."+ex.Message);
+                response.Add("message", "Something went wrong." + ex.Message);
             }
             return Json(response);
         }
@@ -248,9 +285,35 @@ namespace Saffrat.Controllers
                             await _dbContext.SaveChangesAsync();
                             await transaction.CommitAsync();
 
-                            Transaction statement = new()
+                            var purchasesAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Purchases" && (x.AccountGroup == "Expenses" || x.AccountGroup == "Expense"));
+                            int purchasesAccountId = 0;
+                            if (purchasesAccount != null)
                             {
-                                AccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
+                                purchasesAccountId = Convert.ToInt32(purchasesAccount.Id);
+                            }
+                            else
+                            {
+                                var newPurAccount = new Account
+                                {
+                                    AccountName = "Purchases",
+                                    AccountNumber = "5000",
+                                    AccountGroup = "Expenses",
+                                    AccountType = "Expense",
+                                    Credit = 0,
+                                    Debit = 0,
+                                    Balance = 0,
+                                    UpdatedAt = CurrentDateTime()
+                                };
+                                _dbContext.Accounts.Add(newPurAccount);
+                                _dbContext.SaveChanges();
+                                purchasesAccountId = Convert.ToInt32(newPurAccount.Id);
+                            }
+
+                            await _transactionService.DeleteTransactionsByReference("pur-" + purchase.Id);
+
+                            Transaction debitPurchaseTrans = new()
+                            {
+                                AccountId = purchasesAccountId,
                                 TransactionReference = "pur-" + purchase.Id,
                                 TransactionType = "purchase",
                                 Description = purchase.Description,
@@ -259,7 +322,20 @@ namespace Saffrat.Controllers
                                 Amount = purchase.TotalAmount,
                                 Date = CurrentDateTime(),
                             };
-                            _ = await _transactionService.UpdateTransaction(statement);
+
+                            Transaction creditAssetTrans = new()
+                            {
+                                AccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
+                                TransactionReference = "pur-" + purchase.Id,
+                                TransactionType = "purchase",
+                                Description = purchase.Description,
+                                Credit = purchase.TotalAmount,
+                                Debit = 0,
+                                Amount = purchase.TotalAmount,
+                                Date = CurrentDateTime(),
+                            };
+
+                            _ = await _transactionService.AddDoubleEntryTransaction(debitPurchaseTrans, creditAssetTrans);
 
                             response.Add("status", "success");
                             response.Add("message", "success");
@@ -311,8 +387,7 @@ namespace Saffrat.Controllers
                     await _dbContext.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    var statement = _dbContext.Transactions.FirstOrDefault(x => x.TransactionReference == "pur-" + existing.Id);
-                    _ = await _transactionService.DeleteTransaction(statement);
+                    _ = await _transactionService.DeleteTransactionsByReference("pur-" + existing.Id);
 
                     response.Add("status", "success");
                     response.Add("message", "success");

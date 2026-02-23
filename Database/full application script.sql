@@ -1,12 +1,4 @@
-﻿USE [master]
-GO
-USE [db41877]
-GO
-/****** Object:  Table [dbo].[AccountMoneyTransfers]    Script Date: 18-02-2026 21:55:09 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+﻿GO
 CREATE TABLE [dbo].[AccountMoneyTransfers](
 	[Id] [int] IDENTITY(1,1) NOT NULL,
 	[FromAccount] [nvarchar](150) NULL,
@@ -35408,8 +35400,4 @@ REFERENCES [dbo].[Accounts] ([Id])
 ON DELETE CASCADE
 GO
 ALTER TABLE [dbo].[Transactions] CHECK CONSTRAINT [FK_Transactions_Accounts]
-GO
-USE [master]
-GO
-ALTER DATABASE [db41877] SET  READ_WRITE 
 GO

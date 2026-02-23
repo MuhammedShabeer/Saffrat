@@ -18,7 +18,8 @@
                     </h4>
                 </div>
                 <ul class="breadcrumb">
-                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i
+                                class="fa fa-home me-1"></i>@Localize("Home")</a></li>
                     <li class="breadcrumb-item">@Localize("Accounts")</li>
                 </ul>
             </div>
@@ -42,6 +43,8 @@
                                 <th>@Localize("#")</th>
                                 <th>@Localize("Account Name")</th>
                                 <th>@Localize("Account Number")</th>
+                                <th>@Localize("Group")</th>
+                                <th>@Localize("Type")</th>
                                 <th>@Localize("Credit")</th>
                                 <th>@Localize("Debit")</th>
                                 <th>@Localize("Balance")</th>
@@ -59,6 +62,8 @@
                                     <td>@item.Id</td>
                                     <td>@item.AccountName</td>
                                     <td>@item.AccountNumber</td>
+                                    <td>@item.AccountGroup</td>
+                                    <td>@item.AccountType</td>
                                     <td>@item.Credit</td>
                                     <td>@item.Debit</td>
                                     <td>@item.Balance</td>
@@ -66,10 +71,14 @@
                                     <td>@item.UpdatedAt</td>
                                     <td>&#64;@item.UpdatedBy</td>
                                     <td>
-                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown"
+                                            aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
                                         <div class="dropdown-menu">
-                                            <a class="dropdown-item btn" onclick="OpenMainModal(@item.Id);"><i class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
-                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                            <a class="dropdown-item btn" onclick="OpenMainModal(@item.Id);"><i
+                                                    class="fas fa-edit"></i> <span class="ml-2">@Localize("Edit")</span></a>
+                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i
+                                                    class="fas fa-trash"></i> <span
+                                                    class="ml-2">@Localize("Delete")</span></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -111,10 +120,42 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label class="control-label">@Localize("Account Group") <code>*</code></label>
+                            <select name="AccountGroup" class="form-control" required>
+                                <option value="">@Localize("Select Group")</option>
+                                <option value="Assets">Assets</option>
+                                <option value="Liabilities">Liabilities</option>
+                                <option value="Equity">Equity</option>
+                                <option value="Revenue">Revenue</option>
+                                <option value="Expenses">Expenses</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select account group.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Account Type") <code>*</code></label>
+                            <input name="AccountType" class="form-control" required />
+                            <div class="invalid-feedback">
+                                @Localize("Please enter account type.")
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">@Localize("Parent Account")</label>
+                            <select name="ParentAccountId" class="form-control">
+                                <option value="">@Localize("None")</option>
+                                @foreach (var acc in Model)
+                                {
+                                    <option value="@acc.Id">@acc.AccountName (@acc.AccountNumber)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label class="control-label">@Localize("Balance") <code>*</code></label>
                             <div class="input-group">
                                 <div class="input-group-text">@GetSetting.CurrencySymbol</div>
-                                <input name="Balance" type="text" inputmode="numeric" class="form-control cleave-number" required />
+                                <input name="Balance" type="text" inputmode="numeric" class="form-control cleave-number"
+                                    required />
                             </div>
                             <div class="invalid-feedback">
                                 @Localize("Please enter balance.")
@@ -159,7 +200,7 @@
             'columnDefs': [
                 {
                     "orderable": false,
-                    'targets': [4, 7]
+                    'targets': [6, 9]
                 }
             ],
             'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
@@ -241,6 +282,9 @@
                             $("#frm input[name='Balance']").val(getNumber(result.balance));
                             $("#frm input[name='Balance']").prop("readonly", true);
                             $("#frm textarea[name='Note']").val(result.note);
+                            $("#frm select[name='AccountGroup']").val(result.accountGroup);
+                            $("#frm input[name='AccountType']").val(result.accountType);
+                            $("#frm select[name='ParentAccountId']").val(result.parentAccountId);
                             $("#mainModal").modal('show');
                         }
                         else {

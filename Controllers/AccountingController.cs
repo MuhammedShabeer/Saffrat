@@ -92,11 +92,14 @@ namespace Saffrat.Controllers
                     if (account.Id > 0)
                     {
                         var acc = _dbContext.Accounts.FirstOrDefault(x => x.Id == account.Id);
-                        if (account != null)
+                        if (acc != null)
                         {
                             acc.AccountName = account.AccountName;
                             acc.AccountNumber = account.AccountNumber;
                             acc.Note = account.Note;
+                            acc.AccountGroup = account.AccountGroup;
+                            acc.AccountType = account.AccountType;
+                            acc.ParentAccountId = account.ParentAccountId;
                         }
                         _dbContext.Accounts.Update(acc);
                         _dbContext.SaveChanges();
@@ -124,20 +127,56 @@ namespace Saffrat.Controllers
                             _dbContext.Deposits.Add(deposit);
                             await _dbContext.SaveChangesAsync();
 
-                            Transaction statement = new()
+                            // Find or Create Capital Account for Opening Balance Double Entry
+                            var capitalAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Capital Account" && (x.AccountGroup == "Equity" || x.AccountGroup == "Owner Equity"));
+                            int capitalAccountId = 0;
+                            if (capitalAccount != null)
                             {
-                                AccountId = Convert.ToInt32(account.Id),
+                                capitalAccountId = Convert.ToInt32(capitalAccount.Id);
+                            }
+                            else
+                            {
+                                var newCapAccount = new Account
+                                {
+                                    AccountName = "Capital Account",
+                                    AccountNumber = "3000",
+                                    AccountGroup = "Equity",
+                                    AccountType = "Equity",
+                                    Credit = 0,
+                                    Debit = 0,
+                                    Balance = 0,
+                                    UpdatedAt = CurrentDateTime()
+                                };
+                                _dbContext.Accounts.Add(newCapAccount);
+                                _dbContext.SaveChanges();
+                                capitalAccountId = Convert.ToInt32(newCapAccount.Id);
+                            }
+
+                            Transaction creditEquityTrans = new()
+                            {
+                                AccountId = capitalAccountId,
                                 TransactionReference = "deposit-" + deposit.Id,
                                 TransactionType = "deposit",
-                                Description = "Initial Deposit",
+                                Description = "Opening Balance",
                                 Credit = account.Balance,
                                 Debit = 0,
                                 Amount = account.Balance,
                                 Date = CurrentDateTime(),
                             };
 
-                            _dbContext.Transactions.Add(statement);
-                            await _dbContext.SaveChangesAsync();
+                            Transaction debitAssetTrans = new()
+                            {
+                                AccountId = Convert.ToInt32(account.Id),
+                                TransactionReference = "deposit-" + deposit.Id,
+                                TransactionType = "deposit",
+                                Description = "Opening Balance",
+                                Credit = 0,
+                                Debit = account.Balance,
+                                Amount = account.Balance,
+                                Date = CurrentDateTime(),
+                            };
+
+                            _ = await _transactionService.AddDoubleEntryTransaction(debitAssetTrans, creditEquityTrans);
                         }
 
                         await transaction.CommitAsync();
@@ -324,14 +363,42 @@ namespace Saffrat.Controllers
                 {
                     expense.UpdatedBy = userName;
                     expense.UpdatedAt = CurrentDateTime();
+                    var expenseAccountName = string.IsNullOrEmpty(expense.Category) ? "Direct Expenses" : expense.Category;
+                    var expenseAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == expenseAccountName && (x.AccountGroup == "Expenses" || x.AccountGroup == "Expense"));
+                    int expenseAccountId = 0;
+                    if (expenseAccount != null)
+                    {
+                        expenseAccountId = Convert.ToInt32(expenseAccount.Id);
+                    }
+                    else
+                    {
+                        var newExpAccount = new Account
+                        {
+                            AccountName = expenseAccountName,
+                            AccountNumber = "5000",
+                            AccountGroup = "Expenses",
+                            AccountType = "Expense",
+                            Credit = 0,
+                            Debit = 0,
+                            Balance = 0,
+                            UpdatedAt = CurrentDateTime()
+                        };
+                        _dbContext.Accounts.Add(newExpAccount);
+                        _dbContext.SaveChangesAsync().Wait();
+                        expenseAccountId = Convert.ToInt32(newExpAccount.Id);
+                    }
+
                     if (expense.Id > 0)
                     {
                         _dbContext.Expenses.Update(expense);
                         await _dbContext.SaveChangesAsync();
 
-                        Transaction statement = new()
+                        // Remove old transactions then insert the new double entry
+                        await _transactionService.DeleteTransactionsByReference("expense-" + expense.Id);
+
+                        Transaction debitExpenseTrans = new()
                         {
-                            AccountId = expense.AccountId,
+                            AccountId = expenseAccountId,
                             TransactionReference = "expense-" + expense.Id,
                             TransactionType = "expense",
                             Description = expense.Note,
@@ -341,16 +408,28 @@ namespace Saffrat.Controllers
                             Date = expense.ExpenseDate,
                         };
 
-                        _ = await _transactionService.UpdateTransaction(statement);
+                        Transaction creditAssetTrans = new()
+                        {
+                            AccountId = expense.AccountId,
+                            TransactionReference = "expense-" + expense.Id,
+                            TransactionType = "expense",
+                            Description = "Payment for " + expense.Note,
+                            Credit = expense.Amount,
+                            Debit = 0,
+                            Amount = expense.Amount,
+                            Date = expense.ExpenseDate,
+                        };
+
+                        _ = await _transactionService.AddDoubleEntryTransaction(debitExpenseTrans, creditAssetTrans);
                     }
                     else
                     {
                         _dbContext.Expenses.Add(expense);
                         await _dbContext.SaveChangesAsync();
 
-                        Transaction statement = new()
+                        Transaction debitExpenseTrans = new()
                         {
-                            AccountId = expense.AccountId,
+                            AccountId = expenseAccountId,
                             TransactionReference = "expense-" + expense.Id,
                             TransactionType = "expense",
                             Description = expense.Note,
@@ -360,7 +439,19 @@ namespace Saffrat.Controllers
                             Date = expense.ExpenseDate,
                         };
 
-                        _ = await _transactionService.AddTransaction(statement);
+                        Transaction creditAssetTrans = new()
+                        {
+                            AccountId = expense.AccountId,
+                            TransactionReference = "expense-" + expense.Id,
+                            TransactionType = "expense",
+                            Description = "Payment for " + expense.Note,
+                            Credit = expense.Amount,
+                            Debit = 0,
+                            Amount = expense.Amount,
+                            Date = expense.ExpenseDate,
+                        };
+
+                        _ = await _transactionService.AddDoubleEntryTransaction(debitExpenseTrans, creditAssetTrans);
                     }
 
                     response.Add("status", "success");
@@ -392,10 +483,10 @@ namespace Saffrat.Controllers
             {
                 try
                 {
-                    var statement = _dbContext.Transactions.FirstOrDefault(x => x.TransactionReference == "expense-" + existing.Id);
                     _dbContext.Expenses.Remove(existing);
                     await _dbContext.SaveChangesAsync();
-                    _ = await _transactionService.DeleteTransaction(statement);
+
+                    _ = await _transactionService.DeleteTransactionsByReference("expense-" + existing.Id);
 
                     results.Add("status", "success");
                     results.Add("message", "success");
@@ -550,32 +641,32 @@ namespace Saffrat.Controllers
                             _dbContext.AccountMoneyTransfers.Add(transfer);
                             await _dbContext.SaveChangesAsync();
 
-                            Transaction statement = new()
-                            {
-                                AccountId = Convert.ToInt32(toAccount.Id),
-                                TransactionReference = "transfer-" + transfer.Id,
-                                TransactionType = "transfer",
-                                Description = transfer.Note,
-                                Credit = transfer.Amount,
-                                Debit = 0,
-                                Amount = transfer.Amount,
-                                Date = transfer.TransferDate,
-                            };
-                            Transaction statement1 = new()
+                            Transaction debitAssetTrans = new()
                             {
                                 AccountId = Convert.ToInt32(fromAccount.Id),
                                 TransactionReference = "transfer-" + transfer.Id,
                                 TransactionType = "transfer",
-                                Description = transfer.Note,
+                                Description = "Transfer to " + toAccount.AccountName + ": " + transfer.Note,
                                 Credit = 0,
                                 Debit = transfer.Amount,
                                 Amount = transfer.Amount,
                                 Date = transfer.TransferDate,
                             };
 
+                            Transaction creditAssetTrans = new()
+                            {
+                                AccountId = Convert.ToInt32(toAccount.Id),
+                                TransactionReference = "transfer-" + transfer.Id,
+                                TransactionType = "transfer",
+                                Description = "Transfer from " + fromAccount.AccountName + ": " + transfer.Note,
+                                Credit = transfer.Amount,
+                                Debit = 0,
+                                Amount = transfer.Amount,
+                                Date = transfer.TransferDate,
+                            };
 
-                            _ = await _transactionService.AddTransaction(statement);
-                            _ = await _transactionService.AddTransaction(statement1);
+
+                            _ = await _transactionService.AddDoubleEntryTransaction(debitAssetTrans, creditAssetTrans);
                         }
 
                         response.Add("status", "success");
@@ -608,13 +699,9 @@ namespace Saffrat.Controllers
             {
                 try
                 {
-                    var statements = _dbContext.Transactions.Where(x => x.TransactionReference == "transfer-" + existing.Id).ToList();
                     _dbContext.AccountMoneyTransfers.Remove(existing);
+                    _ = await _transactionService.DeleteTransactionsByReference("transfer-" + existing.Id);
                     await _dbContext.SaveChangesAsync();
-                    foreach (var item in statements)
-                    {
-                        _ = await _transactionService.DeleteTransaction(item);
-                    }
 
                     results.Add("status", "success");
                     results.Add("message", "success");
@@ -738,7 +825,44 @@ namespace Saffrat.Controllers
                         _dbContext.Deposits.Add(deposit);
                         await _dbContext.SaveChangesAsync();
 
-                        Transaction statement = new()
+                        // Find or Create Capital Account for matching Double Entry
+                        var capitalAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Capital Account" && (x.AccountGroup == "Equity" || x.AccountGroup == "Owner Equity"));
+                        int capitalAccountId = 0;
+                        if (capitalAccount != null)
+                        {
+                            capitalAccountId = Convert.ToInt32(capitalAccount.Id);
+                        }
+                        else
+                        {
+                            var newCapAccount = new Account
+                            {
+                                AccountName = "Capital Account",
+                                AccountNumber = "3000",
+                                AccountGroup = "Equity",
+                                AccountType = "Equity",
+                                Credit = 0,
+                                Debit = 0,
+                                Balance = 0,
+                                UpdatedAt = CurrentDateTime()
+                            };
+                            _dbContext.Accounts.Add(newCapAccount);
+                            _dbContext.SaveChanges();
+                            capitalAccountId = Convert.ToInt32(newCapAccount.Id);
+                        }
+
+                        Transaction debitEquityTrans = new()
+                        {
+                            AccountId = capitalAccountId,
+                            TransactionReference = "deposit-" + deposit.Id,
+                            TransactionType = "deposit",
+                            Description = deposit.Note,
+                            Credit = 0,
+                            Debit = deposit.Amount,
+                            Amount = deposit.Amount,
+                            Date = deposit.DepositDate,
+                        };
+
+                        Transaction creditAssetTrans = new()
                         {
                             AccountId = deposit.AccountId,
                             TransactionReference = "deposit-" + deposit.Id,
@@ -750,7 +874,7 @@ namespace Saffrat.Controllers
                             Date = deposit.DepositDate,
                         };
 
-                        _ = await _transactionService.AddTransaction(statement);
+                        _ = await _transactionService.AddDoubleEntryTransaction(debitEquityTrans, creditAssetTrans);
                     }
 
                     response.Add("status", "success");
@@ -782,10 +906,10 @@ namespace Saffrat.Controllers
             {
                 try
                 {
-                    var statement = _dbContext.Transactions.FirstOrDefault(x => x.TransactionReference == "deposit-" + existing.Id);
                     _dbContext.Deposits.Remove(existing);
                     await _dbContext.SaveChangesAsync();
-                    _ = await _transactionService.DeleteTransaction(statement);
+
+                    _ = await _transactionService.DeleteTransactionsByReference("deposit-" + existing.Id);
 
                     results.Add("status", "success");
                     results.Add("message", "success");
