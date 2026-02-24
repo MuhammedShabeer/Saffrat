@@ -65,9 +65,11 @@
                         body * {
                             visibility: hidden;
                         }
+
                         #printarea, #printarea * {
                             visibility: visible;
                         }
+
                         #printarea {
                             position: absolute;
                             left: 0;
@@ -94,22 +96,22 @@
                             <tbody>
                                 @foreach (var group in groups)
                                 {
-                                        <tr class="table-secondary">
-                                            <td colspan="3"><strong>@group.Key</strong></td>
-                                        </tr>
+                                    <tr class="table-secondary">
+                                        <td colspan="3"><strong>@group.Key</strong></td>
+                                    </tr>
                                     @foreach (var account in group)
                                     {
-                                                <tr>
-                                                    <td class="ps-4">@account.AccountName</td>
-                                                    <td class="text-end">@account.TotalDebit.ToString("0.00")</td>
-                                                    <td class="text-end">@account.TotalCredit.ToString("0.00")</td>
-                                                </tr>
-                                    }
-                                        <tr class="table-light">
-                                            <td class="text-end"><strong>Total @group.Key:</strong></td>
-                                            <td class="text-end"><strong>@group.Sum(x => x.TotalDebit).ToString("0.00")</strong></td>
-                                            <td class="text-end"><strong>@group.Sum(x => x.TotalCredit).ToString("0.00")</strong></td>
+                                        <tr>
+                                            <td class="ps-4">@account.AccountName</td>
+                                            <td class="text-end">@account.TotalDebit.ToString("0.00")</td>
+                                            <td class="text-end">@account.TotalCredit.ToString("0.00")</td>
                                         </tr>
+                                    }
+                                    <tr class="table-light">
+                                        <td class="text-end"><strong>Total @group.Key:</strong></td>
+                                        <td class="text-end"><strong>@group.Sum(x => x.TotalDebit).ToString("0.00")</strong></td>
+                                        <td class="text-end"><strong>@group.Sum(x => x.TotalCredit).ToString("0.00")</strong></td>
+                                    </tr>
                                 }
                             </tbody>
                             <tfoot>

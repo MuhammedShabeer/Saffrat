@@ -66,6 +66,12 @@ namespace Saffrat.Models
         public virtual DbSet<UserToken> UserTokens { get; set; }
         public virtual DbSet<WorkPeriod> WorkPeriods { get; set; }
 
+        // Accounting Engine DbSets
+        public virtual DbSet<GLAccount> GLAccounts { get; set; }
+        public virtual DbSet<JournalEntry> JournalEntries { get; set; }
+        public virtual DbSet<LedgerEntry> LedgerEntries { get; set; }
+        public virtual DbSet<Invoice> Invoices { get; set; }
+        public virtual DbSet<Bill> Bills { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)

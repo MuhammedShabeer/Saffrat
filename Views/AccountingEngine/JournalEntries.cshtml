@@ -1,0 +1,120 @@
+@model IEnumerable<Saffrat.Models.JournalEntry>
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = Localize("Journal Entries");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("General Journal")</h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i> @Localize("Dashboard")</a></li>
+                    <li class="breadcrumb-item">@Localize("Accounting Engine")</li>
+                    <li class="breadcrumb-item">@Localize("Journal Entries")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <button class="btn btn-outline-info me-2" onclick="runDailyClose()"><i class="fa fa-cogs"></i> @Localize("Run Daily Close")</button>
+                    <a asp-action="ManualJournal" class="btn btn-primary"><i class="fa fa-plus"></i> @Localize("Manual Journal")</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="datatable">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Reference")</th>
+                                <th>@Localize("Description")</th>
+                                <th>@Localize("Source Doc")</th>
+                                <th>@Localize("Debit Total")</th>
+                                <th>@Localize("Credit Total")</th>
+                                <th>@Localize("Posted")</th>
+                                <th>@Localize("Actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                @foreach (var je in Model)
+                                {
+                                    decimal totalDebits = je.LedgerEntries?.Sum(l => l.Debit) ?? 0;
+                                    decimal totalCredits = je.LedgerEntries?.Sum(l => l.Credit) ?? 0;
+                                    bool isBalanced = Math.Round(totalDebits, 2) == Math.Round(totalCredits, 2);
+
+                                    <tr>
+                                        <td>@je.EntryDate.ToString("yyyy-MM-dd")</td>
+                                        <td><strong>@je.ReferenceNumber</strong></td>
+                                        <td>@je.Description</td>
+                                        <td>@je.SourceDocumentType</td>
+                                        <td class="text-success fw-bold">@GetCurrency(totalDebits)</td>
+                                        <td class="text-danger fw-bold">@GetCurrency(totalCredits)</td>
+                                        <td>
+                                            @if (je.IsPosted)
+                                            {
+                                                <span class="badge bg-success"><i class="fa fa-lock"></i> @Localize("Posted")</span>
+                                            }
+                                            else
+                                            {
+                                                if (isBalanced)
+                                                {
+                                                    <span class="badge bg-warning text-dark"><i class="fa fa-unlock"></i> @Localize("Unposted")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger"><i class="fa fa-exclamation-triangle"></i> @Localize("Unbalanced")</span>
+                                                }
+                                            }
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info text-white" title="@Localize("View Lines")" onclick="viewLines(@je.Id)"><i class="fa fa-eye"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#datatable').DataTable({
+                "order": [[0, "desc"]]
+            });
+        });
+
+        function runDailyClose() {
+            var closeDate = prompt("Enter the date for Daily Close (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+            if (closeDate) {
+                $.post('@Url.Action("RunDailyClose", "AccountingEngine")', { closeDate: closeDate }, function(response) {
+                    if (response.status === 'success') {
+                        toastr.success(response.message);
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                });
+            }
+        }
+    </script>
+}

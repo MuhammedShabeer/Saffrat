@@ -1,0 +1,197 @@
+@model Saffrat.Models.JournalEntry
+@using Saffrat.Resources
+@inherits LocService<TModel>
+@{
+    ViewData["Title"] = Localize("Manual Journal Entry");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var accounts = ViewBag.Accounts as List<Saffrat.Models.GLAccount>;
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("New Manual Journal Entry")</h4>
+                </div>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <a asp-action="JournalEntries" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> @Localize("Back to Ledger")</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row pt-3">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form asp-action="ManualJournal" method="post" id="journalForm">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly"
+                        class="text-danger shadow-sm p-3 mb-3 bg-white rounded border-start border-danger border-4">
+                    </div>
+
+                    <h5 class="text-primary border-bottom pb-2 mb-4"><i class="fa fa-info-circle"></i> @Localize("Header Information")</h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="ReferenceNumber" class="form-label text-muted fw-bold">@Localize("Reference Number")
+                                <span class="text-danger">*</span></label>
+                            <input asp-for="ReferenceNumber" class="form-control" placeholder="@Localize("E.g. JRNL-2025-01")"
+                                required />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="EntryDate" class="form-label text-muted fw-bold">@Localize("Entry Date") <span
+                                    class="text-danger">*</span></label>
+                            <input asp-for="EntryDate" class="form-control" type="date" required />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="Description" class="form-label text-muted fw-bold">@Localize("Narration") <span
+                                    class="text-danger">*</span></label>
+                            <input asp-for="Description" class="form-control" placeholder="@Localize("Main description")" required />
+                        </div>
+                    </div>
+
+                    <h5 class="text-primary border-bottom pb-2 mb-3 mt-4"><i class="fa fa-list"></i> @Localize("Ledger Lines")</h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="ledgerTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th width="35%">@Localize("Account")</th>
+                                    <th width="30%">@Localize("Line Description")</th>
+                                    <th width="15%" class="text-end">@Localize("Debit")</th>
+                                    <th width="15%" class="text-end">@Localize("Credit")</th>
+                                    <th width="5%" class="text-center">@Localize("Action")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < 4; i++) // Default 4 rows
+                                {
+                                    <tr>
+                                        <td>
+                                            <select name="LedgerEntries[@i].GLAccountId" class="form-select account-select">
+                                                <option value="0">@Localize("-- Select Account --")</option>
+                                                @if (accounts != null)
+                                                {
+                                                    foreach (var acc in accounts)
+                                                    {
+                                                        <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="LedgerEntries[@i].Description" class="form-control"
+                                                placeholder="@Localize("Trace Details")" />
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" min="0" name="LedgerEntries[@i].Debit"
+                                                class="form-control text-end debit-input" value="0.00"
+                                                onkeyup="updateTotals()" />
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" min="0" name="LedgerEntries[@i].Credit"
+                                                class="form-control text-end credit-input" value="0.00"
+                                                onkeyup="updateTotals()" />
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="javascript:void(0)" class="text-danger pt-2 d-inline-block"
+                                                onclick="$(this).closest('tr').find('input').val('0.00'); $(this).closest('tr').find('select').val('0'); updateTotals();"
+                                                title="@Localize("Clear Row")"><i class="fa fa-times"></i></a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-light fw-bold">
+                                    <td colspan="2" class="text-end pe-4 text-uppercase">@Localize("Totals:")</td>
+                                    <td class="text-end text-success fs-5" id="totalDebits">0.00</td>
+                                    <td class="text-end text-danger fs-5" id="totalCredits">0.00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="row align-items-center mt-3">
+                        <div class="col">
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="addRow()"><i
+                                    class="fa fa-plus"></i> @Localize("Add Row")</button>
+                        </div>
+                        <div class="col-auto text-end">
+                            <span id="balanceAlert" class="text-danger fw-bold me-3 d-none"><i
+                                    class="fa fa-exclamation-triangle"></i> @Localize("Debits and Credits must balance!")</span>
+                            <button type="submit" class="btn btn-primary px-4 fw-bold" id="btnSubmit"><i
+                                    class="fa fa-save"></i> @Localize("Post Journal")</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var rowIdx = 4;
+
+        function addRow() {
+            var newRow = `<tr>
+                    <td>
+                        <select name="LedgerEntries[${rowIdx}].GLAccountId" class="form-select account-select">
+                            <option value="0">@Localize("-- Select Account --")</option>
+        @Html.Raw(accounts != null ? string.Join("", accounts.Select(a => $"<option value='{a.Id}'>{a.AccountCode} - {a.AccountName.Replace("'", "\\'")}</option>")) : "")
+                        </select>
+                    </td>
+                    <td><input type="text" name="LedgerEntries[${rowIdx}].Description" class="form-control" placeholder="@Localize("Trace Details")" /></td>
+                    <td><input type="number" step="0.01" min="0" name="LedgerEntries[${rowIdx}].Debit" class="form-control text-end debit-input" value="0.00" onkeyup="updateTotals()" /></td>
+                    <td><input type="number" step="0.01" min="0" name="LedgerEntries[${rowIdx}].Credit" class="form-control text-end credit-input" value="0.00" onkeyup="updateTotals()" /></td>
+                    <td class="text-center">
+                        <a href="javascript:void(0)" class="text-danger pt-2 d-inline-block" onclick="$(this).closest('tr').remove(); updateTotals();" title="@Localize("Remove Row")"><i class="fa fa-trash"></i></a>
+                    </td>
+                </tr>`;
+
+            $('#ledgerTable tbody').append(newRow);
+            rowIdx++;
+        }
+
+        function updateTotals() {
+            let totalD = 0;
+            let totalC = 0;
+
+            $('.debit-input').each(function () {
+                var val = parseFloat($(this).val()) || 0;
+                totalD += val;
+            });
+
+            $('.credit-input').each(function () {
+                var val = parseFloat($(this).val()) || 0;
+                totalC += val;
+            });
+
+            $('#totalDebits').text(totalD.toFixed(2));
+            $('#totalCredits').text(totalC.toFixed(2));
+
+            if (totalD > 0 && totalD === totalC) {
+                $('#btnSubmit').prop('disabled', false);
+                $('#balanceAlert').addClass('d-none');
+            } else {
+                $('#btnSubmit').prop('disabled', true);
+                $('#balanceAlert').removeClass('d-none');
+            }
+        }
+
+        $(document).ready(function () {
+            updateTotals();
+            $('#journalForm').submit(function (e) {
+                if ($('#btnSubmit').is(':disabled')) {
+                    e.preventDefault();
+                    toastr.error("@Localize("Ledger must balance before posting!")");
+                }
+            });
+        });
+    </script>
+}

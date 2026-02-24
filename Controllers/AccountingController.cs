@@ -12,15 +12,17 @@ namespace Saffrat.Controllers
         private readonly ILogger<AccountingController> _logger;
         private readonly RestaurantDBContext _dbContext;
         private readonly ITransactionService _transactionService;
+        private readonly Saffrat.Services.AccountingEngine.IAccountingEngine _accountingEngine;
         private readonly AppSetting setting;
 
         public AccountingController(ILogger<AccountingController> logger, RestaurantDBContext dbContext, ITransactionService transactionService,
-            ILanguageService languageService, ILocalizationService localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, Saffrat.Services.AccountingEngine.IAccountingEngine accountingEngine)
         : base(languageService, localizationService)
         {
             _logger = logger;
             _dbContext = dbContext;
             _transactionService = transactionService;
+            _accountingEngine = accountingEngine;
 
             setting = _dbContext.AppSettings.FirstOrDefault(x => x.Id == 1);
         }
@@ -180,6 +182,38 @@ namespace Saffrat.Controllers
                         }
 
                         await transaction.CommitAsync();
+
+                        // --- NEW ACCOUNTING ENGINE INTEGRATION (Opening Balance) ---
+                        try
+                        {
+                            var glEntry = new Saffrat.Models.JournalEntry
+                            {
+                                ReferenceNumber = $"DEP-{account.Id}",
+                                Description = "Initial Account Deposit",
+                                EntryDate = CurrentDateTime(),
+                                SourceDocumentType = "Deposit",
+                                SourceDocumentId = account.Id,
+                                LedgerEntries = new List<Saffrat.Models.LedgerEntry>()
+                            };
+
+                            var glCashAcc = await _dbContext.Set<Saffrat.Models.GLAccount>().FirstOrDefaultAsync(a => a.Type == (int)Saffrat.Models.AccountingEngine.AccountType.CashAndBank)
+                                ?? new Saffrat.Models.GLAccount { AccountCode = "1000", AccountName = "Legacy Cash", Category = (int)Saffrat.Models.AccountingEngine.AccountCategory.Asset, Type = (int)Saffrat.Models.AccountingEngine.AccountType.CashAndBank, IsActive = true };
+                            if (glCashAcc.Id == 0) { _dbContext.Set<Saffrat.Models.GLAccount>().Add(glCashAcc); await _dbContext.SaveChangesAsync(); }
+
+                            var glEquityAcc = await _dbContext.Set<Saffrat.Models.GLAccount>().FirstOrDefaultAsync(a => a.Type == (int)Saffrat.Models.AccountingEngine.AccountType.OwnerEquity)
+                                ?? new Saffrat.Models.GLAccount { AccountCode = "3000", AccountName = "Capital Account", Category = (int)Saffrat.Models.AccountingEngine.AccountCategory.Equity, Type = (int)Saffrat.Models.AccountingEngine.AccountType.OwnerEquity, IsActive = true };
+                            if (glEquityAcc.Id == 0) { _dbContext.Set<Saffrat.Models.GLAccount>().Add(glEquityAcc); await _dbContext.SaveChangesAsync(); }
+
+                            glEntry.LedgerEntries.Add(new Saffrat.Models.LedgerEntry { Debit = account.Balance, Credit = 0, GLAccountId = glCashAcc.Id, Description = "Opening Deposit" });
+                            glEntry.LedgerEntries.Add(new Saffrat.Models.LedgerEntry { Debit = 0, Credit = account.Balance, GLAccountId = glEquityAcc.Id, Description = "Capital Injection" });
+
+                            await _accountingEngine.PostJournalEntryAsync(glEntry);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to sync legacy deposit to Accounting Engine");
+                        }
+                        // --- END INTEGRATION ---
                     }
 
                     response.Add("status", "success");
@@ -454,6 +488,41 @@ namespace Saffrat.Controllers
                         _ = await _transactionService.AddDoubleEntryTransaction(debitExpenseTrans, creditAssetTrans);
                     }
 
+                    // --- NEW ACCOUNTING ENGINE INTEGRATION ---
+                    // Sync the Expense to the True Double-Entry General Ledger
+                    try
+                    {
+                        var glEntry = new Saffrat.Models.JournalEntry
+                        {
+                            ReferenceNumber = $"EXP-{expense.Id}",
+                            Description = expense.Note ?? "Expense Payment",
+                            EntryDate = expense.ExpenseDate,
+                            SourceDocumentType = "Expense",
+                            SourceDocumentId = expense.Id,
+                            LedgerEntries = new List<Saffrat.Models.LedgerEntry>()
+                        };
+
+                        // We need the GL mapped IDs. In a real system, we'd lookup legacy DB Accounts to GLAccounts.
+                        // For the integration, we'll route all legacy Expenses to "General Operations" GL.
+                        var glExpenseAcc = await _dbContext.Set<Saffrat.Models.GLAccount>().FirstOrDefaultAsync(a => a.Type == (int)Saffrat.Models.AccountingEngine.AccountType.GeneralAdministrative)
+                            ?? new Saffrat.Models.GLAccount { AccountCode = "5000", AccountName = "Legacy Expenses", Category = (int)Saffrat.Models.AccountingEngine.AccountCategory.Expense, Type = (int)Saffrat.Models.AccountingEngine.AccountType.GeneralAdministrative, IsActive = true };
+                        if (glExpenseAcc.Id == 0) { _dbContext.Set<Saffrat.Models.GLAccount>().Add(glExpenseAcc); await _dbContext.SaveChangesAsync(); }
+
+                        var glCashAcc = await _dbContext.Set<Saffrat.Models.GLAccount>().FirstOrDefaultAsync(a => a.Type == (int)Saffrat.Models.AccountingEngine.AccountType.CashAndBank)
+                            ?? new Saffrat.Models.GLAccount { AccountCode = "1000", AccountName = "Legacy Cash", Category = (int)Saffrat.Models.AccountingEngine.AccountCategory.Asset, Type = (int)Saffrat.Models.AccountingEngine.AccountType.CashAndBank, IsActive = true };
+                        if (glCashAcc.Id == 0) { _dbContext.Set<Saffrat.Models.GLAccount>().Add(glCashAcc); await _dbContext.SaveChangesAsync(); }
+
+                        glEntry.LedgerEntries.Add(new Saffrat.Models.LedgerEntry { Debit = expense.Amount, Credit = 0, GLAccountId = glExpenseAcc.Id, Description = "Legacy Expense Sync" });
+                        glEntry.LedgerEntries.Add(new Saffrat.Models.LedgerEntry { Debit = 0, Credit = expense.Amount, GLAccountId = glCashAcc.Id, Description = "Legacy Cash Payment Sync" });
+
+                        await _accountingEngine.PostJournalEntryAsync(glEntry);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to sync legacy expense to new Accounting Engine");
+                    }
+                    // --- END INTEGRATION ---
+
                     response.Add("status", "success");
                     response.Add("message", "success");
                 }
@@ -669,6 +738,38 @@ namespace Saffrat.Controllers
                             _ = await _transactionService.AddDoubleEntryTransaction(debitAssetTrans, creditAssetTrans);
                         }
 
+                        // --- NEW ACCOUNTING ENGINE INTEGRATION ---
+                        try
+                        {
+                            var glEntry = new Saffrat.Models.JournalEntry
+                            {
+                                ReferenceNumber = $"TXF-{transfer.Id}",
+                                Description = transfer.Note ?? $"Transfer {fromAccount.AccountName} to {toAccount.AccountName}",
+                                EntryDate = transfer.TransferDate,
+                                SourceDocumentType = "Transfer",
+                                SourceDocumentId = transfer.Id,
+                                LedgerEntries = new List<Saffrat.Models.LedgerEntry>()
+                            };
+
+                            var glCashAcc = await _dbContext.Set<Saffrat.Models.GLAccount>().FirstOrDefaultAsync(a => a.Type == (int)Saffrat.Models.AccountingEngine.AccountType.CashAndBank)
+                                ?? new Saffrat.Models.GLAccount { AccountCode = "1000", AccountName = "Legacy Cash", Category = (int)Saffrat.Models.AccountingEngine.AccountCategory.Asset, Type = (int)Saffrat.Models.AccountingEngine.AccountType.CashAndBank, IsActive = true };
+                            if (glCashAcc.Id == 0) { _dbContext.Set<Saffrat.Models.GLAccount>().Add(glCashAcc); await _dbContext.SaveChangesAsync(); }
+
+                            // Both sides are Assets. Transfer involves Debiting the 'To' account and Crediting the 'From' account.
+                            // Since legacy accounts aren't explicitly mapped in the new GL, we record the net movement through the main Cash GL.
+                            // A transfer between cash to cash is technically a zero-net on a consolidated GL level, 
+                            // but we record the lines for audit trace.
+                            glEntry.LedgerEntries.Add(new Saffrat.Models.LedgerEntry { Debit = transfer.Amount, Credit = 0, GLAccountId = glCashAcc.Id, Description = $"To: {toAccount.AccountName}" });
+                            glEntry.LedgerEntries.Add(new Saffrat.Models.LedgerEntry { Debit = 0, Credit = transfer.Amount, GLAccountId = glCashAcc.Id, Description = $"From: {fromAccount.AccountName}" });
+
+                            await _accountingEngine.PostJournalEntryAsync(glEntry);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to sync legacy transfer to new Accounting Engine");
+                        }
+                        // --- END INTEGRATION ---
+
                         response.Add("status", "success");
                         response.Add("message", "success");
                     }
@@ -876,6 +977,39 @@ namespace Saffrat.Controllers
 
                         _ = await _transactionService.AddDoubleEntryTransaction(debitEquityTrans, creditAssetTrans);
                     }
+
+                    // --- NEW ACCOUNTING ENGINE INTEGRATION ---
+                    try
+                    {
+                        var glEntry = new Saffrat.Models.JournalEntry
+                        {
+                            ReferenceNumber = $"DEP-{deposit.Id}",
+                            Description = deposit.Note ?? "Legacy Deposit",
+                            EntryDate = deposit.DepositDate,
+                            SourceDocumentType = "Deposit",
+                            SourceDocumentId = deposit.Id,
+                            LedgerEntries = new List<Saffrat.Models.LedgerEntry>()
+                        };
+
+                        var glCashAcc = await _dbContext.Set<Saffrat.Models.GLAccount>().FirstOrDefaultAsync(a => a.Type == (int)Saffrat.Models.AccountingEngine.AccountType.CashAndBank)
+                            ?? new Saffrat.Models.GLAccount { AccountCode = "1000", AccountName = "Legacy Cash", Category = (int)Saffrat.Models.AccountingEngine.AccountCategory.Asset, Type = (int)Saffrat.Models.AccountingEngine.AccountType.CashAndBank, IsActive = true };
+                        if (glCashAcc.Id == 0) { _dbContext.Set<Saffrat.Models.GLAccount>().Add(glCashAcc); await _dbContext.SaveChangesAsync(); }
+
+                        var glEquityAcc = await _dbContext.Set<Saffrat.Models.GLAccount>().FirstOrDefaultAsync(a => a.Type == (int)Saffrat.Models.AccountingEngine.AccountType.OwnerEquity)
+                            ?? new Saffrat.Models.GLAccount { AccountCode = "3000", AccountName = "Capital Account", Category = (int)Saffrat.Models.AccountingEngine.AccountCategory.Equity, Type = (int)Saffrat.Models.AccountingEngine.AccountType.OwnerEquity, IsActive = true };
+                        if (glEquityAcc.Id == 0) { _dbContext.Set<Saffrat.Models.GLAccount>().Add(glEquityAcc); await _dbContext.SaveChangesAsync(); }
+
+                        // Deposit into Cash (Debit Asset) against Equity (Credit Equity)
+                        glEntry.LedgerEntries.Add(new Saffrat.Models.LedgerEntry { Debit = deposit.Amount, Credit = 0, GLAccountId = glCashAcc.Id, Description = "Legacy Deposit" });
+                        glEntry.LedgerEntries.Add(new Saffrat.Models.LedgerEntry { Debit = 0, Credit = deposit.Amount, GLAccountId = glEquityAcc.Id, Description = "Legacy Deposit Capital" });
+
+                        await _accountingEngine.PostJournalEntryAsync(glEntry);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to sync legacy deposit to Accounting Engine");
+                    }
+                    // --- END INTEGRATION ---
 
                     response.Add("status", "success");
                     response.Add("message", "success");

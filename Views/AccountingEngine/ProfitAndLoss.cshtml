@@ -1,0 +1,105 @@
+@model Saffrat.Services.AccountingEngine.ProfitAndLossReport
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = Localize("Profit and Loss Statement");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="row align-items-center mb-3">
+        <div class="col">
+            <h4 class="page-title">@Localize("Profit & Loss Statement")</h4>
+            <ul class="breadcrumb text-muted">
+                <li class="breadcrumb-item"><i class="fa fa-home"></i> @Localize("Engine")</li>
+                <li class="breadcrumb-item active">@Localize("Income Statement")</li>
+            </ul>
+        </div>
+        <div class="col-auto">
+            <form id="filterForm" class="row g-2 align-items-center" method="get" action="@Url.Action("ProfitAndLoss")">
+                <div class="col-auto">
+                    <label class="sr-only">@Localize("Start Date")</label>
+                    <input type="date" name="start" class="form-control" value="@ViewBag.Start" />
+                </div>
+                <div class="col-auto">
+                    <label class="sr-only">@Localize("End Date")</label>
+                    <input type="date" name="end" class="form-control" value="@ViewBag.End" />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-filter"></i> @Localize("Run Report")</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="row pt-4">
+    <div class="col-md-8 mx-auto">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white text-center py-4 border-bottom-0">
+                <h3 class="mb-1 text-dark fw-bold">@Localize("PROFIT & LOSS STATEMENT")</h3>
+                <p class="text-muted mb-0">@Localize("For the period") <strong>@Model.StartDate.ToString("MMM dd, yyyy")</strong> @Localize("to")
+                    <strong>@Model.EndDate.ToString("MMM dd, yyyy")</strong></p>
+            </div>
+            <div class="card-body p-5">
+
+                <!-- Revenues Section -->
+                <h5 class="text-primary fw-bold text-uppercase pb-2 border-bottom mb-3">@Localize("Operating Revenue")</h5>
+                <div class="mb-4">
+                    @if (Model.Revenues.Any())
+                    {
+                        foreach (var rev in Model.Revenues)
+                        {
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="ps-3 text-secondary">@rev.Key</span>
+                                <span class="fw-medium">@GetCurrency(rev.Value)</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted ps-3 fst-italic small">@Localize("No revenue booked for this period.")</p>
+                    }
+                    <div class="d-flex justify-content-between fw-bold pt-2 mt-2 border-top">
+                        <span class="text-dark">@Localize("Total Revenue (Gross Profit)")</span>
+                        <span class="text-success fs-5">@GetCurrency(Model.GrossProfit)</span>
+                    </div>
+                </div>
+
+                <!-- Expenses Section -->
+                <h5 class="text-primary fw-bold text-uppercase pb-2 border-bottom mb-3">@Localize("Operating Expenses")</h5>
+                <div class="mb-4">
+                    @if (Model.Expenses.Any())
+                    {
+                        foreach (var exp in Model.Expenses)
+                        {
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="ps-3 text-secondary">@exp.Key</span>
+                                <span class="fw-medium">@GetCurrency(exp.Value)</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted ps-3 fst-italic small">@Localize("No expenses booked for this period.")</p>
+                    }
+                    <div class="d-flex justify-content-between fw-bold pt-2 mt-2 border-top">
+                        <span class="text-dark">@Localize("Total Expenses")</span>
+                        <span class="text-danger fs-5">@GetCurrency(Model.TotalExpenses)</span>
+                    </div>
+                </div>
+
+                <!-- Net Income Section -->
+                <div
+                    class="bg-light p-4 rounded-3 d-flex justify-content-between align-items-center mt-5 border border-2 border-info">
+                    <h4 class="mb-0 text-dark fw-bolder text-uppercase">@Localize("Net Income")</h4>
+                    <h3 class="mb-0 fw-bolder @(Model.NetIncome < 0 ? "text-danger" : "text-success")">
+                        @GetCurrency(Model.NetIncome)
+                    </h3>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

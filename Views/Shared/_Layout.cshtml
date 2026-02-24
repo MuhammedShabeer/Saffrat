@@ -184,6 +184,19 @@
                                     <li id="transaction-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Transactions">@Localize("Transactions")</a></li>
                                 </ul>
                             </li>
+                            <li class="dropdown" id="accounting-engine-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-file-invoice-dollar"></i><span>Accounting Engine</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="ae-chartofaccounts-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="ChartOfAccounts">@Localize("Chart of Accounts")</a></li>
+                                    <li id="ae-journalentries-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="JournalEntries">@Localize("Journal Entries")</a></li>
+                                    <li id="ae-balancesheet-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="BalanceSheet">@Localize("Balance Sheet")</a></li>
+                                    <li id="ae-profitandloss-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="ProfitAndLoss">@Localize("Profit & Loss")</a></li>
+                                    <li id="ae-invoices-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="Invoices">@Localize("AR Invoices")</a></li>
+                                    <li id="ae-bills-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="Bills">@Localize("AP Bills")</a></li>
+                                </ul>
+                            </li>
                             <li class="dropdown" id="people-menu">
                                 <a href="#" class="menu-toggle nav-link has-dropdown">
                                     <i class="fas fa-users"></i><span>@Localize("People")</span>

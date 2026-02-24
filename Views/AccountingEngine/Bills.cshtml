@@ -1,0 +1,101 @@
+@model IEnumerable<Saffrat.Models.Bill>
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = Localize("Bills (AP)");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("Accounts Payable Bills")</h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i
+                                class="fa fa-home me-1"></i> @Localize("Dashboard")</a></li>
+                    <li class="breadcrumb-item">@Localize("Accounting Engine")</li>
+                    <li class="breadcrumb-item">@Localize("Bills")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <!-- Note: Add Bill Create view implementation pending -->
+                    <button class="btn btn-primary disabled" title="@Localize("Coming Soon")"><i class="fa fa-plus"></i>
+                        @Localize("Enter Bill")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="datatable">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>@Localize("Bill Number")</th>
+                                <th>@Localize("Supplier ID")</th>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Due Date")</th>
+                                <th>@Localize("Total Amount")</th>
+                                <th>@Localize("Amount Paid")</th>
+                                <th>@Localize("Status")</th>
+                                <th>@Localize("Actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                @foreach (var bill in Model)
+                                {
+                                    <tr>
+                                        <td><strong>@bill.BillNumber</strong></td>
+                                        <td>@bill.SupplierId</td>
+                                        <td>@bill.Date.ToString("yyyy-MM-dd")</td>
+                                        <td>@bill.DueDate.ToString("yyyy-MM-dd")</td>
+                                        <td class="text-danger fw-bold">@GetCurrency(bill.TotalAmount)</td>
+                                        <td class="text-info">@GetCurrency(bill.AmountPaid)</td>
+                                        <td>
+                                            @if (bill.Status == "Paid")
+                                            {
+                                                <span class="badge bg-success">@Localize(bill.Status ?? "")</span>
+                                            }
+                                            else if (bill.Status == "Overdue")
+                                            {
+                                                <span class="badge bg-danger">@Localize(bill.Status ?? "")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">@Localize(bill.Status ?? "")</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info text-white"><i class="fa fa-eye"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#datatable').DataTable({
+                "order": [[2, "desc"]]
+            });
+        });
+    </script>
+}

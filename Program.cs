@@ -53,6 +53,7 @@ builder.Services.AddSession(options =>
 builder.Services.AddScoped<ILanguageService, LanguageService>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<Saffrat.Services.AccountingEngine.IAccountingEngine, Saffrat.Services.AccountingEngine.DefaultAccountingEngine>();
 
 
 var serviceProvider = builder.Services.BuildServiceProvider();

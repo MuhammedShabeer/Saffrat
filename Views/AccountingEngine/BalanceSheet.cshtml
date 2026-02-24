@@ -1,0 +1,128 @@
+@model Saffrat.Services.AccountingEngine.BalanceSheetReport
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = Localize("Balance Sheet");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="row align-items-center mb-3">
+        <div class="col">
+            <h4 class="page-title">@Localize("Balance Sheet")</h4>
+            <ul class="breadcrumb text-muted">
+                <li class="breadcrumb-item"><i class="fa fa-home"></i> @Localize("Engine")</li>
+                <li class="breadcrumb-item active">@Localize("Balance Sheet")</li>
+            </ul>
+        </div>
+        <div class="col-auto">
+            <form id="filterForm" class="row g-2 align-items-center" method="get" action="@Url.Action("BalanceSheet")">
+                <div class="col-auto">
+                    <label class="sr-only">@Localize("As Of Date")</label>
+                    <input type="date" name="asOfDate" class="form-control" value="@ViewBag.Date" />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-sync"></i> @Localize("Refresh Report")</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="row pt-4">
+    <!-- Assets Side -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm border-0 border-top border-4 border-success">
+            <div class="card-header bg-white text-center py-4 border-bottom-0">
+                <h4 class="mb-1 text-dark fw-bold text-uppercase">@Localize("Assets")</h4>
+            </div>
+            <div class="card-body p-4 pt-0">
+                <div class="mb-4">
+                    @if (Model.Assets.Any())
+                    {
+                        foreach (var asset in Model.Assets)
+                        {
+                            <div class="d-flex justify-content-between mb-2 pb-1 border-bottom">
+                                <span class="ps-2 text-secondary">@asset.Key</span>
+                                <span class="fw-medium">@GetCurrency(asset.Value)</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted ps-2 fst-italic small">@Localize("No assets currently reported.")</p>
+                    }
+                    <div class="d-flex justify-content-between fw-bold pt-3 mt-4 bg-light p-3 rounded">
+                        <span class="text-dark text-uppercase">@Localize("Total Assets")</span>
+                        <span class="text-success fs-5">@GetCurrency(Model.TotalAssets)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liabilities & Equity Side -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0 border-top border-4 border-danger mb-4">
+            <div class="card-header bg-white text-center py-4 border-bottom-0">
+                <h4 class="mb-1 text-dark fw-bold text-uppercase">@Localize("Liabilities")</h4>
+            </div>
+            <div class="card-body p-4 pt-0">
+                <div class="mb-2">
+                    @if (Model.Liabilities.Any())
+                    {
+                        foreach (var liab in Model.Liabilities)
+                        {
+                            <div class="d-flex justify-content-between mb-2 pb-1 border-bottom">
+                                <span class="ps-2 text-secondary">@liab.Key</span>
+                                <span class="fw-medium">@GetCurrency(liab.Value)</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted ps-2 fst-italic small">@Localize("No liabilities reported.")</p>
+                    }
+                    <div class="d-flex justify-content-between fw-bold pt-2 mt-3 text-danger">
+                        <span>@Localize("Total Liabilities")</span>
+                        <span>@GetCurrency(Model.TotalLiabilities)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 border-top border-4 border-info">
+            <div class="card-header bg-white text-center py-4 border-bottom-0">
+                <h4 class="mb-1 text-dark fw-bold text-uppercase">@Localize("Equity")</h4>
+            </div>
+            <div class="card-body p-4 pt-0">
+                <div class="mb-2">
+                    @if (Model.Equity.Any())
+                    {
+                        foreach (var eq in Model.Equity)
+                        {
+                            <div class="d-flex justify-content-between mb-2 pb-1 border-bottom">
+                                <span class="ps-2 text-secondary">@eq.Key</span>
+                                <span class="fw-medium">@GetCurrency(eq.Value)</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted ps-2 fst-italic small">@Localize("No equity data reported.")</p>
+                    }
+                    <div class="d-flex justify-content-between fw-bold pt-2 mt-3 text-info">
+                        <span>@Localize("Total Equity")</span>
+                        <span>@GetCurrency(Model.TotalEquity)</span>
+                    </div>
+                </div>
+
+                <div class="d-flex mt-4 justify-content-between fw-bolder p-3 bg-dark text-white rounded">
+                    <span class="text-uppercase">@Localize("Total Liabilities & Equity")</span>
+                    <span class="fs-5">@GetCurrency(Model.TotalLiabilities + Model.TotalEquity)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
