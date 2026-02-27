@@ -1,34 +1,565 @@
-### SAFFRAT RMS DATABASE SCHEMA GUIDE
+﻿### SAFFRAT RMS DATABASE SCHEMA GUIDE (ENRICHED)
 
-This guide explains the relationships and data available in the system for dynamic report generation.
+**LOGIC & ENUM NOTES:**
+- **GLAccounts.Category**: 0=Asset, 1=Liability, 2=Equity, 3=Revenue, 4=Expense
+- **GLAccounts.Type**: 0=CashAndBank, 1=Receivable, 2=Inventory, 4=Payable, 10=Sales, 13=FoodCost, 15=Labor.
+- **Employees.Status**: 1=Active, 0=Inactive.
+- **Orders.Status**: 0=Pending, 1=Completed, 2=Cancelled.
+- **Multi-Tenancy**: Most tables have `TenantId`. Filter by current tenant context if applicable.
 
-#### 1. Sales & Orders
-- **Orders**: `Id`, `Total`, `SubTotal`, `DiscountTotal`, `TaxTotal`, `ChargeTotal`, `PaidAmount`, `DueAmount`, `CustomerId`, `CreatedAt`.
-- **OrderDetails**: `OrderId`, `FoodItemId` (linked to `Item`), `Quantity`, `Price`, `Total`.
-- **PaymentMethods**: `MethodName`.
+#### Table: AccountMoneyTransfers
+- Id (int)
+- FromAccount (nvarchar)
+- ToAccount (nvarchar)
+- TransferDate (date)
+- Amount (decimal)
+- Note (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
 
-#### 2. Products & Inventory
-- **FoodItems**: `ItemName`, `Price`, `FoodGroupId`.
-- **FoodGroups**: `Name`.
-- **IngredientItems**: `ItemName`, `Quantity`, `AlertQuantity`, `Unit`.
-- **Purchases**: `SupplierId`, `TotalAmount`, `PurchaseDate`.
+#### Table: Accounts
+- Id (int)
+- AccountName (nvarchar)
+- AccountNumber (nvarchar)
+- Credit (decimal)
+- Debit (decimal)
+- Balance (decimal)
+- Note (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+- AccountGroup (nvarchar)
+- AccountType (nvarchar)
+- ParentAccountId (int)
 
-#### 3. Customers & Suppliers
-- **Customers**: `CustomerName`, `Email`, `Phone`.
-- **Suppliers**: `SupplierName`, `Email`, `Phone`.
+#### Table: AppSettings
+- Id (int)
+- AppName (nvarchar)
+- Logo (nvarchar)
+- Favicon (nvarchar)
+- Preloader (nvarchar)
+- DefaultCustomer (int)
+- SaleAccount (int)
+- PurchaseAccount (int)
+- PayrollAccount (int)
+- Copyright (nvarchar)
+- SendInvoiceEmail (bit)
+- Timezone (nvarchar)
+- DefaultLanguage (nvarchar)
+- DefaultRegion (nvarchar)
+- CurrencyName (nvarchar)
+- CurrencySymbol (nvarchar)
+- CurrencyPosition (int)
+- CompanyName (nvarchar)
+- CompanyEmail (nvarchar)
+- CompanyPhone (nvarchar)
+- CompanyAddress (nvarchar)
+- CompanyTaxNum (nvarchar)
+- MailProtocol (nvarchar)
+- MailEncryption (nvarchar)
+- MailHost (nvarchar)
+- MailPort (int)
+- MailUserName (nvarchar)
+- MailPassword (nvarchar)
+- ThemeColor (nvarchar)
+- ThemeSidebar (nvarchar)
+- ThemeNavbar (nvarchar)
+- DefaultOrderType (int)
+- InvoiceLogo (nvarchar)
+- PrinterMethod (int)
+- PrinterPaperWidth (int)
+- SkipKitchenOrder (bit)
+- FinancialYearStart (datetime)
 
-#### 4. HRM & Staff
-- **Employees**: `FullName`, `Email`, `Phone`, `DepartmentId`, `DesignationId`, `Salary`.
-- **Attendances**: `EmployeeId`, `AttendaceDate`, `ClockIn`, `ClockOut`, `Status`.
-- **Departments**: `Name`.
-- **Designations**: `Name`.
+#### Table: Attendances
+- Id (int)
+- EmployeeId (int)
+- ShiftId (int)
+- AttendaceDate (date)
+- ClockIn (time)
+- ClockOut (time)
+- Status (nvarchar)
+- Note (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
 
-#### 5. Accounting
-- **GLAccounts**: `AccountName`, `AccountCode`.
-- **JournalEntries**: `Debit`, `Credit`, `Narration`, `CreatedAt`.
-- **Invoices**: `InvoiceNumber`, `TotalAmount`, `DueDate`.
-- **Bills**: `BillNumber`, `TotalAmount`, `DueDate`.
+#### Table: AuditLogs
+- Id (int)
+- Username (nvarchar)
+- Ip (nvarchar)
+- Service (nvarchar)
+- Action (nvarchar)
+- Status (nvarchar)
+- Description (nvarchar)
+- CreatedAt (datetime)
 
-#### 6. Infrastructure
-- **RestaurantTables**: `TableName`, `Capacity`.
-- **WorkPeriods**: `StartDate`, `EndDate`, `IsOpened`.
+#### Table: Bills
+- Id (int)
+- SupplierId (int)
+- BillNumber (nvarchar)
+- Date (datetime)
+- DueDate (datetime)
+- TotalAmount (decimal)
+- AmountPaid (decimal)
+- Status (nvarchar)
+- JournalEntryId (int)
+
+#### Table: Charges
+- Id (int)
+- Title (nvarchar)
+- Value (decimal)
+- IsPercentage (bit)
+- IsDefault (bit)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: Customers
+- Id (int)
+- CustomerName (nvarchar)
+- Email (nvarchar)
+- Phone (nvarchar)
+- Address (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: Departments
+- Id (int)
+- Title (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+- TenantId (nvarchar)
+
+#### Table: Deposits
+- Id (int)
+- AccountId (int)
+- DepositDate (date)
+- Amount (decimal)
+- Note (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: Designations
+- Id (int)
+- Title (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: Discounts
+- Id (int)
+- Title (nvarchar)
+- Value (decimal)
+- IsPercentage (bit)
+- IsDefault (bit)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: EmailTemplates
+- Id (int)
+- Name (nvarchar)
+- Subject (nvarchar)
+- Description (nvarchar)
+- DefaultTemplate (nvarchar)
+- Template (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: EmployeeAttachments
+- Id (int)
+- EmployeeId (int)
+- AttachmentName (nvarchar)
+- AttachmentType (nvarchar)
+
+#### Table: EmployeeDeductions
+- Id (int)
+- EmployeeId (int)
+- Title (nvarchar)
+- IsPercentage (bit)
+- Amount (decimal)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: EmployeeEarnings
+- Id (int)
+- EmployeeId (int)
+- Title (nvarchar)
+- IsPercentage (bit)
+- Amount (decimal)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: Employees
+- Id (int)
+- DepartmentId (int)
+- DesignationId (int)
+- ShiftId (int)
+- Image (nvarchar)
+- Name (nvarchar)
+- Email (nvarchar)
+- Phone (nvarchar)
+- EmergencyContact (nvarchar)
+- PresentAddress (nvarchar)
+- PermanentAddress (nvarchar)
+- Gender (nvarchar)
+- DOB (date)
+- Religion (nvarchar)
+- MaritalStatus (nvarchar)
+- NIDNumber (nvarchar)
+- JoiningDate (date)
+- LeavingDate (date)
+- AccountHolderName (nvarchar)
+- AccountNumber (nvarchar)
+- BankName (nvarchar)
+- BankIdentifierCode (nvarchar)
+- BranchLocation (nvarchar)
+- TaxPayerId (nvarchar)
+- PayslipType (nvarchar)
+- Salary (decimal)
+- Status (bit)
+- UpdatedAt (datetime)
+- UpdatedBy (nvarchar)
+
+#### Table: Expenses
+- Id (int)
+- AccountId (int)
+- ExpenseDate (date)
+- Amount (decimal)
+- Note (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+- Category (nvarchar)
+- Item (nvarchar)
+
+#### Table: FoodGroups
+- Id (int)
+- GroupName (nvarchar)
+- Image (nvarchar)
+- Status (bit)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+- ArabicName (nvarchar)
+
+#### Table: FoodItemIngredients
+- Id (int)
+- FoodItemId (int)
+- IngredientId (int)
+- Quantity (decimal)
+
+#### Table: FoodItems
+- Id (int)
+- GroupId (int)
+- ItemName (nvarchar)
+- Description (nvarchar)
+- Price (decimal)
+- Image (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+- ArabicName (nvarchar)
+- Barcode (nvarchar)
+- VanSalePrice (decimal)
+- WholeSalePrice (decimal)
+
+#### Table: GLAccounts
+- Id (int)
+- AccountCode (nvarchar)
+- AccountName (nvarchar)
+- Description (nvarchar)
+- Category (int)
+- Type (int)
+- CurrentBalance (decimal)
+- IsActive (bit)
+
+#### Table: Holidays
+- Id (int)
+- FromDate (date)
+- ToDate (date)
+- Note (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: IngredientItems
+- Id (int)
+- ItemName (nvarchar)
+- Description (nvarchar)
+- Unit (nvarchar)
+- Price (decimal)
+- Quantity (decimal)
+- AlertQuantity (decimal)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: Invoices
+- Id (int)
+- CustomerId (int)
+- InvoiceNumber (nvarchar)
+- IssueDate (datetime)
+- DueDate (datetime)
+- TotalAmount (decimal)
+- AmountPaid (decimal)
+- Status (nvarchar)
+- JournalEntryId (int)
+
+#### Table: JournalEntries
+- Id (int)
+- ReferenceNumber (nvarchar)
+- Description (nvarchar)
+- EntryDate (datetime)
+- IsPosted (bit)
+- SourceDocumentType (nvarchar)
+- SourceDocumentId (int)
+- CreatedAt (datetime)
+
+#### Table: Languages
+- Id (int)
+- Name (nvarchar)
+- Culture (nvarchar)
+
+#### Table: LeaveRequests
+- Id (int)
+- EmployeeId (int)
+- LeaveType (nvarchar)
+- StartDate (date)
+- EndDate (date)
+- Days (int)
+- Status (nvarchar)
+- Description (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: LedgerEntries
+- Id (int)
+- JournalEntryId (int)
+- GLAccountId (int)
+- Description (nvarchar)
+- Debit (decimal)
+- Credit (decimal)
+
+#### Table: ModifierIngredients
+- Id (int)
+- ModifierId (int)
+- IngredientId (int)
+- Quantity (decimal)
+
+#### Table: Modifiers
+- Id (int)
+- Title (nvarchar)
+- Price (decimal)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: OrderDetails
+- Id (int)
+- OrderId (int)
+- ItemId (int)
+- Price (decimal)
+- ModifierTotal (decimal)
+- Quantity (int)
+- Total (decimal)
+- CreatedAt (datetime)
+
+#### Table: OrderItemModifiers
+- Id (int)
+- OrderDetailId (int)
+- ModifierId (int)
+- Price (decimal)
+- Quantity (int)
+- ModifierTotal (decimal)
+
+#### Table: Orders
+- Id (int)
+- CustomerId (int)
+- TableName (nvarchar)
+- WaiterOrDriver (nvarchar)
+- Guests (int)
+- SubTotal (decimal)
+- TaxTotal (decimal)
+- DiscountTotal (decimal)
+- ChargeTotal (decimal)
+- Total (decimal)
+- PaymentMethod (nvarchar)
+- PaidAmount (decimal)
+- DueAmount (decimal)
+- OrderType (int)
+- Status (int)
+- Note (nvarchar)
+- CreatedBy (nvarchar)
+- CreatedAt (datetime)
+- ClosedBy (nvarchar)
+- ClosedAt (datetime)
+
+#### Table: PaymentMethods
+- Id (int)
+- Title (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: PayrollDetails
+- Id (int)
+- PayrollId (int)
+- Title (nvarchar)
+- IsPercentage (bit)
+- AmountType (nvarchar)
+- Amount (decimal)
+
+#### Table: Payrolls
+- Id (int)
+- EmployeeId (int)
+- PayrollType (nvarchar)
+- Salary (decimal)
+- NetSalary (decimal)
+- Month (int)
+- Year (int)
+- PaymentStatus (nvarchar)
+- GeneratedAt (datetime)
+- GeneratedBy (nvarchar)
+
+#### Table: PurchaseDetails
+- Id (int)
+- PurchaseId (int)
+- IngredientItemId (int)
+- PurchasePrice (decimal)
+- Quantity (decimal)
+- Total (decimal)
+- CreatedAt (datetime)
+
+#### Table: Purchases
+- Id (int)
+- SupplierId (int)
+- InvoiceNo (nvarchar)
+- PurchaseDate (date)
+- Description (nvarchar)
+- PaymentType (nvarchar)
+- TotalAmount (decimal)
+- PaidAmount (decimal)
+- DueAmount (decimal)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: RestaurantTables
+- Id (int)
+- TableName (nvarchar)
+- Image (nvarchar)
+- Status (bit)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: RunningOrderDetails
+- Id (int)
+- OrderId (int)
+- ItemId (int)
+- Price (decimal)
+- ModifierTotal (decimal)
+- Quantity (int)
+- Total (decimal)
+- CreatedAt (datetime)
+
+#### Table: RunningOrderItemModifiers
+- Id (int)
+- OrderDetailId (int)
+- ModifierId (int)
+- Price (decimal)
+- Quantity (int)
+- ModifierTotal (decimal)
+
+#### Table: RunningOrders
+- Id (int)
+- CustomerId (int)
+- TableName (nvarchar)
+- WaiterOrDriver (nvarchar)
+- Guests (int)
+- TaxId (int)
+- DiscountId (int)
+- ChargesId (int)
+- SubTotal (decimal)
+- TaxTotal (decimal)
+- DiscountTotal (decimal)
+- ChargeTotal (decimal)
+- Total (decimal)
+- PaymentMethod (nvarchar)
+- PaidAmount (decimal)
+- DueAmount (decimal)
+- OrderType (int)
+- Status (int)
+- Note (nvarchar)
+- CreatedBy (nvarchar)
+- CreatedAt (datetime)
+
+#### Table: Shifts
+- Id (int)
+- Title (nvarchar)
+- StartAt (time)
+- EndAt (time)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: StringResources
+- Id (int)
+- LanguageId (int)
+- Name (nvarchar)
+- Value (nvarchar)
+
+#### Table: Suppliers
+- Id (int)
+- SupplierName (nvarchar)
+- Email (nvarchar)
+- Phone (nvarchar)
+- Address (nvarchar)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: TaxRates
+- Id (int)
+- Title (nvarchar)
+- Value (decimal)
+- IsPercentage (bit)
+- IsDefault (bit)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+
+#### Table: Tenants
+- Id (nvarchar)
+- Name (nvarchar)
+- Host (nvarchar)
+- ConnectionString (nvarchar)
+- IsActive (bit)
+- CreatedAt (datetime)
+
+#### Table: Transactions
+- Id (int)
+- AccountId (int)
+- TransactionReference (nvarchar)
+- TransactionType (nvarchar)
+- Description (nvarchar)
+- Credit (decimal)
+- Debit (decimal)
+- Amount (decimal)
+- Date (datetime)
+
+#### Table: Users
+- Id (int)
+- UserName (nvarchar)
+- FullName (nvarchar)
+- Email (nvarchar)
+- Password (nvarchar)
+- Role (nvarchar)
+- Status (int)
+- LastLogin (datetime)
+- UpdatedBy (nvarchar)
+- UpdatedAt (datetime)
+- TenantId (nvarchar)
+
+#### Table: UserTokens
+- Id (int)
+- Username (nvarchar)
+- TokenType (nvarchar)
+- Token (nvarchar)
+- Expiry (datetime)
+- GeneratedAt (datetime)
+
+#### Table: WorkPeriods
+- Id (int)
+- StartedAt (datetime)
+- OpeningBalance (decimal)
+- ClosingBalance (decimal)
+- EndAt (datetime)
+- StartedBy (nvarchar)
+- EndBy (nvarchar)
+- IsEnd (bit)

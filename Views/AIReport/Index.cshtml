@@ -12,12 +12,12 @@
                 <div class="card-header-action">
                     @if (ViewBag.isModelLoaded)
                     {
-                        <span class="badge badge-success"><i class="fas fa-check-circle"></i> @Localize("AI Model Active")</span>
+                            <span class="badge badge-success"><i class="fas fa-check-circle"></i> @Localize("AI Model Active")</span>
                     }
                     else
                     {
-                        <span class="badge badge-warning" data-toggle="tooltip" title="@Localize("Ensure") @ViewBag.modelPath @Localize("exists")"><i
-                                class="fas fa-exclamation-triangle"></i> @Localize("Model Not Loaded")</span>
+                            <span class="badge badge-warning" data-toggle="tooltip" title="@Localize("Ensure") @ViewBag.modelPath @Localize("exists")"><i
+                                    class="fas fa-exclamation-triangle"></i> @Localize("Model Not Loaded")</span>
                     }
                 </div>
             </div>
@@ -52,97 +52,163 @@
 </div>
 
 @section styles {
-    <style>
-        .message.user {
-            display: flex;
-            justify-content: flex-end;
-        }
+        <style>
+            .message.user {
+                display: flex;
+                justify-content: flex-end;
+            }
 
-        .message.user .message-content {
-            background-color: var(--color-primary, #6777ef) !important;
-            color: white;
-            border-radius: 15px 15px 0 15px;
-        }
+            .message.user .message-content {
+                background-color: var(--color-primary, #6777ef) !important;
+                color: white;
+                border-radius: 15px 15px 0 15px;
+            }
 
-        .message.assistant {
-            display: flex;
-            justify-content: flex-start;
-        }
+            .message.assistant {
+                display: flex;
+                justify-content: flex-start;
+            }
 
-        .message.assistant .message-content {
-            background-color: #f1f3f5;
-            color: #333;
-            border-radius: 15px 15px 15px 0;
-        }
+            .message.assistant .message-content {
+                background-color: #f1f3f5;
+                color: #333;
+                border-radius: 15px 15px 15px 0;
+                width: 100%;
+                overflow-x: auto;
+            }
 
-        .typing-indicator {
-            font-style: italic;
-            color: #888;
-            font-size: 0.9rem;
-        }
-    </style>
+            /* Premium Table Styling */
+            .message-content table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+                font-size: 0.9rem;
+                min-width: 400px;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .message-content table thead tr {
+                background-color: var(--color-primary, #6777ef);
+                color: #ffffff;
+                text-align: left;
+                font-weight: bold;
+            }
+
+            .message-content table th,
+            .message-content table td {
+                padding: 12px 15px;
+            }
+
+            .message-content table tbody tr {
+                border-bottom: 1px solid #dddddd;
+                background-color: #fff;
+            }
+
+            .message-content table tbody tr:nth-of-type(even) {
+                background-color: #f8f9fa;
+            }
+
+            .message-content table tbody tr:last-of-type {
+                border-bottom: 2px solid var(--color-primary, #6777ef);
+            }
+
+            .typing-indicator {
+                font-style: italic;
+                color: #888;
+                font-size: 0.9rem;
+            }
+
+            .message-content ul, .message-content ol {
+                padding-left: 20px;
+            }
+        </style>
 }
 
 @section scripts {
-    <script>
-        $(document).ready(function () {
-            const $container = $('#chatContainer');
-            const $input = $('#userInput');
-            const $btn = $('#sendBtn');
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script>
+            $(document).ready(function () {
+                const $container = $('#chatContainer');
+                const $input = $('#userInput');
+                const $btn = $('#sendBtn');
 
-            function appendMessage(role, text) {
-                const messageDiv = $('<div>').addClass('message ' + role + ' mb-3');
-                const contentDiv = $('<div>').addClass('message-content p-3 shadow-sm').css('max-width', '80%').text(text);
-                messageDiv.append(contentDiv);
-                $container.append(messageDiv);
-                $container.scrollTop($container[0].scrollHeight);
-            }
+                // Configure marked to be safe and handle line breaks
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true
+                });
 
-            function showTyping() {
-                const typingDiv = $('<div>').addClass('message assistant mb-3 typing-msg');
-                const contentDiv = $('<div>').addClass('message-content p-2 bg-light rounded italic small').text('@Localize("AI is thinking...")');
-                typingDiv.append(contentDiv);
-                $container.append(typingDiv);
-                $container.scrollTop($container[0].scrollHeight);
-            }
+                function appendMessage(role, text) {
+                    const messageDiv = $('<div>').addClass('message ' + role + ' mb-3');
+                    const contentDiv = $('<div>').addClass('message-content p-3 shadow-sm').css('max-width', '90%');
 
-            function removeTyping() {
-                $('.typing-msg').remove();
-            }
+                    // Parse markdown for assistant messages
+                    if (role === 'assistant') {
+                        contentDiv.html(marked.parse(text));
+                    } else {
+                        contentDiv.text(text);
+                    }
 
-            $btn.on('click', function () {
-                const msg = $input.val().trim();
-                if (!msg) return;
+                    messageDiv.append(contentDiv);
+                    $container.append(messageDiv);
+                    $container.scrollTop($container[0].scrollHeight);
+                }
 
-                appendMessage('user', msg);
-                $input.val('');
-                showTyping();
+                function showTyping() {
+                    const typingDiv = $('<div>').addClass('message assistant mb-3 typing-msg');
+                    const contentDiv = $('<div>').addClass('message-content p-2 bg-light rounded italic small').text('@Localize("AI is thinking...")');
+                    typingDiv.append(contentDiv);
+                    $container.append(typingDiv);
+                    $container.scrollTop($container[0].scrollHeight);
+                }
 
-                $.ajax({
-                    url: '/AIReport/Chat',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ message: msg }),
-                    success: function (data) {
-                        removeTyping();
-                        appendMessage('assistant', data.response);
-                    },
-                    error: function (xhr) {
-                        removeTyping();
-                        let errorMsg = "@Localize("Sorry, I encountered an error while connecting to the AI service.")";
-                        if (xhr.responseJSON && xhr.responseJSON.response) {
-                             errorMsg = xhr.responseJSON.response;
+                function removeTyping() {
+                    $('.typing-msg').remove();
+                }
+
+                $btn.on('click', function () {
+                    const msg = $input.val().trim();
+                    if (!msg) return;
+
+                    appendMessage('user', msg);
+                    $input.val('');
+                    showTyping();
+
+                    $.ajax({
+                        url: '/AIReport/Chat',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ message: msg }),
+                        success: function (data) {
+                            removeTyping();
+                            appendMessage('assistant', data.response);
+                        },
+                        error: function (xhr) {
+                            removeTyping();
+                            let errorMsg = "@Localize("Sorry, I encountered an error while connecting to the AI service.")";
+                            if (xhr.responseJSON && xhr.responseJSON.response) {
+                                 errorMsg = xhr.responseJSON.response;
+                            }
+                            appendMessage('assistant', errorMsg);
                         }
-                        appendMessage('assistant', errorMsg);
+                    });
+                });
+
+                $input.on('keypress', function (e) {
+                    if (e.which === 13) {
+                        $btn.click();
+                    }
+                });
+
+                // Initial message parsing
+                $('.message.assistant .message-content').each(function() {
+                    const rawText = $(this).text().trim();
+                    if (rawText && !$(this).find('ul').length) { // Only parse if it's text and not already HTML-ified
+                         // This is tricky for the initial message in CSHTML, better to just leave it or re-parse
                     }
                 });
             });
-
-            $input.on('keypress', function (e) {
-                if (e.which === 13) {
-                    $btn.click();
-                }
-            });
-        });
-    </script>
+        </script>
 }

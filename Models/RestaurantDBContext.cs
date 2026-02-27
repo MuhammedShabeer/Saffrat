@@ -182,8 +182,6 @@ namespace Saffrat.Models
                     .IsRequired()
                     .HasMaxLength(300);
 
-                entity.Property(e => e.GeminiApiKey)
-                    .HasMaxLength(255);
             });
 
             modelBuilder.Entity<Attendance>(entity =>

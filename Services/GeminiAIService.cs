@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -8,18 +9,24 @@ namespace Saffrat.Services
     public class GeminiAIService : IGeminiAIService
     {
         private readonly HttpClient _httpClient;
+        private readonly IConfiguration _configuration;
 
-        public GeminiAIService(IHttpClientFactory httpClientFactory)
+        public GeminiAIService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _httpClient = httpClientFactory.CreateClient();
+            _configuration = configuration;
         }
 
-        public async Task<string> GetResponseAsync(string prompt, string apiKey)
+        public async Task<string> GetResponseAsync(string prompt, string apiKey = null)
         {
-            if (string.IsNullOrEmpty(apiKey))
-                return "Error: Gemini API Key is not configured in Settings.";
+            // Use provided key or fall back to configuration
+            var finalApiKey = apiKey ?? _configuration["GeminiApiKey"];
 
-            var url = $"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={apiKey}";
+            if (string.IsNullOrEmpty(finalApiKey))
+                return "Error: Gemini API Key is not configured in appsettings.json.";
+
+            // Using v1beta and gemini-2.0-flash as confirmed by diagnostics
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={finalApiKey}";
 
             var requestBody = new
             {

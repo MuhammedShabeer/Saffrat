@@ -12,117 +12,98 @@ namespace Saffrat.Controllers
     {
         private readonly IGeminiAIService _aiService;
         private readonly RestaurantDBContext _dbContext;
+        private readonly ISqlQueryService _sqlService;
+        private readonly IConfiguration _configuration;
 
-        public AIReportController(IGeminiAIService aiService, RestaurantDBContext dbContext,
-            ILanguageService languageService, ILocalizationService localizationService)
+        public AIReportController(IGeminiAIService aiService, RestaurantDBContext dbContext, ISqlQueryService sqlService,
+            ILanguageService languageService, ILocalizationService localizationService, IConfiguration configuration)
             : base(languageService, localizationService)
         {
             _aiService = aiService;
             _dbContext = dbContext;
+            _sqlService = sqlService;
+            _configuration = configuration;
         }
 
         [HttpGet]
         public IActionResult Index()
         {
-            ViewBag.isModelLoaded = !string.IsNullOrEmpty(GetSetting?.GeminiApiKey);
+            ViewBag.isModelLoaded = !string.IsNullOrEmpty(_configuration["GeminiApiKey"]);
             return View();
         }
 
         [HttpPost]
         public async Task<IActionResult> Chat([FromBody] ChatRequest request)
         {
-            if (string.IsNullOrEmpty(request.Message))
-                return BadRequest("Message is empty");
+            try
+            {
+                // 1. Load Schema Context
+                string schemaPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "AI", "SchemaGuide.txt");
+                string schema = System.IO.File.Exists(schemaPath) ? await System.IO.File.ReadAllTextAsync(schemaPath) : "";
 
-            if (string.IsNullOrEmpty(GetSetting?.GeminiApiKey))
-                return Json(new { response = "Please configure your Gemini API Key in General Settings first." });
+                // 2. Step 1: Generate SQL Query
+                string sqlPrompt = $"You are a SQL Expert. Based on the following database schema, generate a single T-SQL SELECT query to answer the user's question. Output ONLY the raw SQL query inside a markdown code block (```sql ... ```).\n\n[SCHEMA]\n{schema}\n\n[USER QUESTION]\n{request.Message}";
+                string aiSqlResponse = await _aiService.GetResponseAsync(sqlPrompt);
 
-            // 1. Load Schema Context
-            string schemaPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "AI", "SchemaGuide.txt");
-            string schema = System.IO.File.Exists(schemaPath) ? await System.IO.File.ReadAllTextAsync(schemaPath) : "";
+                string sql = ExtractSql(aiSqlResponse);
+                string queryResult = "";
 
-            // 2. Load Data Context
-            string context = await PrepareContextAsync();
+                if (!string.IsNullOrEmpty(sql))
+                {
+                    try
+                    {
+                        var data = await _sqlService.ExecuteQueryAsync(sql);
+                        queryResult = System.Text.Json.JsonSerializer.Serialize(data);
+                    }
+                    catch (Exception ex)
+                    {
+                        queryResult = $"Error executing SQL: {ex.Message}";
+                    }
+                }
 
-            string systemPrompt = $"You are a sophisticated Restaurant Business Intelligence Analyst. Below is the structure of the restaurant's database (Schema) and a snapshot of current data (Context). Use both to answer the user's question accurately. If the user asks for a report that requires more detail than provided, explain what data is available based on the schema.\n\n[DATABASE SCHEMA]\n{schema}\n\n[DATA CONTEXT]\n{context}\n\nUser Question: {request.Message}";
+                // 3. Step 2: Final Summary
+                string finalPrompt = $"You are a sophisticated Restaurant Business Intelligence Analyst. Below is a user's question and the data retrieved from the database to answer it. Summarize the findings for the user professionally. If the data is an error or empty, explain why.\n\n[USER QUESTION]\n{request.Message}\n\n[SQL EXECUTED]\n{sql}\n\n[QUERY RESULT DATA]\n{queryResult}";
+                string finalResponse = await _aiService.GetResponseAsync(finalPrompt);
 
-            string response = await _aiService.GetResponseAsync(systemPrompt, GetSetting.GeminiApiKey);
+                if (finalResponse.Contains("TooManyRequests") || finalResponse.Contains("429"))
+                {
+                    return Json(new { response = "⚠️ **Rate Limit Reached**: You've made too many requests in a short time. Please wait about 15-30 seconds before asking your next question." });
+                }
 
-            return Json(new { response = response });
+                return Json(new { response = finalResponse });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { response = $"An error occurred while processing your request: {ex.Message}" });
+            }
         }
 
-        private async Task<string> PrepareContextAsync()
+        private string ExtractSql(string aiResponse)
         {
-            var sb = new StringBuilder();
-            var today = DateTime.Today;
-            var startOfMonth = new DateTime(today.Year, today.Month, 1);
-            var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+            if (aiResponse.Contains("TooManyRequests") || aiResponse.Contains("429"))
+                return string.Empty;
 
-            sb.AppendLine("### COMPREHENSIVE BUSINESS SNAPSHOT ###");
-            sb.AppendLine($"Report Date: {DateTime.Now:F}");
+            if (aiResponse.Contains("```sql"))
+            {
+                int start = aiResponse.IndexOf("```sql") + 6;
+                int end = aiResponse.IndexOf("```", start);
+                if (end > start)
+                    return aiResponse.Substring(start, end - start).Trim();
+            }
+            else if (aiResponse.Contains("```"))
+            {
+                int start = aiResponse.IndexOf("```") + 3;
+                int end = aiResponse.IndexOf("```", start);
+                if (end > start)
+                    return aiResponse.Substring(start, end - start).Trim();
+            }
 
-            // 1. SALES & ORDERS
-            sb.AppendLine("\n[SECTION: SALES & ORDERS]");
-            var salesToday = await _dbContext.Orders.Where(x => x.CreatedAt >= today).CountAsync();
-            var revenueToday = await _dbContext.Orders.Where(x => x.CreatedAt >= today).SumAsync(x => (decimal?)x.Total) ?? 0;
-            var revenueMonth = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfMonth).SumAsync(x => (decimal?)x.Total) ?? 0;
+            // Fallback: Check if it starts with SELECT
+            if (aiResponse.Trim().ToUpper().StartsWith("SELECT"))
+                return aiResponse.Trim();
 
-            sb.AppendLine($"- Orders Today: {salesToday}");
-            sb.AppendLine($"- Revenue Today: {revenueToday:C}");
-            sb.AppendLine($"- Revenue This Month: {revenueMonth:C}");
-
-            var topItems = await _dbContext.OrderDetails
-                .GroupBy(x => x.Item.ItemName)
-                .Select(g => new { Name = g.Key, Qty = g.Sum(x => x.Quantity) })
-                .OrderByDescending(x => x.Qty)
-                .Take(5).ToListAsync();
-            sb.AppendLine("- Top 5 Items: " + string.Join(", ", topItems.Select(x => $"{x.Name}({x.Qty})")));
-
-            // 2. INVENTORY
-            sb.AppendLine("\n[SECTION: INVENTORY]");
-            var totalIngredients = await _dbContext.IngredientItems.CountAsync();
-            var lowStockItems = await _dbContext.IngredientItems.Where(x => x.Quantity <= x.AlertQuantity).ToListAsync();
-            sb.AppendLine($"- Total Ingredients: {totalIngredients}");
-            sb.AppendLine($"- Low Stock Count: {lowStockItems.Count}");
-            if (lowStockItems.Any())
-                sb.AppendLine("- Critical Items: " + string.Join(", ", lowStockItems.Take(5).Select(x => x.ItemName)));
-
-            // 3. CUSTOMERS
-            sb.AppendLine("\n[SECTION: CUSTOMERS]");
-            var totalCustomers = await _dbContext.Customers.CountAsync();
-            var topCustomers = await _dbContext.Orders.Include(x => x.Customer)
-                .GroupBy(x => x.Customer.CustomerName)
-                .Select(g => new { Name = g.Key, Total = g.Sum(x => x.Total) })
-                .OrderByDescending(x => x.Total).Take(3).ToListAsync();
-            sb.AppendLine($"- Total Customers in Database: {totalCustomers}");
-            sb.AppendLine("- Top Customers: " + string.Join(", ", topCustomers.Select(x => x.Name)));
-
-            // 4. HRM & STAFF
-            sb.AppendLine("\n[SECTION: STAFF & ATTENDANCE]");
-            var totalEmployees = await _dbContext.Employees.CountAsync();
-            var presentToday = await _dbContext.Attendances.Where(x => x.AttendaceDate == today).CountAsync();
-            sb.AppendLine($"- Total Staff: {totalEmployees}");
-            sb.AppendLine($"- Present Today: {presentToday}");
-
-            // 5. FINANCE & PURCHASES
-            sb.AppendLine("\n[SECTION: FINANCE]");
-            var monthPurchases = await _dbContext.Purchases.Where(x => x.PurchaseDate >= startOfMonth).SumAsync(x => (decimal?)x.TotalAmount) ?? 0;
-            var topSuppliers = await _dbContext.Purchases.Include(x => x.Supplier)
-                .GroupBy(x => x.Supplier.SupplierName)
-                .Select(g => new { Name = g.Key, Total = g.Sum(x => x.TotalAmount) })
-                .OrderByDescending(x => x.Total).Take(3).ToListAsync();
-
-            sb.AppendLine($"- Total Purchases (This Month): {monthPurchases:C}");
-            sb.AppendLine("- Main Suppliers: " + string.Join(", ", topSuppliers.Select(x => x.Name)));
-
-            // 6. ASSETS
-            sb.AppendLine("\n[SECTION: ASSETS]");
-            var totalTables = await _dbContext.RestaurantTables.CountAsync();
-            sb.AppendLine($"- Total Dining Tables: {totalTables}");
-
-            return sb.ToString();
+            return string.Empty;
         }
-
         public class ChatRequest
         {
             public string Message { get; set; }
