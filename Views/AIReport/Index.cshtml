@@ -1,0 +1,148 @@
+@using Saffrat.Resources
+@inherits LocService<dynamic>
+@{
+    ViewData["Title"] = Localize("AI Report Assistant");
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h4><i class="fas fa-robot text-primary me-2"></i> @Localize("AI Report Assistant")</h4>
+                <div class="card-header-action">
+                    @if (ViewBag.isModelLoaded)
+                    {
+                        <span class="badge badge-success"><i class="fas fa-check-circle"></i> @Localize("AI Model Active")</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-warning" data-toggle="tooltip" title="@Localize("Ensure") @ViewBag.modelPath @Localize("exists")"><i
+                                class="fas fa-exclamation-triangle"></i> @Localize("Model Not Loaded")</span>
+                    }
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chat-container mb-4" id="chatContainer"
+                    style="height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 15px; background: #fdfdfd;">
+                    <div class="message assistant mb-3">
+                        <div class="message-content p-3 bg-light rounded shadow-sm" style="max-width: 80%;">
+                            @Localize("Hello! I am your AI assistant. I have access to your restaurant's data. You can ask me things like:")
+                            <ul class="mt-2 mb-0">
+                                <li>"@Localize("How many orders did we have today?")"</li>
+                                <li>"@Localize("What are the top 5 selling items?")"</li>
+                                <li>"@Localize("Is there any ingredient low on stock?")"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" id="userInput" class="form-control" placeholder="@Localize("Type your question here...")"
+                        aria-label="Query">
+                    <button class="btn btn-primary" type="button" id="sendBtn">
+                        <i class="fas fa-paper-plane"></i> @Localize("Send")
+                    </button>
+                </div>
+            </div>
+            <div class="card-footer text-muted small">
+                <i class="fas fa-info-circle"></i> @Localize("Powered by Google Gemini. Your data is processed securely to generate insights.")
+            </div>
+        </div>
+    </div>
+</div>
+
+@section styles {
+    <style>
+        .message.user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message.user .message-content {
+            background-color: var(--color-primary, #6777ef) !important;
+            color: white;
+            border-radius: 15px 15px 0 15px;
+        }
+
+        .message.assistant {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message.assistant .message-content {
+            background-color: #f1f3f5;
+            color: #333;
+            border-radius: 15px 15px 15px 0;
+        }
+
+        .typing-indicator {
+            font-style: italic;
+            color: #888;
+            font-size: 0.9rem;
+        }
+    </style>
+}
+
+@section scripts {
+    <script>
+        $(document).ready(function () {
+            const $container = $('#chatContainer');
+            const $input = $('#userInput');
+            const $btn = $('#sendBtn');
+
+            function appendMessage(role, text) {
+                const messageDiv = $('<div>').addClass('message ' + role + ' mb-3');
+                const contentDiv = $('<div>').addClass('message-content p-3 shadow-sm').css('max-width', '80%').text(text);
+                messageDiv.append(contentDiv);
+                $container.append(messageDiv);
+                $container.scrollTop($container[0].scrollHeight);
+            }
+
+            function showTyping() {
+                const typingDiv = $('<div>').addClass('message assistant mb-3 typing-msg');
+                const contentDiv = $('<div>').addClass('message-content p-2 bg-light rounded italic small').text('@Localize("AI is thinking...")');
+                typingDiv.append(contentDiv);
+                $container.append(typingDiv);
+                $container.scrollTop($container[0].scrollHeight);
+            }
+
+            function removeTyping() {
+                $('.typing-msg').remove();
+            }
+
+            $btn.on('click', function () {
+                const msg = $input.val().trim();
+                if (!msg) return;
+
+                appendMessage('user', msg);
+                $input.val('');
+                showTyping();
+
+                $.ajax({
+                    url: '/AIReport/Chat',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ message: msg }),
+                    success: function (data) {
+                        removeTyping();
+                        appendMessage('assistant', data.response);
+                    },
+                    error: function (xhr) {
+                        removeTyping();
+                        let errorMsg = "@Localize("Sorry, I encountered an error while connecting to the AI service.")";
+                        if (xhr.responseJSON && xhr.responseJSON.response) {
+                             errorMsg = xhr.responseJSON.response;
+                        }
+                        appendMessage('assistant', errorMsg);
+                    }
+                });
+            });
+
+            $input.on('keypress', function (e) {
+                if (e.which === 13) {
+                    $btn.click();
+                }
+            });
+        });
+    </script>
+}

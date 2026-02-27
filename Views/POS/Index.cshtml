@@ -10,7 +10,7 @@
     Layout = "~/Views/Shared/_POSLayout.cshtml";
 }
 @section styles{
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/1.3.3/owl.carousel.css" rel="stylesheet" />
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/1.3.3/owl.carousel.css" rel="stylesheet" />
 }
 
 <nav class="top-nav" style="margin-top:71px; margin-bottom:3px;">
@@ -56,10 +56,6 @@
                 <li class="item" id="submitBtn" onclick="SubmitOrder();">
                     <i class="fas fa-save"></i>
                     <span>@Localize("Submit")</span>
-                </li>
-                <li class="item" id="stickerBtn" onclick="PrintOrderSticker();">
-                    <i class="fas fa-print"></i>
-                    <span>@Localize("Print Stickers")</span>
                 </li>
             </ul>
         </div>
@@ -171,371 +167,373 @@
 </div>
 
 @section models{
-            <!--Guest Model-->
-            <div class="modal fade" id="GuestModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Guest")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <form>
-                                <div class="form-group p-0">
-                                    <input type="text" id="guestInput" placeholder="0" value="1" class="form-control d-invtotal cleave-number" inputmode="numeric" readonly />
-                                </div>
-                            </form>
-                            <div class="numpad">
-                                <div class="row g-0" id="guests">
-                                    <div class="col-4"><div data-value="7" class="item">@Localize("7")</div></div>
-                                    <div class="col-4"><div data-value="8" class="item">@Localize("8")</div></div>
-                                    <div class="col-4"><div data-value="9" class="item">@Localize("9")</div></div>
-                                    <div class="col-4"><div data-value="4" class="item">@Localize("4")</div></div>
-                                    <div class="col-4"><div data-value="5" class="item">@Localize("5")</div></div>
-                                    <div class="col-4"><div data-value="6" class="item">@Localize("6")</div></div>
-                                    <div class="col-4"><div data-value="1" class="item">@Localize("1")</div></div>
-                                    <div class="col-4"><div data-value="2" class="item">@Localize("2")</div></div>
-                                    <div class="col-4"><div data-value="3" class="item">@Localize("3")</div></div>
-                                    <div class="col-8"><div data-value="0" class="item">@Localize("0")</div></div>
-                                    <div class="col-4"><div data-value="x" class="item"><i class="fas fa-circle-xmark"></i></div></div>
+                <!--Guest Model-->
+                <div class="modal fade" id="GuestModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Guest")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form>
+                                    <div class="form-group p-0">
+                                        <input type="text" id="guestInput" placeholder="0" value="1" class="form-control d-invtotal cleave-number" inputmode="numeric" readonly />
+                                    </div>
+                                </form>
+                                <div class="numpad">
+                                    <div class="row g-0" id="guests">
+                                        <div class="col-4"><div data-value="7" class="item">@Localize("7")</div></div>
+                                        <div class="col-4"><div data-value="8" class="item">@Localize("8")</div></div>
+                                        <div class="col-4"><div data-value="9" class="item">@Localize("9")</div></div>
+                                        <div class="col-4"><div data-value="4" class="item">@Localize("4")</div></div>
+                                        <div class="col-4"><div data-value="5" class="item">@Localize("5")</div></div>
+                                        <div class="col-4"><div data-value="6" class="item">@Localize("6")</div></div>
+                                        <div class="col-4"><div data-value="1" class="item">@Localize("1")</div></div>
+                                        <div class="col-4"><div data-value="2" class="item">@Localize("2")</div></div>
+                                        <div class="col-4"><div data-value="3" class="item">@Localize("3")</div></div>
+                                        <div class="col-8"><div data-value="0" class="item">@Localize("0")</div></div>
+                                        <div class="col-4"><div data-value="x" class="item"><i class="fas fa-circle-xmark"></i></div></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="modal-footer bg-whitesmoke">
-                            <button type="button" onclick="EnterGuests();" class="btn btn-primary">@Localize("Enter")</button>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                            <div class="modal-footer bg-whitesmoke">
+                                <button type="button" onclick="EnterGuests();" class="btn btn-primary">@Localize("Enter")</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Payment Model-->
-            <div class="modal fade" id="PaymentModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Payment")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <table class="table table-bordered table-sm mb-4">
-                                <tbody>
-                                    <tr>
-                                        <th>@Localize("Total Amount")</th>
-                                        <td class="d-OrderTotalAmount" colspan="2"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>@Localize("Due Amount")</th>
-                                        <td class="d-OrderDueAmount" colspan="2"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div class="form-group">
-                                <label class="control-label">@Localize("Payment Method")</label>
-                                <select id="PaymentMethod" name="PaymentMethod" class="form-control selectpicker">
+                <!--Payment Model-->
+                <div class="modal fade" id="PaymentModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Payment")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <table class="table table-bordered table-sm mb-4">
+                                    <tbody>
+                                        <tr>
+                                            <th>@Localize("Total Amount")</th>
+                                            <td class="d-OrderTotalAmount" colspan="2"></td>
+                                        </tr>
+                                        <tr>
+                                            <th>@Localize("Due Amount")</th>
+                                            <td class="d-OrderDueAmount" colspan="2"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div class="form-group">
+                                    <label class="control-label">@Localize("Payment Method")</label>
+                                    <select id="PaymentMethod" name="PaymentMethod" class="form-control selectpicker">
                             @foreach (var item in Model.PaymentMethods)
                             {
-                                                <option value="@item.Title">@item.Title</option>
+                                                        <option value="@item.Title">@item.Title</option>
                             }
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label">@Localize("Amount")</label>
-                                <div class="input-group">
-                                    <div class="input-group-text">@GetSetting.CurrencySymbol</div>
-                                    <input value="" id="PaymentAmount" name="PaymentAmount" onkeyup="PaymentAmountChange();" type="text" class="form-control d-invtotal cleave-number" inputmode="numeric" disabled />
+                                    </select>
                                 </div>
-                            </div>
-                            <div class="row g-0">
-                                <div class="col-12 col-md-8">
-                                    <div class="numpad">
-                                        <div class="row g-0" id="amounts">
-                                            <div class="col-4"><div data-value="7" class="item">@Localize("7")</div></div>
-                                            <div class="col-4"><div data-value="8" class="item">@Localize("8")</div></div>
-                                            <div class="col-4"><div data-value="9" class="item">@Localize("9")</div></div>
-                                            <div class="col-4"><div data-value="4" class="item">@Localize("4")</div></div>
-                                            <div class="col-4"><div data-value="5" class="item">@Localize("5")</div></div>
-                                            <div class="col-4"><div data-value="6" class="item">@Localize("6")</div></div>
-                                            <div class="col-4"><div data-value="1" class="item">@Localize("1")</div></div>
-                                            <div class="col-4"><div data-value="2" class="item">@Localize("2")</div></div>
-                                            <div class="col-4"><div data-value="3" class="item">@Localize("3")</div></div>
-                                            <div class="col-4"><div data-value="0" class="item">@Localize("0")</div></div>
-                                            <div class="col-4"><div data-value="@numberdelimeter" class="item">@numberdelimeter</div></div>
-                                            <div class="col-4"><div data-value="x" class="item"><i class="fas fa-circle-xmark"></i></div></div>
+                                <div class="form-group">
+                                    <label class="control-label">@Localize("Amount")</label>
+                                    <div class="input-group">
+                                        <div class="input-group-text">@GetSetting.CurrencySymbol</div>
+                                        <input value="" id="PaymentAmount" name="PaymentAmount" onkeyup="PaymentAmountChange();" type="text" class="form-control d-invtotal cleave-number" inputmode="numeric" disabled />
+                                    </div>
+                                </div>
+                                <div class="row g-0">
+                                    <div class="col-12 col-md-8">
+                                        <div class="numpad">
+                                            <div class="row g-0" id="amounts">
+                                                <div class="col-4"><div data-value="7" class="item">@Localize("7")</div></div>
+                                                <div class="col-4"><div data-value="8" class="item">@Localize("8")</div></div>
+                                                <div class="col-4"><div data-value="9" class="item">@Localize("9")</div></div>
+                                                <div class="col-4"><div data-value="4" class="item">@Localize("4")</div></div>
+                                                <div class="col-4"><div data-value="5" class="item">@Localize("5")</div></div>
+                                                <div class="col-4"><div data-value="6" class="item">@Localize("6")</div></div>
+                                                <div class="col-4"><div data-value="1" class="item">@Localize("1")</div></div>
+                                                <div class="col-4"><div data-value="2" class="item">@Localize("2")</div></div>
+                                                <div class="col-4"><div data-value="3" class="item">@Localize("3")</div></div>
+                                                <div class="col-4"><div data-value="0" class="item">@Localize("0")</div></div>
+                                                <div class="col-4"><div data-value="@numberdelimeter" class="item">@numberdelimeter</div></div>
+                                                <div class="col-4"><div data-value="x" class="item"><i class="fas fa-circle-xmark"></i></div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <div class="numpad">
+                                            <div class="row g-0" id="amountsPlus">
+                                                <div class="col-4 col-md-6"><div data-value="5" class="item">+@Localize("5")</div></div>
+                                                <div class="col-4 col-md-6"><div data-value="10" class="item">+@Localize("10")</div></div>
+                                                <div class="col-4 col-md-6"><div data-value="50" class="item">+@Localize("50")</div></div>
+                                                <div class="col-4 col-md-6"><div data-value="75" class="item">+@Localize("75")</div></div>
+                                                <div class="col-4 col-md-6"><div data-value="100" class="item">+@Localize("100")</div></div>
+                                                <div class="col-4 col-md-6"><div data-value="500" class="item">+@Localize("500")</div></div>
+                                                <div class="col-4 col-md-6"><div data-value="1000" class="item">+@Localize("1000")</div></div>
+                                                <div class="col-4 col-md-6"><div data-value="total" class="item">@Localize("Total")</div></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-12 col-md-4">
-                                    <div class="numpad">
-                                        <div class="row g-0" id="amountsPlus">
-                                            <div class="col-4 col-md-6"><div data-value="5" class="item">+@Localize("5")</div></div>
-                                            <div class="col-4 col-md-6"><div data-value="10" class="item">+@Localize("10")</div></div>
-                                            <div class="col-4 col-md-6"><div data-value="50" class="item">+@Localize("50")</div></div>
-                                            <div class="col-4 col-md-6"><div data-value="75" class="item">+@Localize("75")</div></div>
-                                            <div class="col-4 col-md-6"><div data-value="100" class="item">+@Localize("100")</div></div>
-                                            <div class="col-4 col-md-6"><div data-value="500" class="item">+@Localize("500")</div></div>
-                                            <div class="col-4 col-md-6"><div data-value="1000" class="item">+@Localize("1000")</div></div>
-                                            <div class="col-4 col-md-6"><div data-value="total" class="item">@Localize("Total")</div></div>
-                                        </div>
-                                    </div>
-                                </div>
+                            </div>
+                            <div class="modal-footer bg-whitesmoke">
+                                <button type="button" onclick="PrintOrderSticker();" class="btn btn-dark">@Localize("Print Stickers")</button>
+                                <button type="button" id="closeOrderBtn" onclick="CloseOrder();" class="btn btn-primary">@Localize("Print & Close")</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
                             </div>
                         </div>
-                        <div class="modal-footer bg-whitesmoke">
-                            <button type="button" id="closeOrderBtn" onclick="CloseOrder();" class="btn btn-primary">@Localize("Print & Close")</button>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                    </div>
+                </div>
+
+                <!--Split Bill Model-->
+                <div class="modal fade" id="SplitBillModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Split Bill")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>@Localize("Food Item")</th>
+                                            <th>@Localize("Quantity")</th>
+                                            <th>@Localize("Price")</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="splitBillItems">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="modal-footer bg-whitesmoke br">
+                                <button type="button" id="splitSubmitBtn" onclick="SplitBill();" class="btn btn-primary">@Localize("Split Bill")</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Split Bill Model-->
-            <div class="modal fade" id="SplitBillModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Split Bill")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <table class="table table-sm table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        <th>@Localize("Food Item")</th>
-                                        <th>@Localize("Quantity")</th>
-                                        <th>@Localize("Price")</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="splitBillItems">
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="modal-footer bg-whitesmoke br">
-                            <button type="button" id="splitSubmitBtn" onclick="SplitBill();" class="btn btn-primary">@Localize("Split Bill")</button>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!--Tax Model-->
-            <div class="modal fade" id="TaxModel" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Select Tax")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-3" id="taxes">
+                <!--Tax Model-->
+                <div class="modal fade" id="TaxModel" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Select Tax")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3" id="taxes">
                         @foreach (var item in Model.TaxRates)
                         {
-                                            <div class="col-6 col-md-4 item" data-id="@item.Id" data-value="@item.Value" data-percentage="@item.IsPercentage" data-default="@item.IsDefault">
-                                                <div class="card-box p-2 text-center">
-                                                    <h2>@item.Title</h2>
+                                                    <div class="col-6 col-md-4 item" data-id="@item.Id" data-value="@item.Value" data-percentage="@item.IsPercentage" data-default="@item.IsDefault">
+                                                        <div class="card-box p-2 text-center">
+                                                            <h2>@item.Title</h2>
                                     @if (item.IsPercentage == true)
                                     {
-                                                                <h2>@item.Value %</h2>
+                                                                            <h2>@item.Value %</h2>
                                     }
                                     else
                                     {
-                                                                <h2>@GetCurrency(item.Value)</h2>
+                                                                            <h2>@GetCurrency(item.Value)</h2>
                                     }
-                                                </div>
-                                            </div>
+                                                        </div>
+                                                    </div>
                         }
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Discount Model-->
-            <div class="modal fade" id="DiscountModel" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Select Discount")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-3" id="discounts">
+                <!--Discount Model-->
+                <div class="modal fade" id="DiscountModel" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Select Discount")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3" id="discounts">
                         @foreach (var item in Model.Discounts)
                         {
-                                            <div class="col-6 col-md-4 item" data-id="@item.Id" data-value="@item.Value" data-percentage="@item.IsPercentage" data-default="@item.IsDefault">
-                                                <div class="card-box p-2 text-center">
-                                                    <h2>@item.Title</h2>
+                                                    <div class="col-6 col-md-4 item" data-id="@item.Id" data-value="@item.Value" data-percentage="@item.IsPercentage" data-default="@item.IsDefault">
+                                                        <div class="card-box p-2 text-center">
+                                                            <h2>@item.Title</h2>
                                     @if (item.IsPercentage == true)
                                     {
-                                                                <h2>@item.Value %</h2>
+                                                                            <h2>@item.Value %</h2>
                                     }
                                     else
                                     {
-                                                                <h2>@GetCurrency(item.Value)</h2>
+                                                                            <h2>@GetCurrency(item.Value)</h2>
                                     }
-                                                </div>
-                                            </div>
+                                                        </div>
+                                                    </div>
                         }
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Charges Model-->
-            <div class="modal fade" id="ChargeModel" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Select Charge")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-3" id="charges">
+                <!--Charges Model-->
+                <div class="modal fade" id="ChargeModel" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Select Charge")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3" id="charges">
                         @foreach (var item in Model.Charges)
                         {
-                                            <div class="col-6 col-md-4 item" data-id="@item.Id" data-value="@item.Value" data-percentage="@item.IsPercentage" data-default="@item.IsDefault">
-                                                <div class="card-box p-2 text-center">
-                                                    <h2>@item.Title</h2>
+                                                    <div class="col-6 col-md-4 item" data-id="@item.Id" data-value="@item.Value" data-percentage="@item.IsPercentage" data-default="@item.IsDefault">
+                                                        <div class="card-box p-2 text-center">
+                                                            <h2>@item.Title</h2>
                                     @if (item.IsPercentage == true)
                                     {
-                                                                <h2>@item.Value %</h2>
+                                                                            <h2>@item.Value %</h2>
                                     }
                                     else
                                     {
-                                                                <h2>@GetCurrency(item.Value)</h2>
+                                                                            <h2>@GetCurrency(item.Value)</h2>
                                     }
-                                                </div>
-                                            </div>
+                                                        </div>
+                                                    </div>
                         }
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Note Model-->
-            <div class="modal fade" id="NoteModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Enter Note")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="form-group">
-                                <label class="control-label">@Localize("Note")</label>
-                                <textarea id="noteInput" class="form-control"></textarea>
+                <!--Note Model-->
+                <div class="modal fade" id="NoteModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Enter Note")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
                             </div>
-                        </div>
-                        <div class="modal-footer bg-whitesmoke br">
-                            <button type="submit" class="btn btn-primary" onclick="EnterNote();">@Localize("Enter")</button>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!--Table Model-->
-            <div class="modal fade" id="TableModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Select Table")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body" style="min-height:300px;">
-                            <div class="row g-2" id="tables">
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label class="control-label">@Localize("Note")</label>
+                                    <textarea id="noteInput" class="form-control"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-whitesmoke br">
+                                <button type="submit" class="btn btn-primary" onclick="EnterNote();">@Localize("Enter")</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Customer Model-->
-            <div class="modal fade" id="CustomerModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Customer")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
+                <!--Table Model-->
+                <div class="modal fade" id="TableModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Select Table")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body" style="min-height:300px;">
+                                <div class="row g-2" id="tables">
+                                </div>
+                            </div>
                         </div>
-                        <div class="modal-body">
-                            <ul class="nav nav-tabs nav-primary" id="myTab" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="newcustomer-tab" data-bs-toggle="tab" data-bs-target="#newcustomer" type="button" role="tab" aria-controls="newcustomer" aria-selected="true">@Localize("Add Customer")</button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="customersearch-tab" data-bs-toggle="tab" data-bs-target="#customersearch" type="button" role="tab" aria-controls="customersearch" aria-selected="false">@Localize("Search")</button>
-                                </li>
-                            </ul>
-                            <div class="tab-content pt-2" id="myTabContent">
-                                <div class="tab-pane fade show active" id="newcustomer" role="tabpanel" aria-labelledby="newcustomer-tab">
-                                    <form id="customerfrm" class="needs-validation" novalidate="">
-                                        <div class="form-group">
-                                            <label class="control-label">@Localize("Customer Name") <code>*</code></label>
-                                            <input name="CustomerName" class="form-control" required />
-                                            <div class="invalid-feedback">
-                                        @Localize("Please enter customer name.")
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6 form-group">
-                                                <label class="control-label">@Localize("Email")</label>
-                                                <input name="Email" type="email" class="form-control">
-                                            </div>
-                                            <div class="col-md-6 form-group">
-                                                <label class="control-label">@Localize("Phone Number") <code>*</code></label>
-                                                <input name="Phone" type="tel" class="form-control" required />
+                    </div>
+                </div>
+
+                <!--Customer Model-->
+                <div class="modal fade" id="CustomerModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Customer")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <ul class="nav nav-tabs nav-primary" id="myTab" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="newcustomer-tab" data-bs-toggle="tab" data-bs-target="#newcustomer" type="button" role="tab" aria-controls="newcustomer" aria-selected="true">@Localize("Add Customer")</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="customersearch-tab" data-bs-toggle="tab" data-bs-target="#customersearch" type="button" role="tab" aria-controls="customersearch" aria-selected="false">@Localize("Search")</button>
+                                    </li>
+                                </ul>
+                                <div class="tab-content pt-2" id="myTabContent">
+                                    <div class="tab-pane fade show active" id="newcustomer" role="tabpanel" aria-labelledby="newcustomer-tab">
+                                        <form id="customerfrm" class="needs-validation" novalidate="">
+                                            <div class="form-group">
+                                                <label class="control-label">@Localize("Customer Name") <code>*</code></label>
+                                                <input name="CustomerName" class="form-control" required />
                                                 <div class="invalid-feedback">
+                                        @Localize("Please enter customer name.")
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6 form-group">
+                                                    <label class="control-label">@Localize("Email")</label>
+                                                    <input name="Email" type="email" class="form-control">
+                                                </div>
+                                                <div class="col-md-6 form-group">
+                                                    <label class="control-label">@Localize("Phone Number") <code>*</code></label>
+                                                    <input name="Phone" type="tel" class="form-control" required />
+                                                    <div class="invalid-feedback">
                                             @Localize("Please enter phone number.")
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="control-label">@Localize("Address") <code>*</code></label>
-                                            <textarea name="Address" class="form-control" required></textarea>
-                                            <div class="invalid-feedback">
+                                            <div class="form-group">
+                                                <label class="control-label">@Localize("Address") <code>*</code></label>
+                                                <textarea name="Address" class="form-control" required></textarea>
+                                                <div class="invalid-feedback">
                                         @Localize("Please enter address.")
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <button class="btn btn-primary mr-1" type="submit" id="submitCustomer">@Localize("Save")</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="tab-pane fade" id="customersearch" role="tabpanel" aria-labelledby="customersearch-tab">
+                                        <div class="form-group w-100">
+                                            <div class="input-group">
+                                                <input type="text" placeholder="Search by name or phone number" id="customerSearchInput" class="form-control" />
+                                                <a href="javascript:void(0);" onclick="SearchCustomer();" id="customerSearchBtn" class="btn btn-primary m-0">@Localize("Search")</a>
                                             </div>
                                         </div>
-                                        <div class="form-group">
-                                            <button class="btn btn-primary mr-1" type="submit" id="submitCustomer">@Localize("Save")</button>
-                                        </div>
-                                    </form>
-                                </div>
-                                <div class="tab-pane fade" id="customersearch" role="tabpanel" aria-labelledby="customersearch-tab">
-                                    <div class="form-group w-100">
-                                        <div class="input-group">
-                                            <input type="text" placeholder="Search by name or phone number" id="customerSearchInput" class="form-control" />
-                                            <a href="javascript:void(0);" onclick="SearchCustomer();" id="customerSearchBtn" class="btn btn-primary m-0">@Localize("Search")</a>
-                                        </div>
-                                    </div>
-                                    <div class="customers mt-4">
-                                        <div class="row g-2" id="customers">
-                                            <div class="col-6 col-md-4 item" data-id="@Model.DefaultCustomer.Id" data-name="@Model.DefaultCustomer.CustomerName" data-default="True">
-                                                <div class="card-box p-2 text-center">
-                                                    <h2>@Model.DefaultCustomer.CustomerName</h2>
-                                                    <h2>@Model.DefaultCustomer.Phone</h2>
+                                        <div class="customers mt-4">
+                                            <div class="row g-2" id="customers">
+                                                <div class="col-6 col-md-4 item" data-id="@Model.DefaultCustomer.Id" data-name="@Model.DefaultCustomer.CustomerName" data-default="True">
+                                                    <div class="card-box p-2 text-center">
+                                                        <h2>@Model.DefaultCustomer.CustomerName</h2>
+                                                        <h2>@Model.DefaultCustomer.Phone</h2>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -545,128 +543,166 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Orders Model-->
-            <div class="modal fade" id="OrderModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Running Orders")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body" style="min-height:300px;">
-                            <div class="orders" id="openedOrders">
+                <!--Orders Model-->
+                <div class="modal fade" id="OrderModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Running Orders")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body" style="min-height:300px;">
+                                <div class="orders" id="openedOrders">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Modifier Model-->
-            <div class="modal fade" id="ModifierModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Select Modifiers")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-2" id="modifiers">
+                <!--Modifier Model-->
+                <div class="modal fade" id="ModifierModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Select Modifiers")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
                             </div>
-                        </div>
-                        <div class="modal-footer bg-whitesmoke br">
-                            <button type="button" onclick="SelectModifiers();" class="btn btn-primary">@Localize("Select")</button>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                            <div class="modal-body">
+                                <div class="row g-2" id="modifiers">
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-whitesmoke br">
+                                <button type="button" onclick="SelectModifiers();" class="btn btn-primary">@Localize("Select")</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Waiter Model-->
-            <div class="modal fade" id="WaiterModel" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Select Waiter")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-3" id="waiters">
+                <!--Waiter Model-->
+                <div class="modal fade" id="WaiterModel" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Select Waiter")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3" id="waiters">
                         @foreach (var item in Model.Waiters)
                         {
-                                            <div class="col-6 col-md-4 item" data-id="@item.Id" data-uname="@item.UserName">
-                                                <div class="card-box p-2 text-center">
-                                                    <h2>@item.FullName</h2>
-                                                    <p>&#64;@item.UserName</p>
-                                                </div>
-                                            </div>
+                                                    <div class="col-6 col-md-4 item" data-id="@item.Id" data-uname="@item.UserName">
+                                                        <div class="card-box p-2 text-center">
+                                                            <h2>@item.FullName</h2>
+                                                            <p>&#64;@item.UserName</p>
+                                                        </div>
+                                                    </div>
                         }
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!--Delivery Man Model-->
-            <div class="modal fade" id="DeliveryManModel" data-bs-backdrop="static">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modalTitle">@Localize("Select Delivery Man")</h5>
-                            <button type="button" class="btn btn-light" data-dismiss="modal">
-                                <span aria-hidden="true">x</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-3" id="deliverymans">
+                <!--Delivery Man Model-->
+                <div class="modal fade" id="DeliveryManModel" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modalTitle">@Localize("Select Delivery Man")</h5>
+                                <button type="button" class="btn btn-light" data-dismiss="modal">
+                                    <span aria-hidden="true">x</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3" id="deliverymans">
                         @foreach (var item in Model.Drivers)
                         {
-                                            <div class="col-6 col-md-4 item" data-id="@item.Id" data-uname="@item.UserName">
-                                                <div class="card-box p-2 text-center">
-                                                    <h2>@item.FullName</h2>
-                                                    <p>&#64;@item.UserName</p>
-                                                </div>
-                                            </div>
+                                                    <div class="col-6 col-md-4 item" data-id="@item.Id" data-uname="@item.UserName">
+                                                        <div class="card-box p-2 text-center">
+                                                            <h2>@item.FullName</h2>
+                                                            <p>&#64;@item.UserName</p>
+                                                        </div>
+                                                    </div>
                         }
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 }
 
 @section scripts{
-            <script src="~/lib/signalr/dist/browser/signalr.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/1.3.3/owl.carousel.js"></script>
-            <script>
-                const orderTypes = ['<span class="badge badge-light m-1">None</span>', '<span class="badge badge-primary m-1">@Localize("Dine In")</span>', '<span class="badge badge-secondary m-1">@Localize("Pick Up")</span>', '<span class="badge badge-black m-1">@Localize("Delivery")</span>'];
-                const ostatus = ['<span class="badge badge-red m-1">@Localize("Cancelled")</span>', '<span class="badge badge-secondary m-1">@Localize("In Progress")</span>', '<span class="badge badge-black m-1">@Localize("Cooked")</span>'];
+                <script src="~/lib/signalr/dist/browser/signalr.js"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/1.3.3/owl.carousel.js"></script>
+                <script>
+                    const orderTypes = ['<span class="badge badge-light m-1">None</span>', '<span class="badge badge-primary m-1">@Localize("Dine In")</span>', '<span class="badge badge-secondary m-1">@Localize("Pick Up")</span>', '<span class="badge badge-black m-1">@Localize("Delivery")</span>'];
+                    const ostatus = ['<span class="badge badge-red m-1">@Localize("Cancelled")</span>', '<span class="badge badge-secondary m-1">@Localize("In Progress")</span>', '<span class="badge badge-black m-1">@Localize("Cooked")</span>'];
 
-                var connection = new signalR.HubConnectionBuilder().withUrl("/notificationHub").build();
-                connection.on("OrderNotification", function (operation, orderId) {
-                    if (operation == 'closed') {
-                        $('#openedOrder' + orderId).remove();
-                    }
-                    else {
+                    var connection = new signalR.HubConnectionBuilder().withUrl("/notificationHub").build();
+                    connection.on("OrderNotification", function (operation, orderId) {
+                        if (operation == 'closed') {
+                            $('#openedOrder' + orderId).remove();
+                        }
+                        else {
+                            $.ajax({
+                                url: '/POS/GetRunningOrder',
+                                type: 'GET',
+                                data: {
+                                    Id: orderId
+                                },
+                                dataType: "json",
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        var order = JSON.parse(data.order);
+                                        let op = operation;
+                                        DisplayOpenedOrder(order, op);
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+                    connection.start().then(function () {
+                        console.log("Connected to server successfully.");
+                        LoadAllOpenedOrders();
+                    }).catch(function (err) {
+                        console.log("Error while connecting with server.");
+                    });
+
+                    function LoadAllOpenedOrders() {
+                        $("#openedOrders").addClass('card-progress');
                         $.ajax({
-                            url: '/POS/GetRunningOrder',
+                            url: '/POS/GetAllRunningOrder',
                             type: 'GET',
-                            data: {
-                                Id: orderId
-                            },
                             dataType: "json",
                             success: function (data) {
                                 if (data.status == "success") {
-                                    var order = JSON.parse(data.order);
-                                    let op = operation;
-                                    DisplayOpenedOrder(order, op);
+                                    var orders = JSON.parse(data.data);
+                                    for (var i = 0; i < orders.length; i++) {
+                                        DisplayOpenedOrder(orders[i], "created");
+                                    }
                                 }
                                 else {
                                     errorMessage(data.message);
@@ -682,152 +718,875 @@
                                 else {
                                     console.log(JSON.stringify(data));
                                 }
+                            },
+                            complete: function () {
+                                $("#openedOrders").removeClass('card-progress');
                             }
                         });
                     }
-                });
 
-                connection.start().then(function () {
-                    console.log("Connected to server successfully.");
-                    LoadAllOpenedOrders();
-                }).catch(function (err) {
-                    console.log("Error while connecting with server.");
-                });
+                    function DisplayOpenedOrder(order, operation) {
+                        console.log(operation);
+                        var date = new Date(Date.parse(order.CreatedAt));
+                        var htmlText = '';
+                        htmlText += '<div class="d-flex align-items-center">';
+                        htmlText += '<h6>@Localize("Order No.") ' + order.Id + '</h6>';
+                        htmlText += '<p class="text-muted ms-auto">' + formatAMPM(date) + '</p></div>';
 
-                function LoadAllOpenedOrders() {
-                    $("#openedOrders").addClass('card-progress');
-                    $.ajax({
-                        url: '/POS/GetAllRunningOrder',
-                        type: 'GET',
-                        dataType: "json",
-                        success: function (data) {
-                            if (data.status == "success") {
-                                var orders = JSON.parse(data.data);
-                                for (var i = 0; i < orders.length; i++) {
-                                    DisplayOpenedOrder(orders[i], "created");
+                        if (order.OrderType == 1) {
+                            htmlText += '<div class="d-flex align-items-center">';
+                            htmlText += '<p><strong>@Localize("Table")</strong> ' + order.TableName + '</p>';
+                            htmlText += '<p class="ms-auto"><strong>@Localize("Guest")</strong> ' + order.Guests + '</p></div>';
+                        }
+                        htmlText += '<div class="d-flex align-items-center">';
+                        htmlText += '<p>' + ostatus[order.Status] + '</p>';
+                        htmlText += '<p class="ms-auto"><strong>' + GetCurrency(getNumber(order.Total)) + '</strong>' + orderTypes[order.OrderType];
+                        htmlText += '</p></div>';
+
+                        if (!$('#openedOrder' + order.Id).length) {
+                            var html = '<div class="item" id="openedOrder' + order.Id + '" data-id="' + order.Id + '">' + htmlText + '</div>';
+                            $('#openedOrders').append(html);
+                        }
+                        else {
+                            $('#openedOrder' + order.Id).html(htmlText);
+                        }
+
+                    }
+                </script>
+                <script>
+                    var foodGroups = [];
+                    var foodItems = [];
+                    var modifiers = [];
+
+                    var OrderId = 0;
+
+                    var TaxId = 0;
+                    var DiscountId = 0;
+                    var ChargeId = 0;
+                    /*
+                        Order Type
+                        0 None
+                        1 Dine In
+                        2 Pick Up
+                        3 Delivery
+                    */
+                    var OrderType = 0;
+                    var WaiterOrDriver = '';
+
+                    //Default table values
+                    var TableName = '';
+
+                    //Default customer values
+                    var CustomerId = 0;
+                    var CustomerName = '';
+
+                    // Order Detail Default Value
+                    var Note = "";
+                    var Guests = 1;
+                    var OrderStatus = 0;
+
+                    var cartItems = [];
+                    var selectedCartItemId = '';
+                    var cartid = 1;
+                    var tempModifiers = [];
+                    var TotalAmount = 0;
+                    var PaidAmount = 0;
+                    var ExistingTotalAmount = 0;
+
+                    var TaxIsPercentage = true;
+                    var TaxValue = 0;
+                    var DiscountIsPercentage = true;
+                    var DiscountValue = 0;
+                    var ChargeIsPercentage = false;
+                    var ChargeValue = 0;
+                    var category = 0;
+
+                    GetData();
+                    function ReloadData() {
+                        localStorage.removeItem("posdata");
+                        window.location.reload(true);
+                    }
+                    function GetData() {
+                        $("body").addClass('card-progress');
+                        let data = localStorage.getItem("posdata");
+                        if (data != null) {
+                            var json = JSON.parse(data);
+                            LoadData(json);
+                            $("body").removeClass('card-progress');
+                        }
+                        else {
+                            $.ajax({
+                                url: '/POS/GetPOSData',
+                                type: 'GET',
+                                dataType: "json",
+                                contentType: false,
+                                processData: false,
+                                success: function (data) {
+                                    var str = JSON.stringify(data);
+                                    localStorage.setItem("posdata", str);
+                                    LoadData(data);
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                complete: function () {
+                                    $("body").removeClass('card-progress');
                                 }
+                            });
+                        }
+                    }
+                    function LoadData(data) {
+                        foodGroups = JSON.parse(data.foodGroups);
+                        foodItems = JSON.parse(data.foodItems);
+                        modifiers = JSON.parse(data.modifiers);
+                        LoadFoodGroup();
+                        LoadModifiers();
+                        ResetControls();
+                    }
+                    function ResetControls() {
+                        OrderId = 0;
+                        TaxId = 0;
+                        DiscountId = 0;
+                        ChargeId = 0;
+                        OrderType = 0;
+                        TableName = '';
+                        WaiterOrDriver = '';
+                        Note = "";
+                        OrderStatus = 0;
+                        TotalAmount = 0;
+                        PaidAmount = 0;
+
+                        TaxIsPercentage = true;
+                        TaxValue = 0;
+                        DiscountIsPercentage = true;
+                        DiscountValue = 0;
+                        ChargeIsPercentage = false;
+                        ChargeValue = 0;
+                        category = 0;
+                        CustomerId = parseInt('@GetSetting.DefaultCustomer');
+                        CustomerName = '';
+
+                        var taxelement = $("#taxes [data-default='True']");
+                        var discountelement = $("#discounts [data-default='True']");
+                        var chargeelement = $("#charges [data-default='True']");
+                        var customerelement = $("#customers [data-id='" + CustomerId + "']");
+
+                        if (taxelement.length) {
+                            TaxId = taxelement.data('id');
+                            TaxValue = getLocaleNumber(taxelement.data('value'));
+                            TaxIsPercentage = taxelement.data('percentage') == 'True' ? true : false;
+                        }
+
+                        if (discountelement.length) {
+                            DiscountId = discountelement.data('id');
+                            DiscountValue = getLocaleNumber(discountelement.data('value'));
+                            DiscountIsPercentage = discountelement.data('percentage') == 'True' ? true : false;
+                        }
+
+                        if (chargeelement.length) {
+                            ChargeId = chargeelement.data('id');
+                            ChargeValue = getLocaleNumber(chargeelement.data('value'));
+                            ChargeIsPercentage = chargeelement.data('percentage') == 'True' ? true : false;
+                        }
+
+                        if (customerelement.length) {
+                            CustomerId = customerelement.data('id');
+                            CustomerName = customerelement.data('name').toString();
+                        }
+
+                        $("#waiters").find(".card-box").removeClass("active");
+                        $("#deliverymans").find(".card-box").removeClass("active");
+
+                        $("#d-OrderId").text('');
+                        $("#pickUpBtn").removeClass('active');
+                        $("#dineInBtn").removeClass('active');
+                        $("#deliveryBtn").removeClass('active');
+                        $("#d-OrderType").text('@Localize("Select Order Type")');
+                        $("#d-TableName").text('@Localize("Select Table")');
+                        $("#d-DeliveryMan").text('@Localize("Select Driver")');
+                        $("#d-Waiter").text('@Localize("Select Waiter")');
+                        $(".dineinOption").addClass('d-none');
+                        $(".deliveryOption").addClass('d-none');
+                        $(".waiterOption").addClass('d-none');
+
+                        $("#topBtns .item").each(function () {
+                            $(this).removeClass('disabled');
+                        });
+
+                        $("#splitBtn").addClass('disabled');
+                        $("#paymentBtn").addClass('disabled');
+                        $("#submitBtn span").text('@Localize("Submit")');
+
+                        $('#guestInput').val('1');
+                        $('#PaymentAmount').val('');
+                        EnterGuests();
+
+                        cartItems = [];
+                        $("#cartItems").html('');
+                        tempModifiers = [];
+
+                        cartid = 1;
+                        OrderId = 0;
+
+                        SetTax();
+                        SetDiscount();
+                        SetCharge();
+                        SetCustomer();
+
+                        var defaultOrderType = parseInt('@Model.DefaultOrderType');
+                        if (defaultOrderType == 1) SetDineInOrder();
+                        else if (defaultOrderType == 2) SetPickUpOrder();
+                        else if (defaultOrderType == 3) SetDeliveryOrder();
+
+                        $("#cartActions a").each(function () {
+                            $(this).addClass('disabled');
+                        });
+                    }
+
+                    // Tax
+                    function OpenTaxModel() {
+                        $("#TaxModel").modal('show');
+                    }
+                    function SetTax() {
+                        $("#taxes").find(".card-box").removeClass("active");
+                        $("#taxes [data-id='" + TaxId + "']").find(".card-box").addClass('active');
+
+                        if (TaxIsPercentage == true) {
+                            $("#d-Tax").text(getNumber(TaxValue) + ' %');
+                        }
+                        else {
+                            $("#d-Tax").text(GetCurrency(getNumber(TaxValue)));
+                        }
+                        CalculateTotal();
+                    }
+                    $("#taxes").on("click", "div.item", function () {
+                        $("#taxes").find(".card-box").removeClass("active");
+                        $(this).find(".card-box").addClass('active');
+                        TaxId = $(this).data("id");
+                        TaxValue = getLocaleNumber($(this).data("value"));
+                        TaxIsPercentage = $(this).data("percentage") == 'True' ? true : false;
+                        SetTax();
+                        $("#TaxModel").modal('hide');
+                    });
+
+                    // Discount
+                    function OpenDiscountModel() {
+                        $("#DiscountModel").modal('show');
+                    }
+                    function SetDiscount() {
+                        $("#discounts").find(".card-box").removeClass("active");
+                        $("#discounts [data-id='" + DiscountId + "']").find(".card-box").addClass('active');
+                        if (DiscountIsPercentage == true) {
+                            $("#d-Discount").text(getNumber(DiscountValue) + ' %');
+                        }
+                        else {
+                            $("#d-Discount").text(GetCurrency(getNumber(DiscountValue)));
+                        }
+                        CalculateTotal();
+                    }
+                    $("#discounts").on("click", "div.item", function () {
+                        DiscountId = $(this).data("id");
+                        DiscountValue = getLocaleNumber($(this).data("value"));
+                        DiscountIsPercentage = $(this).data("percentage") == 'True' ? true : false;
+                        SetDiscount();
+                        $("#DiscountModel").modal('hide');
+                    });
+
+                    // Charges
+                    function OpenChargeModel() {
+                        $("#ChargeModel").modal('show');
+                    }
+                    function SetCharge() {
+                        $("#charges").find(".card-box").removeClass("active");
+                        $("#charges [data-id='" + ChargeId + "']").find(".card-box").addClass('active');
+                        if (ChargeIsPercentage == true) {
+                            $("#d-Charge").text(getNumber(ChargeValue) + ' %');
+                        }
+                        else {
+                            $("#d-Charge").text(GetCurrency(getNumber(ChargeValue)));
+                        }
+                        CalculateTotal();
+                    }
+                    $("#charges").on("click", "div.item", function () {
+                        ChargeId = $(this).data("id");
+                        ChargeValue = getLocaleNumber($(this).data("value"));
+                        ChargeIsPercentage = $(this).data("percentage") == 'True' ? true : false;
+                        SetCharge();
+                        $("#ChargeModel").modal('hide');
+                    });
+
+                    //Customer Operations
+                    function OpenCustomerModel() {
+                        $("#CustomerModel").modal('show');
+                    }
+                    function SearchCustomer() {
+                        $("#customers").html('');
+                        $("#customerSearchBtn").addClass('disabled btn-progress');
+                        var search = $("#customerSearchInput").val();
+                        jQuery.ajax({
+                            url: "/People/SearchCustomer",
+                            method: "GET",
+                            dataType: "json",
+                            data: {
+                                search: search
+                            },
+                            success: function (data) {
+                                if (data.status == "success") {
+                                    customers = JSON.parse(data.data);
+                                    if (customers.length <= 0) {
+                                    }
+                                    else {
+                                        for (var i = 0; i < customers.length; i++) {
+                                            DisplayCustomers(customers[i]);
+                                        }
+                                        SetCustomer();
+                                    }
+                                }
+                                else {
+                                    errorMessage(data.message);
+                                }
+                            },
+                            error: function (data) {
+                                if (data.status == 401) {
+                                    window.location.href = '/Account/Login';
+                                }
+                                else if (data.status == 403) {
+                                    errorMessage('@Localize("Access denied.")');
+                                }
+                                else {
+                                    console.log(JSON.stringify(data));
+                                }
+                            },
+                            complete: function () {
+                                $("#customerSearchBtn").removeClass('disabled btn-progress');
                             }
-                            else {
-                                errorMessage(data.message);
-                            }
-                        },
-                        error: function (data) {
-                            if (data.status == 401) {
-                                window.location.href = '/Account/Login';
-                            }
-                            else if (data.status == 403) {
-                                errorMessage('@Localize("Access denied.")');
-                            }
-                            else {
-                                console.log(JSON.stringify(data));
-                            }
-                        },
-                        complete: function () {
-                            $("#openedOrders").removeClass('card-progress');
+                        });
+                    }
+                    function DisplayCustomers(item) {
+                        htmlText = '<div class="col-6 col-md-4 item" data-id="' + item.Id + '" data-name="' + item.CustomerName + '">';
+                        htmlText += '<div class="card-box p-2 text-center"><h2>' + item.CustomerName + '</h2>';
+                        htmlText += '<h2>' + item.Phone + '</h2>';
+                        htmlText += '</div></div>';
+
+                        $("#customers").append(htmlText);
+                    }
+
+                    function SetCustomer() {
+                        $("#customers").find(".card-box").removeClass("active");
+                        $("#customers [data-id='" + CustomerId + "']").find(".card-box").addClass('active');
+                        $("#d-Customer").text(CustomerName);
+                    }
+
+                    $("#customers").on("click", "div.item", function () {
+                        CustomerId = $(this).data("id");
+                        CustomerName = $(this).data("name").toString();
+                        SetCustomer();
+                        $("#CustomerModel").modal('hide');
+                    });
+
+                    $("#customerfrm").submit(function (e) {
+                        e.preventDefault();
+                        var formData = new FormData(this);
+
+                        if (performValidation($("#customerfrm"))) {
+                            $("#submitCustomer").addClass("disabled btn-progress");
+                            $.ajax({
+                                url: '/People/AddCustomer',
+                                type: 'POST',
+                                data: formData,
+                                dataType: "json",
+                                contentType: false,
+                                processData: false,
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Customer created successfully.")');
+                                        $("#customerfrm")[0].reset();
+                                        var cus = JSON.parse(data.customer);
+                                        CustomerId = cus.Id;
+                                        CustomerName = cus.CustomerName;
+                                        DisplayCustomers(cus);
+                                        SetCustomer();
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                complete: function () {
+                                    $("#submitCustomer").removeClass("disabled btn-progress");
+                                    $("#customerfrm").removeClass("was-validated");
+                                }
+                            });
                         }
                     });
-                }
 
-                function DisplayOpenedOrder(order, operation) {
-                    console.log(operation);
-                    var date = new Date(Date.parse(order.CreatedAt));
-                    var htmlText = '';
-                    htmlText += '<div class="d-flex align-items-center">';
-                    htmlText += '<h6>@Localize("Order No.") ' + order.Id + '</h6>';
-                    htmlText += '<p class="text-muted ms-auto">' + formatAMPM(date) + '</p></div>';
-
-                    if (order.OrderType == 1) {
-                        htmlText += '<div class="d-flex align-items-center">';
-                        htmlText += '<p><strong>@Localize("Table")</strong> ' + order.TableName + '</p>';
-                        htmlText += '<p class="ms-auto"><strong>@Localize("Guest")</strong> ' + order.Guests + '</p></div>';
-                    }
-                    htmlText += '<div class="d-flex align-items-center">';
-                    htmlText += '<p>' + ostatus[order.Status] + '</p>';
-                    htmlText += '<p class="ms-auto"><strong>' + GetCurrency(getNumber(order.Total)) + '</strong>' + orderTypes[order.OrderType];
-                    htmlText += '</p></div>';
-
-                    if (!$('#openedOrder' + order.Id).length) {
-                        var html = '<div class="item" id="openedOrder' + order.Id + '" data-id="' + order.Id + '">' + htmlText + '</div>';
-                        $('#openedOrders').append(html);
-                    }
-                    else {
-                        $('#openedOrder' + order.Id).html(htmlText);
-                    }
-
-                }
-            </script>
-            <script>
-                var foodGroups = [];
-                var foodItems = [];
-                var modifiers = [];
-
-                var OrderId = 0;
-
-                var TaxId = 0;
-                var DiscountId = 0;
-                var ChargeId = 0;
-                /*
-                    Order Type
-                    0 None
-                    1 Dine In
-                    2 Pick Up
-                    3 Delivery
-                */
-                var OrderType = 0;
-                var WaiterOrDriver = '';
-
-                //Default table values
-                var TableName = '';
-
-                //Default customer values
-                var CustomerId = 0;
-                var CustomerName = '';
-
-                // Order Detail Default Value
-                var Note = "";
-                var Guests = 1;
-                var OrderStatus = 0;
-
-                var cartItems = [];
-                var selectedCartItemId = '';
-                var cartid = 1;
-                var tempModifiers = [];
-                var TotalAmount = 0;
-                var PaidAmount = 0;
-                var ExistingTotalAmount = 0;
-
-                var TaxIsPercentage = true;
-                var TaxValue = 0;
-                var DiscountIsPercentage = true;
-                var DiscountValue = 0;
-                var ChargeIsPercentage = false;
-                var ChargeValue = 0;
-                var category = 0;
-
-                GetData();
-                function ReloadData() {
-                    localStorage.removeItem("posdata");
-                    window.location.reload(true);
-                }
-                function GetData() {
-                    $("body").addClass('card-progress');
-                    let data = localStorage.getItem("posdata");
-                    if (data != null) {
-                        var json = JSON.parse(data);
-                        LoadData(json);
-                        $("body").removeClass('card-progress');
-                    }
-                    else {
-                        $.ajax({
-                            url: '/POS/GetPOSData',
-                            type: 'GET',
+                    // Order Type Operations
+                    function OpenTableModel() {
+                        $("#TableModel").modal('show');
+                        $("#tables").addClass('card-progress');
+                        $("#tables").html('');
+                        jQuery.ajax({
+                            url: "/Table/AvailableTables",
+                            method: "GET",
                             dataType: "json",
-                            contentType: false,
-                            processData: false,
                             success: function (data) {
-                                var str = JSON.stringify(data);
-                                localStorage.setItem("posdata", str);
-                                LoadData(data);
+                                if (data.status == "success") {
+                                    tables = data.data;
+                                    if (tables.length <= 0) {
+                                        $("#tables").html('<h6 class="text-center mt-5">@Localize("Table not available.")</h3>');
+                                    }
+                                    else {
+                                        for (var i = 0; i < tables.length; i++) {
+                                            DisplayTable(tables[i]);
+                                        }
+                                    }
+                                }
+                                else {
+                                    errorMessage(data.message);
+                                }
+                            },
+                            error: function (data) {
+                                if (data.status == 401) {
+                                    window.location.href = '/Account/Login';
+                                }
+                                else if (data.status == 403) {
+                                    errorMessage('@Localize("Access denied.")');
+                                }
+                                else {
+                                    console.log(JSON.stringify(data));
+                                }
+                            },
+                            complete: function () {
+                                $("#tables").removeClass('card-progress');
+                            }
+                        });
+                    }
+                    function DisplayTable(item) {
+                        htmlText = '<div class="col-6 col-md-4 col-lg-3 mb-2 item" data-id="' + item.id + '" data-name="' + item.tableName + '">';
+                        htmlText += '<article class="product"><div class="product-header">';
+                        htmlText += '<div class="image" style="background-image: url(&quot;/Media/TableImage?name=' + item.image + '&quot;);"></div></div>';
+                        htmlText += '<div class="product-details"><div class="title text-center">';
+                        htmlText += '<h2>' + item.tableName + '</h2></div></div>';
+                        htmlText += '</article></div>';
+
+                        $("#tables").append(htmlText);
+                    }
+                    $("#tables").on("click", "div.item", function () {
+                        TableName = $(this).data("name").toString();
+                        SetDineInOrder();
+                        $("#TableModel").modal('hide');
+                    });
+                    function SetDineInOrder() {
+                        OrderType = 1;
+                        $("#d-TableName").text('@Localize("Select Table")');
+                        $("#d-OrderType").text('@Localize("Dine In")');
+                        $(".dineinOption").removeClass('d-none');
+                        $(".waiterOption").removeClass('d-none');
+                        $(".deliveryOption").addClass('d-none');
+                        $("#dineInBtn").addClass('active');
+                        $("#deliveryBtn").removeClass('active');
+                        $("#pickUpBtn").removeClass('active');
+
+                        if (TableName.length > 0) {
+                            $("#d-TableName").text(TableName);
+                        }
+                    }
+                    function SetPickUpOrder() {
+                        OrderType = 2;
+                        $("#d-OrderType").text('@Localize("Pick Up")');
+                        $(".dineinOption").addClass('d-none');
+                        $(".waiterOption").removeClass('d-none');
+                        $(".deliveryOption").addClass('d-none');
+
+                        $("#pickUpBtn").addClass('active');
+                        $("#dineInBtn").removeClass('active');
+                        $("#deliveryBtn").removeClass('active');
+                    }
+                    function SetDeliveryOrder() {
+                        OrderType = 3;
+                        $("#d-OrderType").text('@Localize("Delivery")');
+                        $(".dineinOption").addClass('d-none');
+                        $(".waiterOption").addClass('d-none');
+                        $(".deliveryOption").removeClass('d-none');
+
+                        $("#deliveryBtn").addClass('active');
+                        $("#pickUpBtn").removeClass('active');
+                        $("#dineInBtn").removeClass('active');
+                    }
+
+                    // Waiters & Drivers
+                    function OpenWaiterModel() {
+                        $("#WaiterModel").modal('show');
+                    }
+                    function OpenDeliveryManModel() {
+                        $("#DeliveryManModel").modal('show');
+                    }
+                    $("#waiters").on("click", "div.item", function () {
+                        $("#waiters").find(".card-box").removeClass("active");
+                        $(this).find(".card-box").addClass('active');
+                        WaiterOrDriver = $(this).data("uname").toString();
+                        $("#d-Waiter").text(WaiterOrDriver);
+                        $("#WaiterModel").modal('hide');
+                    });
+                    $("#deliverymans").on("click", "div.item", function () {
+                        $("#deliverymans").find(".card-box").removeClass("active");
+                        $(this).find(".card-box").addClass('active');
+                        WaiterOrDriver = $(this).data("uname").toString();
+                        $("#d-DeliveryMan").text(WaiterOrDriver);
+                        $("#DeliveryManModel").modal('hide');
+                    });
+
+                    //Order Note
+                    function OpenNoteModel() {
+                        $('#noteInput').val(Note);
+                        $("#NoteModel").modal('show');
+                    }
+                    function EnterNote() {
+                        Note = $('#noteInput').val();
+                        if ($('#NoteModel').hasClass('show'))
+                            $("#NoteModel").modal('hide');
+                    }
+
+                    // Guests
+                    var guestString = "";
+                    function OpenGuestModel() {
+                        $("#GuestModel").modal('show');
+                    }
+                    $("#guests").on("click", "div.item", function () {
+                        var value = $(this).data("value").toString();
+                        if (value == "x") {
+                            guestString = '';
+                        }
+                        else if (guestString == '0' && value != numberformat.decimalseparator) {
+                            guestString = value;
+                        }
+                        else if (guestString.includes(numberformat.decimalseparator) == true && value == numberformat.decimalseparator) {
+                            return;
+                        }
+                        else {
+                            guestString += value;
+                        }
+
+                        $('#guestInput').val(guestString);
+                    });
+                    function EnterGuests() {
+                        Guests = $('#guestInput').val();
+                        $("#d-Guest").text('Guest ' + Guests);
+                        if ($("#GuestModel").hasClass('show')) {
+                            $("#GuestModel").modal('hide');
+                        }
+                    }
+
+
+                    // Products Operations
+                    function SearchItems() {
+                        $("#products").html('');
+                        var q = $("#searchInput").val().toLowerCase();
+                        if (q == '') {
+                            LoadFoodItems(category);
+                        }
+                        else {
+                            for (var i = 0; i < foodItems.length; i++) {
+                                var ItemName = foodItems[i].ItemName.toLowerCase();
+                                if (ItemName.match(q)) {
+                                    DisplayFoodItem(foodItems[i]);
+                                }
+                            }
+                        }
+                    }
+                    function LoadFoodGroup() {
+                        $("#categories").html('');
+                        for (var i = 0; i < foodGroups.length; i++) {
+                            DisplayFoodGroup(foodGroups[i]);
+                        }
+
+                        $("#products").html('<h6 class="note text-center mt-5">@Localize("Select Food Group")</h3>');
+
+                        $('#categories').owlCarousel({
+                            loop: true,
+                            nav: true,
+                            navText: ["<i class='fa fa-angle-left'></i>", "<i class='fa fa-angle-right'></i>"]
+                        });
+                    }
+                    function DisplayFoodGroup(item) {
+                        htmlText = '<div class="item-box" data-id="' + item.Id + '" data-name="' + item.GroupName + '" data-type="group">';
+                        htmlText += '<img src="/Media/FoodGroupImage?name=' + item.Image + '" alt="">';
+                        htmlText += '<h5 class="title mb-0">' + item.GroupName + '</h5>';
+                        htmlText += '</div>';
+
+                        $("#categories").append(htmlText);
+                    }
+                    function LoadFoodItems(groupId) {
+                        $("#products").html('');
+                        var count = 0;
+                        category = groupId;
+                        for (var i = 0; i < foodItems.length; i++) {
+                            if (foodItems[i].GroupId == groupId) {
+                                DisplayFoodItem(foodItems[i]);
+                                count++;
+                            }
+                        }
+
+                        if (count == 0) {
+                            $("#products").html('<h6 class="note text-center mt-5">@Localize("Food Items not found.")</h3>');
+                        }
+                    }
+                    function DisplayFoodItem(item) {
+                        htmlText = '<div class="product-single" data-id="' + item.Id + '" data-name="' + item.ItemName + '" data-price="' + item.Price + '"><div class="position-relative h-100">';
+                        htmlText += '<img class="image" src="/Media/ProductImage?name=' + item.Image + '">';
+                        htmlText += '<div class="px-2 pt-2 pb-1 details"<h6 class="product-title mb-0">' + item.ItemName + '</h6>';
+                        htmlText += '<p class="badge-right m-0"><span class="badge badge-primary">' + GetCurrency(getNumber(item.Price)) + '</span></p></div></div></div>';
+
+                        $("#products").append(htmlText);
+                    }
+
+                    $("#categories").on("click", ".item-box", function () {
+                        var id = $(this).data("id");
+                        $('.categories .item-box').removeClass('active');
+                        $(this).addClass('active');
+                        LoadFoodItems(id);
+                    });
+
+                    // Cart Operations
+                    $("#products").on("click", "div.product-single", function () {
+                        var itemType = $(this).data("type");
+                        var id = $(this).data("id");
+                        var name = $(this).data("name");
+                        var price = $(this).data("price");
+                        AddItemInCart(id, name, price, 1);
+                    });
+                    function AddItemInCart(id, name, price, quantity) {
+                        for (var i = 0; i < cartItems.length; i++) {
+                            if (cartItems[i].ItemId == id && cartItems[i].modifiers.length == 0) {
+                                cartItems[i].ItemQuantity += quantity;
+                                var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
+                                itemTotal *= cartItems[i].ItemQuantity;
+
+                                $("#cart" + cartItems[i].Id + " td.quantity").text(getNumber(cartItems[i].ItemQuantity));
+                                $("#cart" + cartItems[i].Id + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
+
+                                CalculateTotal();
+                                MarkCartItemSelected("cart" + cartItems[i].Id);
+                                return;
+                            }
+                        }
+
+                        var item = [];
+                        cartid++;
+
+                        item['Id'] = cartid;
+                        item['ItemId'] = id;
+                        item['ItemName'] = name;
+                        item['ItemPrice'] = price;
+                        item['ItemModifierTotal'] = 0.0;
+                        item['ItemQuantity'] = quantity;
+                        item['modifiers'] = [];
+
+                        cartItems.push(item);
+                        DisplayCartItem(item);
+                        MarkCartItemSelected("cart" + cartid);
+                    }
+                    function DisplayCartItem(item) {
+                        var itemTotal = item.ItemPrice + item.ItemModifierTotal;
+                        itemTotal *= item.ItemQuantity;
+
+                        htmlText = '<tr class="item" id="cart' + item['Id'] + '" data-id="' + item['ItemId'] + '"><td><div>' + item['ItemName'] + '</div><div class="modifiers">';
+                        htmlText += '<td class="quantity text-center">' + getNumber(item['ItemQuantity']) + '</td>';
+                        htmlText += '<td class="price text-end">' + GetCurrency(getNumber(itemTotal.toFixed(2))) + '</td></tr>';
+
+                        $("#cartItems").append(htmlText);
+                        CalculateTotal();
+                    }
+                    function MarkCartItemSelected(id) {
+                        if (IsItemSelected())
+                            $("#" + selectedCartItemId).removeClass('active');
+
+                        selectedCartItemId = id;
+                        $("#" + selectedCartItemId).addClass('active');
+
+                        $("#cartActions a").each(function () {
+                            $(this).removeClass('disabled');
+                        });
+                    }
+                    $("#cartItems").on("click", "tr.item", function () {
+                        var id = $(this).attr("id");
+                        MarkCartItemSelected(id);
+                    });
+                    function IsItemSelected() {
+                        if (selectedCartItemId == "") {
+                            return false;
+                        }
+                        return true;
+                    }
+                    function IncreaseQuantity() {
+                        if (!IsItemSelected())
+                            return;
+
+                        var split = selectedCartItemId.match(/(\d+)/);
+                        id = split[0];
+                        for (var i = 0; i < cartItems.length; i++) {
+                            if (cartItems[i].Id == id) {
+                                cartItems[i].ItemQuantity += 1;
+                                var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
+                                itemTotal *= cartItems[i].ItemQuantity;
+
+                                $("#" + selectedCartItemId + " td.quantity").text(getNumber(cartItems[i].ItemQuantity));
+                                $("#" + selectedCartItemId + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
+                            }
+                        }
+                        CalculateTotal();
+                    }
+                    function DecreaseQuantity() {
+                        if (!IsItemSelected())
+                            return;
+
+                        var split = selectedCartItemId.match(/(\d+)/);
+                        id = split[0];
+                        for (var i = 0; i < cartItems.length; i++) {
+                            if (cartItems[i].Id == id) {
+                                if (cartItems[i].ItemQuantity > 1) {
+                                    cartItems[i].ItemQuantity -= 1;
+                                    var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
+                                    itemTotal *= cartItems[i].ItemQuantity;
+
+                                    $("#" + selectedCartItemId + " td.quantity").text(getNumber(cartItems[i].ItemQuantity));
+                                    $("#" + selectedCartItemId + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
+                                }
+                            }
+                        }
+                        CalculateTotal();
+                    }
+                    //Delete Cart Item
+                    function DeleteItem() {
+                        if (IsItemSelected()) {
+                            var split = selectedCartItemId.match(/(\d+)/);
+                            id = split[0];
+                            cartItems = cartItems.filter(obj => obj.Id != id);
+                            $("#" + selectedCartItemId).remove();
+                            CalculateTotal();
+                            selectedCartItemId = "";
+                            $("#cartActions a").each(function () {
+                                $(this).addClass('disabled');
+                            });
+                            CalculateTotal();
+                        }
+                    }
+
+                    //Apply Modifers
+                    function LoadModifiers() {
+                        var htmlText = '';
+                        for (var i = 0; i < modifiers.length; i++) {
+                            htmlText += '<div class="col-6 col-md-4 item" id="modifier' + modifiers[i].Id + '" data-name="' + modifiers[i].Title + '" data-price="' + modifiers[i].Price + '">';
+                            htmlText += '<div class="card-box p-2 text-center"><h2>' + modifiers[i].Title + '</h2>';
+                            htmlText += '<h2>' + GetCurrency(getNumber(modifiers[i].Price)) + '</h2>';
+                            htmlText += '</div></div>';
+                        }
+                        $("#modifiers").html(htmlText);
+                    }
+                    function OpenModifierModel() {
+                        if (IsItemSelected()) {
+                            $("#modifiers div").each(function () {
+                                $(this).children().removeClass("active");
+                            });
+                            tempModifiers = [];
+                            $("#ModifierModel").modal('show');
+                        }
+                    }
+                    $("#modifiers").on("click", "div.item", function () {
+                        var item = [];
+                        item['Id'] = StrToNum($(this).attr("id"));
+                        item['Name'] = $(this).data("name").toString();
+                        item['Price'] = Number($(this).data("price"));
+
+                        var isExisting = false;
+                        for (var i = 0; i < tempModifiers.length; i++) {
+                            if (tempModifiers[i].Id == item['Id']) {
+                                tempModifiers = tempModifiers.filter(obj => obj.Id != item['Id']);
+                                $("#modifier" + item['Id'] + " .card-box").removeClass("active");
+                                isExisting = true;
+                            }
+                        }
+                        if (!isExisting) {
+                            tempModifiers.push(item);
+                            $("#modifier" + item['Id'] + " .card-box").addClass("active");
+                        }
+                    });
+
+                    function SelectModifiers() {
+                        if (!IsItemSelected())
+                            return;
+
+                        var split = selectedCartItemId.match(/(\d+)/);
+                        id = split[0];
+                        for (var i = 0; i < cartItems.length; i++) {
+                            if (cartItems[i].Id == id) {
+                                var modifiersTotal = 0.0;
+                                var htmlText = '';
+                                for (var j = 0; j < tempModifiers.length; j++) {
+                                    modifiersTotal += tempModifiers[j].Price;
+                                    htmlText += '<span class="badge badge-primary m-1">' + tempModifiers[j].Name + '</span>';
+                                }
+                                cartItems[i].ItemModifierTotal = modifiersTotal;
+                                cartItems[i].modifiers = tempModifiers;
+                                $("#" + selectedCartItemId + " td div.modifiers").html(htmlText);
+
+                                var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
+                                itemTotal *= cartItems[i].ItemQuantity;
+                                $("#" + selectedCartItemId + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
+                                if ($('#ModifierModel').hasClass('show'))
+                                    $("#ModifierModel").modal('hide');
+                            }
+                        }
+                        CalculateTotal();
+                    }
+
+                    //Orders
+                    function OpenOrderModel() {
+                        $("#OrderModel").modal('show');
+                    }
+
+
+                    $("#openedOrders").on("click", "div.item", function () {
+                        $("#OrderModel").modal('hide');
+                        Id = $(this).data("id");
+                        GetOpenedOrder(Id);
+                    });
+
+                    function GetOpenedOrder(Id, openPayment = false) {
+                        $("body").addClass('card-progress');
+                        jQuery.ajax({
+                            url: "/POS/GetRunningOrderDetail",
+                            method: "GET",
+                            dataType: "json",
+                            data: {
+                                Id: Id
+                            },
+                            success: function (data) {
+                                if (data.status == "success") {
+                                    order = JSON.parse(data.order);
+                                    LoadOpenedOrder(order, openPayment);
+                                }
+                                else {
+                                    errorMessage(data.message);
+                                }
                             },
                             error: function (data) {
                                 if (data.status == 401) {
@@ -845,1196 +1604,434 @@
                             }
                         });
                     }
-                }
-                function LoadData(data) {
-                    foodGroups = JSON.parse(data.foodGroups);
-                    foodItems = JSON.parse(data.foodItems);
-                    modifiers = JSON.parse(data.modifiers);
-                    LoadFoodGroup();
-                    LoadModifiers();
-                    ResetControls();
-                }
-                function ResetControls() {
-                    OrderId = 0;
-                    TaxId = 0;
-                    DiscountId = 0;
-                    ChargeId = 0;
-                    OrderType = 0;
-                    TableName = '';
-                    WaiterOrDriver = '';
-                    Note = "";
-                    OrderStatus = 0;
-                    TotalAmount = 0;
-                    PaidAmount = 0;
+                    function LoadOpenedOrder(order, openPayment = false) {
+                        $("body").addClass('card-progress');
+                        ResetControls();
+                        var splitItems = '';
+                        var items = order.RunningOrderDetails;
+                        for (var i = 0; i < items.length; i++) {
+                            splitItems += '<tr><td><input type="checkbox" name="SplitOrderDetailId[]" value="' + items[i].Id + '" class="form-check-input text-center"></td>';
+                            splitItems += '<td><div>' + items[i].Item.ItemName + '</div><div>';
 
-                    TaxIsPercentage = true;
-                    TaxValue = 0;
-                    DiscountIsPercentage = true;
-                    DiscountValue = 0;
-                    ChargeIsPercentage = false;
-                    ChargeValue = 0;
-                    category = 0;
-                    CustomerId = parseInt('@GetSetting.DefaultCustomer');
-                    CustomerName = '';
+                            AddItemInCart(items[i].Item.Id, items[i].Item.ItemName, items[i].Item.Price, items[i].Quantity);
+                            var modifiers = items[i].RunningOrderItemModifiers;
+                            for (var j = 0; j < modifiers.length; j++) {
+                                splitItems += '<span class="badge badge-primary m-1">' + modifiers[j].Modifier.Title + '</span>';
+                                var mod = [];
+                                mod['Id'] = modifiers[j].Modifier.Id;
+                                mod['Name'] = modifiers[j].Modifier.Title;
+                                mod['Price'] = modifiers[j].Modifier.Price;
+                                tempModifiers.push(mod);
+                            }
+                            splitItems += '</div></td>';
+                            splitItems += '<td>' + getNumber(items[i].Quantity) + '</td>';
+                            splitItems += '<td>' + getNumber(items[i].Total) + '</td></tr>';
 
-                    var taxelement = $("#taxes [data-default='True']");
-                    var discountelement = $("#discounts [data-default='True']");
-                    var chargeelement = $("#charges [data-default='True']");
-                    var customerelement = $("#customers [data-id='" + CustomerId + "']");
+                            SelectModifiers();
+                            tempModifiers = [];
+                        }
+                        OrderId = order.Id;
+                        TaxId = order.TaxId;
+                        TaxValue = order.Tax.Value;
+                        TaxIsPercentage = order.Tax.IsPercentage;
+                        DiscountId = order.DiscountId;
+                        DiscountValue = order.Discount.Value;
+                        DiscountIsPercentage = order.Discount.IsPercentage;
+                        ChargeId = order.ChargesId;
+                        ChargeValue = order.Charges.Value;
+                        ChargeIsPercentage = order.Charges.IsPercentage;
+                        CustomerId = order.CustomerId;
+                        CustomerName = order.Customer.CustomerName;
+                        WaiterOrDriver = order.WaiterOrDriver;
+                        OrderType = order.OrderType;
+                        OrderStatus = order.Status;
+                        TotalAmount = order.Total;
+                        PaidAmount = order.PaidAmount;
+                        ExistingTotalAmount = order.Total;
 
-                    if (taxelement.length) {
-                        TaxId = taxelement.data('id');
-                        TaxValue = getLocaleNumber(taxelement.data('value'));
-                        TaxIsPercentage = taxelement.data('percentage') == 'True' ? true : false;
+                        SetTax();
+                        SetDiscount();
+                        SetCharge();
+                        SetCustomer();
+                        if (order.OrderType == 1) {
+                            TableName = order.TableName;
+                            SetDineInOrder();
+                            $("#d-Waiter").text(WaiterOrDriver != '' ? WaiterOrDriver : '@Localize("Select Waiter")');
+                            $('#guestInput').val(order.Guests);
+                            EnterGuests();
+                        }
+                        else if (order.OrderType == 2) {
+                            SetPickUpOrder();
+                            $("#d-Waiter").text(WaiterOrDriver != '' ? WaiterOrDriver : '@Localize("Select Waiter")');
+                        }
+                        else if (order.OrderType == 3) {
+                            SetDeliveryOrder();
+                            $("#d-DeliveryMan").text(WaiterOrDriver != '' ? WaiterOrDriver : '@Localize("Select Driver")');
+                        }
+
+                        if (order.Status == 2) {
+                            $("#paymentBtn").removeClass('disabled');
+                            $("#splitBtn").removeClass('disabled');
+                            $("#splitBillItems").html(splitItems);
+                        }
+
+                        $("#d-OrderId").text(OrderId);
+                        $('#noteInput').val(order.Note);
+                        EnterNote();
+
+                        $("#submitBtn span").text('Update');
+
+                        CalculateTotal();
+                        $("body").removeClass('card-progress');
+
+                        if (openPayment) {
+                            OpenPaymentModel();
+                        }
                     }
 
-                    if (discountelement.length) {
-                        DiscountId = discountelement.data('id');
-                        DiscountValue = getLocaleNumber(discountelement.data('value'));
-                        DiscountIsPercentage = discountelement.data('percentage') == 'True' ? true : false;
+                    // Split Bill
+                    function OpenSplitBillModel() {
+                        $("#SplitBillModel").modal('show');
                     }
 
-                    if (chargeelement.length) {
-                        ChargeId = chargeelement.data('id');
-                        ChargeValue = getLocaleNumber(chargeelement.data('value'));
-                        ChargeIsPercentage = chargeelement.data('percentage') == 'True' ? true : false;
-                    }
+                    function SplitBill() {
+                        var data = new FormData();
+                        data.append('OrderId', OrderId);
+                        var ids = document.getElementsByName('SplitOrderDetailId[]');
+                        var valid = false;
+                        for (var i = 0; i < ids.length; i++) {
+                            if (ids[i].checked) {
+                                data.append('OrderDetailIds[]', ids[i].value);
+                                valid = true;
+                            }
+                        }
 
-                    if (customerelement.length) {
-                        CustomerId = customerelement.data('id');
-                        CustomerName = customerelement.data('name').toString();
-                    }
-
-                    $("#waiters").find(".card-box").removeClass("active");
-                    $("#deliverymans").find(".card-box").removeClass("active");
-
-                    $("#d-OrderId").text('');
-                    $("#pickUpBtn").removeClass('active');
-                    $("#dineInBtn").removeClass('active');
-                    $("#deliveryBtn").removeClass('active');
-                    $("#d-OrderType").text('@Localize("Select Order Type")');
-                    $("#d-TableName").text('@Localize("Select Table")');
-                    $("#d-DeliveryMan").text('@Localize("Select Driver")');
-                    $("#d-Waiter").text('@Localize("Select Waiter")');
-                    $(".dineinOption").addClass('d-none');
-                    $(".deliveryOption").addClass('d-none');
-                    $(".waiterOption").addClass('d-none');
-
-                    $("#topBtns .item").each(function () {
-                        $(this).removeClass('disabled');
-                    });
-
-                    $("#splitBtn").addClass('disabled');
-                    $("#paymentBtn").addClass('disabled');
-                    $("#submitBtn span").text('@Localize("Submit")');
-
-                    $('#guestInput').val('1');
-                    $('#PaymentAmount').val('');
-                    EnterGuests();
-
-                    cartItems = [];
-                    $("#cartItems").html('');
-                    tempModifiers = [];
-
-                    cartid = 1;
-                    OrderId = 0;
-
-                    SetTax();
-                    SetDiscount();
-                    SetCharge();
-                    SetCustomer();
-
-                    var defaultOrderType = parseInt('@Model.DefaultOrderType');
-                    if (defaultOrderType == 1) SetDineInOrder();
-                    else if (defaultOrderType == 2) SetPickUpOrder();
-                    else if (defaultOrderType == 3) SetDeliveryOrder();
-
-                    $("#cartActions a").each(function () {
-                        $(this).addClass('disabled');
-                    });
-                }
-
-                // Tax
-                function OpenTaxModel() {
-                    $("#TaxModel").modal('show');
-                }
-                function SetTax() {
-                    $("#taxes").find(".card-box").removeClass("active");
-                    $("#taxes [data-id='" + TaxId + "']").find(".card-box").addClass('active');
-
-                    if (TaxIsPercentage == true) {
-                        $("#d-Tax").text(getNumber(TaxValue) + ' %');
-                    }
-                    else {
-                        $("#d-Tax").text(GetCurrency(getNumber(TaxValue)));
-                    }
-                    CalculateTotal();
-                }
-                $("#taxes").on("click", "div.item", function () {
-                    $("#taxes").find(".card-box").removeClass("active");
-                    $(this).find(".card-box").addClass('active');
-                    TaxId = $(this).data("id");
-                    TaxValue = getLocaleNumber($(this).data("value"));
-                    TaxIsPercentage = $(this).data("percentage") == 'True' ? true : false;
-                    SetTax();
-                    $("#TaxModel").modal('hide');
-                });
-
-                // Discount
-                function OpenDiscountModel() {
-                    $("#DiscountModel").modal('show');
-                }
-                function SetDiscount() {
-                    $("#discounts").find(".card-box").removeClass("active");
-                    $("#discounts [data-id='" + DiscountId + "']").find(".card-box").addClass('active');
-                    if (DiscountIsPercentage == true) {
-                        $("#d-Discount").text(getNumber(DiscountValue) + ' %');
-                    }
-                    else {
-                        $("#d-Discount").text(GetCurrency(getNumber(DiscountValue)));
-                    }
-                    CalculateTotal();
-                }
-                $("#discounts").on("click", "div.item", function () {
-                    DiscountId = $(this).data("id");
-                    DiscountValue = getLocaleNumber($(this).data("value"));
-                    DiscountIsPercentage = $(this).data("percentage") == 'True' ? true : false;
-                    SetDiscount();
-                    $("#DiscountModel").modal('hide');
-                });
-
-                // Charges
-                function OpenChargeModel() {
-                    $("#ChargeModel").modal('show');
-                }
-                function SetCharge() {
-                    $("#charges").find(".card-box").removeClass("active");
-                    $("#charges [data-id='" + ChargeId + "']").find(".card-box").addClass('active');
-                    if (ChargeIsPercentage == true) {
-                        $("#d-Charge").text(getNumber(ChargeValue) + ' %');
-                    }
-                    else {
-                        $("#d-Charge").text(GetCurrency(getNumber(ChargeValue)));
-                    }
-                    CalculateTotal();
-                }
-                $("#charges").on("click", "div.item", function () {
-                    ChargeId = $(this).data("id");
-                    ChargeValue = getLocaleNumber($(this).data("value"));
-                    ChargeIsPercentage = $(this).data("percentage") == 'True' ? true : false;
-                    SetCharge();
-                    $("#ChargeModel").modal('hide');
-                });
-
-                //Customer Operations
-                function OpenCustomerModel() {
-                    $("#CustomerModel").modal('show');
-                }
-                function SearchCustomer() {
-                    $("#customers").html('');
-                    $("#customerSearchBtn").addClass('disabled btn-progress');
-                    var search = $("#customerSearchInput").val();
-                    jQuery.ajax({
-                        url: "/People/SearchCustomer",
-                        method: "GET",
-                        dataType: "json",
-                        data: {
-                            search: search
-                        },
-                        success: function (data) {
-                            if (data.status == "success") {
-                                customers = JSON.parse(data.data);
-                                if (customers.length <= 0) {
-                                }
-                                else {
-                                    for (var i = 0; i < customers.length; i++) {
-                                        DisplayCustomers(customers[i]);
+                        if (valid) {
+                            $("#splitSubmitBtn").addClass("disabled btn-progress");
+                            $.ajax({
+                                url: "/POS/SplitOrder",
+                                type: 'POST',
+                                dataType: "json",
+                                contentType: false,
+                                processData: false,
+                                data: data,
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
                                     }
-                                    SetCustomer();
-                                }
-                            }
-                            else {
-                                errorMessage(data.message);
-                            }
-                        },
-                        error: function (data) {
-                            if (data.status == 401) {
-                                window.location.href = '/Account/Login';
-                            }
-                            else if (data.status == 403) {
-                                errorMessage('@Localize("Access denied.")');
-                            }
-                            else {
-                                console.log(JSON.stringify(data));
-                            }
-                        },
-                        complete: function () {
-                            $("#customerSearchBtn").removeClass('disabled btn-progress');
-                        }
-                    });
-                }
-                function DisplayCustomers(item) {
-                    htmlText = '<div class="col-6 col-md-4 item" data-id="' + item.Id + '" data-name="' + item.CustomerName + '">';
-                    htmlText += '<div class="card-box p-2 text-center"><h2>' + item.CustomerName + '</h2>';
-                    htmlText += '<h2>' + item.Phone + '</h2>';
-                    htmlText += '</div></div>';
-
-                    $("#customers").append(htmlText);
-                }
-
-                function SetCustomer() {
-                    $("#customers").find(".card-box").removeClass("active");
-                    $("#customers [data-id='" + CustomerId + "']").find(".card-box").addClass('active');
-                    $("#d-Customer").text(CustomerName);
-                }
-
-                $("#customers").on("click", "div.item", function () {
-                    CustomerId = $(this).data("id");
-                    CustomerName = $(this).data("name").toString();
-                    SetCustomer();
-                    $("#CustomerModel").modal('hide');
-                });
-
-                $("#customerfrm").submit(function (e) {
-                    e.preventDefault();
-                    var formData = new FormData(this);
-
-                    if (performValidation($("#customerfrm"))) {
-                        $("#submitCustomer").addClass("disabled btn-progress");
-                        $.ajax({
-                            url: '/People/AddCustomer',
-                            type: 'POST',
-                            data: formData,
-                            dataType: "json",
-                            contentType: false,
-                            processData: false,
-                            success: function (data) {
-                                if (data.status == "success") {
-                                    successMessage('@Localize("Customer created successfully.")');
-                                    $("#customerfrm")[0].reset();
-                                    var cus = JSON.parse(data.customer);
-                                    CustomerId = cus.Id;
-                                    CustomerName = cus.CustomerName;
-                                    DisplayCustomers(cus);
-                                    SetCustomer();
-                                }
-                                else {
-                                    errorMessage(data.message);
-                                }
-                            },
-                            error: function (data) {
-                                if (data.status == 401) {
-                                    window.location.href = '/Account/Login';
-                                }
-                                else if (data.status == 403) {
-                                    errorMessage('@Localize("Access denied.")');
-                                }
-                                else {
-                                    console.log(JSON.stringify(data));
-                                }
-                            },
-                            complete: function () {
-                                $("#submitCustomer").removeClass("disabled btn-progress");
-                                $("#customerfrm").removeClass("was-validated");
-                            }
-                        });
-                    }
-                });
-
-                // Order Type Operations
-                function OpenTableModel() {
-                    $("#TableModel").modal('show');
-                    $("#tables").addClass('card-progress');
-                    $("#tables").html('');
-                    jQuery.ajax({
-                        url: "/Table/AvailableTables",
-                        method: "GET",
-                        dataType: "json",
-                        success: function (data) {
-                            if (data.status == "success") {
-                                tables = data.data;
-                                if (tables.length <= 0) {
-                                    $("#tables").html('<h6 class="text-center mt-5">@Localize("Table not available.")</h3>');
-                                }
-                                else {
-                                    for (var i = 0; i < tables.length; i++) {
-                                        DisplayTable(tables[i]);
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
                                     }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Order splitted successfully.")');
+                                        $("#SplitBillModel").modal('hide');
+                                        GetOpenedOrder(data.id);
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    $("#splitSubmitBtn").removeClass("disabled btn-progress");
                                 }
-                            }
-                            else {
-                                errorMessage(data.message);
-                            }
-                        },
-                        error: function (data) {
-                            if (data.status == 401) {
-                                window.location.href = '/Account/Login';
-                            }
-                            else if (data.status == 403) {
-                                errorMessage('@Localize("Access denied.")');
-                            }
-                            else {
-                                console.log(JSON.stringify(data));
-                            }
-                        },
-                        complete: function () {
-                            $("#tables").removeClass('card-progress');
+                            });
                         }
-                    });
-                }
-                function DisplayTable(item) {
-                    htmlText = '<div class="col-6 col-md-4 col-lg-3 mb-2 item" data-id="' + item.id + '" data-name="' + item.tableName + '">';
-                    htmlText += '<article class="product"><div class="product-header">';
-                    htmlText += '<div class="image" style="background-image: url(&quot;/Media/TableImage?name=' + item.image + '&quot;);"></div></div>';
-                    htmlText += '<div class="product-details"><div class="title text-center">';
-                    htmlText += '<h2>' + item.tableName + '</h2></div></div>';
-                    htmlText += '</article></div>';
-
-                    $("#tables").append(htmlText);
-                }
-                $("#tables").on("click", "div.item", function () {
-                    TableName = $(this).data("name").toString();
-                    SetDineInOrder();
-                    $("#TableModel").modal('hide');
-                });
-                function SetDineInOrder() {
-                    OrderType = 1;
-                    $("#d-TableName").text('@Localize("Select Table")');
-                    $("#d-OrderType").text('@Localize("Dine In")');
-                    $(".dineinOption").removeClass('d-none');
-                    $(".waiterOption").removeClass('d-none');
-                    $(".deliveryOption").addClass('d-none');
-                    $("#dineInBtn").addClass('active');
-                    $("#deliveryBtn").removeClass('active');
-                    $("#pickUpBtn").removeClass('active');
-
-                    if (TableName.length > 0) {
-                        $("#d-TableName").text(TableName);
-                    }
-                }
-                function SetPickUpOrder() {
-                    OrderType = 2;
-                    $("#d-OrderType").text('@Localize("Pick Up")');
-                    $(".dineinOption").addClass('d-none');
-                    $(".waiterOption").removeClass('d-none');
-                    $(".deliveryOption").addClass('d-none');
-
-                    $("#pickUpBtn").addClass('active');
-                    $("#dineInBtn").removeClass('active');
-                    $("#deliveryBtn").removeClass('active');
-                }
-                function SetDeliveryOrder() {
-                    OrderType = 3;
-                    $("#d-OrderType").text('@Localize("Delivery")');
-                    $(".dineinOption").addClass('d-none');
-                    $(".waiterOption").addClass('d-none');
-                    $(".deliveryOption").removeClass('d-none');
-
-                    $("#deliveryBtn").addClass('active');
-                    $("#pickUpBtn").removeClass('active');
-                    $("#dineInBtn").removeClass('active');
-                }
-
-                // Waiters & Drivers
-                function OpenWaiterModel() {
-                    $("#WaiterModel").modal('show');
-                }
-                function OpenDeliveryManModel() {
-                    $("#DeliveryManModel").modal('show');
-                }
-                $("#waiters").on("click", "div.item", function () {
-                    $("#waiters").find(".card-box").removeClass("active");
-                    $(this).find(".card-box").addClass('active');
-                    WaiterOrDriver = $(this).data("uname").toString();
-                    $("#d-Waiter").text(WaiterOrDriver);
-                    $("#WaiterModel").modal('hide');
-                });
-                $("#deliverymans").on("click", "div.item", function () {
-                    $("#deliverymans").find(".card-box").removeClass("active");
-                    $(this).find(".card-box").addClass('active');
-                    WaiterOrDriver = $(this).data("uname").toString();
-                    $("#d-DeliveryMan").text(WaiterOrDriver);
-                    $("#DeliveryManModel").modal('hide');
-                });
-
-                //Order Note
-                function OpenNoteModel() {
-                    $('#noteInput').val(Note);
-                    $("#NoteModel").modal('show');
-                }
-                function EnterNote() {
-                    Note = $('#noteInput').val();
-                    if ($('#NoteModel').hasClass('show'))
-                        $("#NoteModel").modal('hide');
-                }
-
-                // Guests
-                var guestString = "";
-                function OpenGuestModel() {
-                    $("#GuestModel").modal('show');
-                }
-                $("#guests").on("click", "div.item", function () {
-                    var value = $(this).data("value").toString();
-                    if (value == "x") {
-                        guestString = '';
-                    }
-                    else if (guestString == '0' && value != numberformat.decimalseparator) {
-                        guestString = value;
-                    }
-                    else if (guestString.includes(numberformat.decimalseparator) == true && value == numberformat.decimalseparator) {
-                        return;
-                    }
-                    else {
-                        guestString += value;
-                    }
-
-                    $('#guestInput').val(guestString);
-                });
-                function EnterGuests() {
-                    Guests = $('#guestInput').val();
-                    $("#d-Guest").text('Guest ' + Guests);
-                    if ($("#GuestModel").hasClass('show')) {
-                        $("#GuestModel").modal('hide');
-                    }
-                }
-
-
-                // Products Operations
-                function SearchItems() {
-                    $("#products").html('');
-                    var q = $("#searchInput").val().toLowerCase();
-                    if (q == '') {
-                        LoadFoodItems(category);
-                    }
-                    else {
-                        for (var i = 0; i < foodItems.length; i++) {
-                            var ItemName = foodItems[i].ItemName.toLowerCase();
-                            if (ItemName.match(q)) {
-                                DisplayFoodItem(foodItems[i]);
-                            }
+                        else {
+                            errorMessage('@Localize("Please select items for split.")');
                         }
-                    }
-                }
-                function LoadFoodGroup() {
-                    $("#categories").html('');
-                    for (var i = 0; i < foodGroups.length; i++) {
-                        DisplayFoodGroup(foodGroups[i]);
+
                     }
 
-                    $("#products").html('<h6 class="note text-center mt-5">@Localize("Select Food Group")</h3>');
+                    //Payment
+                    function OpenPaymentModel() {
+                        var total = getNumber(ExistingTotalAmount.toFixed(2));
+                        $('#PaymentAmount').val(total);
+                        $(".d-OrderTotalAmount").text(GetCurrency(total));
+                        $(".d-OrderDueAmount").text(GetCurrency(0));
+                        $("#PaymentModel").modal('show');
+                    }
 
-                    $('#categories').owlCarousel({
-                        loop: true,
-                        nav: true,
-                        navText: ["<i class='fa fa-angle-left'></i>", "<i class='fa fa-angle-right'></i>"]
-                    });
-                }
-                function DisplayFoodGroup(item) {
-                    htmlText = '<div class="item-box" data-id="' + item.Id + '" data-name="' + item.GroupName + '" data-type="group">';
-                    htmlText += '<img src="/Media/FoodGroupImage?name=' + item.Image + '" alt="">';
-                    htmlText += '<h5 class="title mb-0">' + item.GroupName + '</h5>';
-                    htmlText += '</div>';
+                    function PaymentAmountChange() {
+                        PaidAmount = getLocaleNumber($('#PaymentAmount').val());
+                        var DueAmount = ExistingTotalAmount - PaidAmount;
+                        $('.d-OrderDueAmount').text(GetCurrency(getNumber(DueAmount.toFixed(2))));
+                    }
 
-                    $("#categories").append(htmlText);
-                }
-                function LoadFoodItems(groupId) {
-                    $("#products").html('');
-                    var count = 0;
-                    category = groupId;
-                    for (var i = 0; i < foodItems.length; i++) {
-                        if (foodItems[i].GroupId == groupId) {
-                            DisplayFoodItem(foodItems[i]);
-                            count++;
+                    $("#amounts").on("click", "div.item", function () {
+                        var value = $(this).data("value").toString();
+                        var paymentString = $('#PaymentAmount').val();
+
+                        if (value == "x") {
+                            paymentString = '';
                         }
-                    }
-
-                    if (count == 0) {
-                        $("#products").html('<h6 class="note text-center mt-5">@Localize("Food Items not found.")</h3>');
-                    }
-                }
-                function DisplayFoodItem(item) {
-                    htmlText = '<div class="product-single" data-id="' + item.Id + '" data-name="' + item.ItemName + '" data-price="' + item.Price + '"><div class="position-relative h-100">';
-                    htmlText += '<img class="image" src="/Media/ProductImage?name=' + item.Image + '">';
-                    htmlText += '<div class="px-2 pt-2 pb-1 details"<h6 class="product-title mb-0">' + item.ItemName + '</h6>';
-                    htmlText += '<p class="badge-right m-0"><span class="badge badge-primary">' + GetCurrency(getNumber(item.Price)) + '</span></p></div></div></div>';
-
-                    $("#products").append(htmlText);
-                }
-
-                $("#categories").on("click", ".item-box", function () {
-                    var id = $(this).data("id");
-                    $('.categories .item-box').removeClass('active');
-                    $(this).addClass('active');
-                    LoadFoodItems(id);
-                });
-
-                // Cart Operations
-                $("#products").on("click", "div.product-single", function () {
-                    var itemType = $(this).data("type");
-                    var id = $(this).data("id");
-                    var name = $(this).data("name");
-                    var price = $(this).data("price");
-                    AddItemInCart(id, name, price, 1);
-                });
-                function AddItemInCart(id, name, price, quantity) {
-                    for (var i = 0; i < cartItems.length; i++) {
-                        if (cartItems[i].ItemId == id && cartItems[i].modifiers.length == 0) {
-                            cartItems[i].ItemQuantity += quantity;
-                            var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
-                            itemTotal *= cartItems[i].ItemQuantity;
-
-                            $("#cart" + cartItems[i].Id + " td.quantity").text(getNumber(cartItems[i].ItemQuantity));
-                            $("#cart" + cartItems[i].Id + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
-
-                            CalculateTotal();
-                            MarkCartItemSelected("cart" + cartItems[i].Id);
+                        else if (paymentString == '0' && value != numberformat.decimalseparator) {
+                            paymentString = value;
+                        }
+                        else if (paymentString.includes(numberformat.decimalseparator) == true && value == numberformat.decimalseparator) {
                             return;
                         }
-                    }
+                        else {
+                            paymentString += value;
+                        }
 
-                    var item = [];
-                    cartid++;
-
-                    item['Id'] = cartid;
-                    item['ItemId'] = id;
-                    item['ItemName'] = name;
-                    item['ItemPrice'] = price;
-                    item['ItemModifierTotal'] = 0.0;
-                    item['ItemQuantity'] = quantity;
-                    item['modifiers'] = [];
-
-                    cartItems.push(item);
-                    DisplayCartItem(item);
-                    MarkCartItemSelected("cart" + cartid);
-                }
-                function DisplayCartItem(item) {
-                    var itemTotal = item.ItemPrice + item.ItemModifierTotal;
-                    itemTotal *= item.ItemQuantity;
-
-                    htmlText = '<tr class="item" id="cart' + item['Id'] + '" data-id="' + item['ItemId'] + '"><td><div>' + item['ItemName'] + '</div><div class="modifiers">';
-                    htmlText += '<td class="quantity text-center">' + getNumber(item['ItemQuantity']) + '</td>';
-                    htmlText += '<td class="price text-end">' + GetCurrency(getNumber(itemTotal.toFixed(2))) + '</td></tr>';
-
-                    $("#cartItems").append(htmlText);
-                    CalculateTotal();
-                }
-                function MarkCartItemSelected(id) {
-                    if (IsItemSelected())
-                        $("#" + selectedCartItemId).removeClass('active');
-
-                    selectedCartItemId = id;
-                    $("#" + selectedCartItemId).addClass('active');
-
-                    $("#cartActions a").each(function () {
-                        $(this).removeClass('disabled');
+                        $('#PaymentAmount').val(paymentString);
+                        PaymentAmountChange();
                     });
-                }
-                $("#cartItems").on("click", "tr.item", function () {
-                    var id = $(this).attr("id");
-                    MarkCartItemSelected(id);
-                });
-                function IsItemSelected() {
-                    if (selectedCartItemId == "") {
-                        return false;
-                    }
-                    return true;
-                }
-                function IncreaseQuantity() {
-                    if (!IsItemSelected())
-                        return;
 
-                    var split = selectedCartItemId.match(/(\d+)/);
-                    id = split[0];
-                    for (var i = 0; i < cartItems.length; i++) {
-                        if (cartItems[i].Id == id) {
-                            cartItems[i].ItemQuantity += 1;
-                            var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
-                            itemTotal *= cartItems[i].ItemQuantity;
+                    $("#amountsPlus").on("click", "div.item", function () {
+                        var value = $(this).data("value");
+                        var paymentString = $('#PaymentAmount').val();
+                        paymentString = paymentString == numberformat.decimalseparator ? '0' : paymentString;
+                        if (value == 'total')
+                            paymentString = TotalAmount;
+                        else
+                            paymentString = getLocaleNumber(paymentString) + getLocaleNumber(value);
 
-                            $("#" + selectedCartItemId + " td.quantity").text(getNumber(cartItems[i].ItemQuantity));
-                            $("#" + selectedCartItemId + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
-                        }
-                    }
-                    CalculateTotal();
-                }
-                function DecreaseQuantity() {
-                    if (!IsItemSelected())
-                        return;
-
-                    var split = selectedCartItemId.match(/(\d+)/);
-                    id = split[0];
-                    for (var i = 0; i < cartItems.length; i++) {
-                        if (cartItems[i].Id == id) {
-                            if (cartItems[i].ItemQuantity > 1) {
-                                cartItems[i].ItemQuantity -= 1;
-                                var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
-                                itemTotal *= cartItems[i].ItemQuantity;
-
-                                $("#" + selectedCartItemId + " td.quantity").text(getNumber(cartItems[i].ItemQuantity));
-                                $("#" + selectedCartItemId + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
-                            }
-                        }
-                    }
-                    CalculateTotal();
-                }
-                //Delete Cart Item
-                function DeleteItem() {
-                    if (IsItemSelected()) {
-                        var split = selectedCartItemId.match(/(\d+)/);
-                        id = split[0];
-                        cartItems = cartItems.filter(obj => obj.Id != id);
-                        $("#" + selectedCartItemId).remove();
-                        CalculateTotal();
-                        selectedCartItemId = "";
-                        $("#cartActions a").each(function () {
-                            $(this).addClass('disabled');
-                        });
-                        CalculateTotal();
-                    }
-                }
-
-                //Apply Modifers
-                function LoadModifiers() {
-                    var htmlText = '';
-                    for (var i = 0; i < modifiers.length; i++) {
-                        htmlText += '<div class="col-6 col-md-4 item" id="modifier' + modifiers[i].Id + '" data-name="' + modifiers[i].Title + '" data-price="' + modifiers[i].Price + '">';
-                        htmlText += '<div class="card-box p-2 text-center"><h2>' + modifiers[i].Title + '</h2>';
-                        htmlText += '<h2>' + GetCurrency(getNumber(modifiers[i].Price)) + '</h2>';
-                        htmlText += '</div></div>';
-                    }
-                    $("#modifiers").html(htmlText);
-                }
-                function OpenModifierModel() {
-                    if (IsItemSelected()) {
-                        $("#modifiers div").each(function () {
-                            $(this).children().removeClass("active");
-                        });
-                        tempModifiers = [];
-                        $("#ModifierModel").modal('show');
-                    }
-                }
-                $("#modifiers").on("click", "div.item", function () {
-                    var item = [];
-                    item['Id'] = StrToNum($(this).attr("id"));
-                    item['Name'] = $(this).data("name").toString();
-                    item['Price'] = Number($(this).data("price"));
-
-                    var isExisting = false;
-                    for (var i = 0; i < tempModifiers.length; i++) {
-                        if (tempModifiers[i].Id == item['Id']) {
-                            tempModifiers = tempModifiers.filter(obj => obj.Id != item['Id']);
-                            $("#modifier" + item['Id'] + " .card-box").removeClass("active");
-                            isExisting = true;
-                        }
-                    }
-                    if (!isExisting) {
-                        tempModifiers.push(item);
-                        $("#modifier" + item['Id'] + " .card-box").addClass("active");
-                    }
-                });
-
-                function SelectModifiers() {
-                    if (!IsItemSelected())
-                        return;
-
-                    var split = selectedCartItemId.match(/(\d+)/);
-                    id = split[0];
-                    for (var i = 0; i < cartItems.length; i++) {
-                        if (cartItems[i].Id == id) {
-                            var modifiersTotal = 0.0;
-                            var htmlText = '';
-                            for (var j = 0; j < tempModifiers.length; j++) {
-                                modifiersTotal += tempModifiers[j].Price;
-                                htmlText += '<span class="badge badge-primary m-1">' + tempModifiers[j].Name + '</span>';
-                            }
-                            cartItems[i].ItemModifierTotal = modifiersTotal;
-                            cartItems[i].modifiers = tempModifiers;
-                            $("#" + selectedCartItemId + " td div.modifiers").html(htmlText);
-
-                            var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
-                            itemTotal *= cartItems[i].ItemQuantity;
-                            $("#" + selectedCartItemId + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
-                            if ($('#ModifierModel').hasClass('show'))
-                                $("#ModifierModel").modal('hide');
-                        }
-                    }
-                    CalculateTotal();
-                }
-
-                //Orders
-                function OpenOrderModel() {
-                    $("#OrderModel").modal('show');
-                }
-
-
-                $("#openedOrders").on("click", "div.item", function () {
-                    $("#OrderModel").modal('hide');
-                    Id = $(this).data("id");
-                    GetOpenedOrder(Id);
-                });
-
-                function GetOpenedOrder(Id, openPayment = false) {
-                    $("body").addClass('card-progress');
-                    jQuery.ajax({
-                        url: "/POS/GetRunningOrderDetail",
-                        method: "GET",
-                        dataType: "json",
-                        data: {
-                            Id: Id
-                        },
-                        success: function (data) {
-                            if (data.status == "success") {
-                                order = JSON.parse(data.order);
-                                LoadOpenedOrder(order, openPayment);
-                            }
-                            else {
-                                errorMessage(data.message);
-                            }
-                        },
-                        error: function (data) {
-                            if (data.status == 401) {
-                                window.location.href = '/Account/Login';
-                            }
-                            else if (data.status == 403) {
-                                errorMessage('@Localize("Access denied.")');
-                            }
-                            else {
-                                console.log(JSON.stringify(data));
-                            }
-                        },
-                        complete: function () {
-                            $("body").removeClass('card-progress');
-                        }
+                        $('#PaymentAmount').val(getNumber(paymentString));
+                        PaymentAmountChange();
                     });
-                }
-                function LoadOpenedOrder(order, openPayment = false) {
-                    $("body").addClass('card-progress');
-                    ResetControls();
-                    var splitItems = '';
-                    var items = order.RunningOrderDetails;
-                    for (var i = 0; i < items.length; i++) {
-                        splitItems += '<tr><td><input type="checkbox" name="SplitOrderDetailId[]" value="' + items[i].Id + '" class="form-check-input text-center"></td>';
-                        splitItems += '<td><div>' + items[i].Item.ItemName + '</div><div>';
 
-                        AddItemInCart(items[i].Item.Id, items[i].Item.ItemName, items[i].Item.Price, items[i].Quantity);
-                        var modifiers = items[i].RunningOrderItemModifiers;
-                        for (var j = 0; j < modifiers.length; j++) {
-                            splitItems += '<span class="badge badge-primary m-1">' + modifiers[j].Modifier.Title + '</span>';
-                            var mod = [];
-                            mod['Id'] = modifiers[j].Modifier.Id;
-                            mod['Name'] = modifiers[j].Modifier.Title;
-                            mod['Price'] = modifiers[j].Modifier.Price;
-                            tempModifiers.push(mod);
+                    function CloseOrder() {
+                        var pMethod = $('#PaymentMethod').val();
+                        var pAmount = Number(getLocaleNumber($('#PaymentAmount').val()));
+                        if (pMethod == '') {
+                            errorMessage('@Localize("Please select payment method.")');
                         }
-                        splitItems += '</div></td>';
-                        splitItems += '<td>' + getNumber(items[i].Quantity) + '</td>';
-                        splitItems += '<td>' + getNumber(items[i].Total) + '</td></tr>';
-
-                        SelectModifiers();
-                        tempModifiers = [];
-                    }
-                    OrderId = order.Id;
-                    TaxId = order.TaxId;
-                    TaxValue = order.Tax.Value;
-                    TaxIsPercentage = order.Tax.IsPercentage;
-                    DiscountId = order.DiscountId;
-                    DiscountValue = order.Discount.Value;
-                    DiscountIsPercentage = order.Discount.IsPercentage;
-                    ChargeId = order.ChargesId;
-                    ChargeValue = order.Charges.Value;
-                    ChargeIsPercentage = order.Charges.IsPercentage;
-                    CustomerId = order.CustomerId;
-                    CustomerName = order.Customer.CustomerName;
-                    WaiterOrDriver = order.WaiterOrDriver;
-                    OrderType = order.OrderType;
-                    OrderStatus = order.Status;
-                    TotalAmount = order.Total;
-                    PaidAmount = order.PaidAmount;
-                    ExistingTotalAmount = order.Total;
-
-                    SetTax();
-                    SetDiscount();
-                    SetCharge();
-                    SetCustomer();
-                    if (order.OrderType == 1) {
-                        TableName = order.TableName;
-                        SetDineInOrder();
-                        $("#d-Waiter").text(WaiterOrDriver != '' ? WaiterOrDriver : '@Localize("Select Waiter")');
-                        $('#guestInput').val(order.Guests);
-                        EnterGuests();
-                    }
-                    else if (order.OrderType == 2) {
-                        SetPickUpOrder();
-                        $("#d-Waiter").text(WaiterOrDriver != '' ? WaiterOrDriver : '@Localize("Select Waiter")');
-                    }
-                    else if (order.OrderType == 3) {
-                        SetDeliveryOrder();
-                        $("#d-DeliveryMan").text(WaiterOrDriver != '' ? WaiterOrDriver : '@Localize("Select Driver")');
-                    }
-
-                    if (order.Status == 2) {
-                        $("#paymentBtn").removeClass('disabled');
-                        $("#splitBtn").removeClass('disabled');
-                        $("#splitBillItems").html(splitItems);
-                    }
-
-                    $("#d-OrderId").text(OrderId);
-                    $('#noteInput').val(order.Note);
-                    EnterNote();
-
-                    $("#submitBtn span").text('Update');
-
-                    CalculateTotal();
-                    $("body").removeClass('card-progress');
-
-                    if (openPayment) {
-                        OpenPaymentModel();
-                    }
-                }
-
-                // Split Bill
-                function OpenSplitBillModel() {
-                    $("#SplitBillModel").modal('show');
-                }
-
-                function SplitBill() {
-                    var data = new FormData();
-                    data.append('OrderId', OrderId);
-                    var ids = document.getElementsByName('SplitOrderDetailId[]');
-                    var valid = false;
-                    for (var i = 0; i < ids.length; i++) {
-                        if (ids[i].checked) {
-                            data.append('OrderDetailIds[]', ids[i].value);
-                            valid = true;
+                        else if (pAmount < 0 || pAmount > ExistingTotalAmount) {
+                            errorMessage('@Localize("Enter valid amount.")');
                         }
-                    }
-
-                    if (valid) {
-                        $("#splitSubmitBtn").addClass("disabled btn-progress");
-                        $.ajax({
-                            url: "/POS/SplitOrder",
-                            type: 'POST',
-                            dataType: "json",
-                            contentType: false,
-                            processData: false,
-                            data: data,
-                            error: function (data) {
-                                if (data.status == 401) {
-                                    window.location.href = '/Account/Login';
-                                }
-                                else if (data.status == 403) {
-                                    errorMessage('@Localize("Access denied.")');
-                                }
-                                else {
-                                    console.log(JSON.stringify(data));
-                                }
-                            },
-                            success: function (data) {
-                                if (data.status == "success") {
-                                    successMessage('@Localize("Order splitted successfully.")');
-                                    $("#SplitBillModel").modal('hide');
-                                    GetOpenedOrder(data.id);
-                                }
-                                else {
-                                    errorMessage(data.message);
-                                }
-                            },
-                            complete: function () {
-                                $("#splitSubmitBtn").removeClass("disabled btn-progress");
-                            }
-                        });
-                    }
-                    else {
-                        errorMessage('@Localize("Please select items for split.")');
-                    }
-
-                }
-
-                //Payment
-                function OpenPaymentModel() {
-                    var total = getNumber(ExistingTotalAmount.toFixed(2));
-                    $('#PaymentAmount').val(total);
-                    $(".d-OrderTotalAmount").text(GetCurrency(total));
-                    $(".d-OrderDueAmount").text(GetCurrency(0));
-                    $("#PaymentModel").modal('show');
-                }
-
-                function PaymentAmountChange() {
-                    PaidAmount = getLocaleNumber($('#PaymentAmount').val());
-                    var DueAmount = ExistingTotalAmount - PaidAmount;
-                    $('.d-OrderDueAmount').text(GetCurrency(getNumber(DueAmount.toFixed(2))));
-                }
-
-                $("#amounts").on("click", "div.item", function () {
-                    var value = $(this).data("value").toString();
-                    var paymentString = $('#PaymentAmount').val();
-
-                    if (value == "x") {
-                        paymentString = '';
-                    }
-                    else if (paymentString == '0' && value != numberformat.decimalseparator) {
-                        paymentString = value;
-                    }
-                    else if (paymentString.includes(numberformat.decimalseparator) == true && value == numberformat.decimalseparator) {
-                        return;
-                    }
-                    else {
-                        paymentString += value;
-                    }
-
-                    $('#PaymentAmount').val(paymentString);
-                    PaymentAmountChange();
-                });
-
-                $("#amountsPlus").on("click", "div.item", function () {
-                    var value = $(this).data("value");
-                    var paymentString = $('#PaymentAmount').val();
-                    paymentString = paymentString == numberformat.decimalseparator ? '0' : paymentString;
-                    if (value == 'total')
-                        paymentString = TotalAmount;
-                    else
-                        paymentString = getLocaleNumber(paymentString) + getLocaleNumber(value);
-
-                    $('#PaymentAmount').val(getNumber(paymentString));
-                    PaymentAmountChange();
-                });
-
-                function CloseOrder() {
-                    var pMethod = $('#PaymentMethod').val();
-                    var pAmount = Number(getLocaleNumber($('#PaymentAmount').val()));
-                    if (pMethod == '') {
-                        errorMessage('@Localize("Please select payment method.")');
-                    }
-                    else if (pAmount < 0 || pAmount > ExistingTotalAmount) {
-                        errorMessage('@Localize("Enter valid amount.")');
-                    }
-                    else {
-                        $("#closeOrderBtn").addClass("disabled btn-progress");
-                        $.ajax({
-                            url: "/POS/CloseOrder",
-                            type: 'POST',
-                            dataType: "json",
-                            data: {
-                                Id: OrderId,
-                                PaymentMethod: pMethod,
-                                PaidAmount: getNumber(pAmount)
-                            },
-                            error: function (data) {
-                                if (data.status == 401) {
-                                    window.location.href = '/Account/Login';
-                                }
-                                else if (data.status == 403) {
-                                    errorMessage('@Localize("Access denied.")');
-                                }
-                                else {
-                                    console.log(JSON.stringify(data));
-                                }
-                            },
-                            success: function (data) {
-                                if (data.status == "success") {
-                                    successMessage("Order closed successfully.");
-                                    $("#PaymentModel").modal('hide');
-                                    ResetControls();
-                                    PrintFinalInvoice(data.id);
-                                }
-                                else {
-                                    errorMessage(data.message);
-                                }
-                            },
-                            complete: function () {
-                                $("#closeOrderBtn").removeClass("disabled btn-progress");
-                            }
-                        });
-                    }
-                }
-
-                //Calculate Total
-                function CalculateTotal() {
-                    if (cartItems == null) {
-                        $("#d-SubTotal").text(GetCurrency(getNumber(0.00)));
-                        $(".d-Total").text(GetCurrency(getNumber(0.00)));
-                        return;
-                    }
-
-                    var subTotal = 0.0;
-                    var total = 0.0;
-                    var amount = 0.0;
-
-                    for (var i = 0; i < cartItems.length; i++) {
-                        var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
-                        itemTotal *= cartItems[i].ItemQuantity;
-                        subTotal += itemTotal;
-                    }
-                    amount = subTotal;
-                    //apply discount
-
-                    if (DiscountIsPercentage == true) {
-                        var perc = DiscountValue / 100;
-                        amount = amount - (amount * perc);
-                    }
-                    else {
-                        amount -= DiscountValue;
-                    }
-
-                    //apply tax
-                    if (TaxIsPercentage == true) {
-                        var perc = TaxValue / 100;
-                        amount = amount + (amount * perc);
-                    }
-                    else {
-                        amount += TaxValue;
-                    }
-
-                    //apply charges
-                    if (ChargeIsPercentage == true) {
-                        var perc = ChargeValue / 100;
-                        amount = amount + (amount * perc);
-                    }
-                    else {
-                        amount += ChargeValue;
-                    }
-
-                    TotalAmount = amount.toFixed(2);
-                    var due = TotalAmount - PaidAmount;
-                    $("#d-SubTotal").text(GetCurrency(getNumber(subTotal.toFixed(2))));
-                    $(".d-Total").text(GetCurrency(getNumber(amount.toFixed(2))));
-                }
-
-                function SubmitOrder() {
-                    if (cartItems.length <= 0) {
-                        errorMessage('@Localize("Please add item in cart.")');
-                    }
-                    else if (OrderType <= 0) {
-                        errorMessage('@Localize("Please select order type.")');
-                    }
-                    else {
-                        var url = OrderId > 0 ? '/POS/UpdateRunningOrder' : '/POS/SaveRunningOrder';
-                        $("#submitBtn").addClass("disabled btn-progress");
-                        var data = new FormData();
-                        for (var i = 0; i < cartItems.length; i++) {
-                            data.append("ItemIds[]", cartItems[i].ItemId);
-                            data.append("Quantities[]", cartItems[i].ItemQuantity);
-                            var modifiers = [];
-                            for (var j = 0; j < cartItems[i].modifiers.length; j++) {
-                                modifiers.push(cartItems[i].modifiers[j].Id);
-                            }
-                            var str = modifiers.toString();
-                            if (str.length > 0) {
-                                data.append("Modifiers[]", str);
-                            }
-                            else {
-                                data.append("Modifiers[]", "");
-                            }
-                        }
-                        data.append("OrderId", OrderId);
-                        data.append("OrderType", OrderType);
-                        data.append("Note", Note);
-                        data.append("CustomerId", CustomerId);
-                        data.append("TableName", TableName);
-                        data.append("TaxId", TaxId);
-                        data.append("DiscountId", DiscountId);
-                        data.append("ChargeId", ChargeId);
-                        data.append("Guests", Guests);
-                        data.append("WaiterOrDriver", WaiterOrDriver);
-
-                        $.ajax({
-                            url: url,
-                            type: 'POST',
-                            data: data,
-                            dataType: "json",
-                            contentType: false,
-                            processData: false,
-                            success: function (data) {
-                                if (data.status == "success") {
-                                    successMessage('@Localize("Order submitted successfully.")');
-
-                                    var skipKitchen = '@GetSetting.SkipKitchenOrder' == 'True';
-                                    if (skipKitchen) {
-                                        if (data.id) OrderId = data.id;
-                                        GetOpenedOrder(OrderId, true);
+                        else {
+                            $("#closeOrderBtn").addClass("disabled btn-progress");
+                            $.ajax({
+                                url: "/POS/CloseOrder",
+                                type: 'POST',
+                                dataType: "json",
+                                data: {
+                                    Id: OrderId,
+                                    PaymentMethod: pMethod,
+                                    PaidAmount: getNumber(pAmount)
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
                                     }
-                                    else if (OrderId == 0)
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage("Order closed successfully.");
+                                        $("#PaymentModel").modal('hide');
                                         ResetControls();
-                                    else
-                                        GetOpenedOrder(OrderId);
+                                        PrintFinalInvoice(data.id);
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                complete: function () {
+                                    $("#closeOrderBtn").removeClass("disabled btn-progress");
                                 }
-                                else {
-                                    errorMessage(data.message);
-                                }
-                            },
-                            error: function (data) {
-                                if (data.status == 401) {
-                                    window.location.href = '/Account/Login';
-                                }
-                                else if (data.status == 403) {
-                                    errorMessage('@Localize("Access denied.")');
-                                }
-                                else {
-                                    console.log(JSON.stringify(data));
-                                }
-                            },
-                            complete: function () {
-                                $("#submitBtn").removeClass("disabled btn-progress");
-                            }
-                        });
-                    }
-                }
-
-                function PrintFinalInvoice(id) {
-                    var iframe = document.getElementById('invisiblePrintFrame');
-                    if(!iframe){
-                        iframe = document.createElement('iframe');
-                        iframe.id = 'invisiblePrintFrame';
-                        iframe.style.position = 'fixed';
-                        iframe.style.right = '0';
-                        iframe.style.bottom = '0';
-                        iframe.style.width = '0';
-                        iframe.style.height = '0';
-                        iframe.style.border = '0';
-                        document.body.appendChild(iframe);
-                    }
-                    iframe.src = "/POS/PrintInvoice/" + id;
-                }
-
-                function BarcodeScan(e) {
-                    if(e.key === 'Enter' || e.keyCode === 13){
-                        var bcode = $("#barcodeInput").val();
-                        if(bcode !== ''){
-                            var itemFound = false;
-                            for (var i = 0; i < foodItems.length; i++) {
-                                if (foodItems[i].Barcode == bcode) {
-                                    AddItemInCart(foodItems[i].Id, foodItems[i].ItemName, foodItems[i].Price, 1);
-                                    itemFound = true;
-                                    break;
-                                }
-                            }
-                            if(!itemFound){
-                                errorMessage('Item not found');
-                            }
-                            $("#barcodeInput").val('');
+                            });
                         }
                     }
-                }
 
-                function PrintOrderSticker() {
-                    if(OrderId == 0){
-                        errorMessage('@Localize("Please select or save an order first.")');
-                        return;
+                    //Calculate Total
+                    function CalculateTotal() {
+                        if (cartItems == null) {
+                            $("#d-SubTotal").text(GetCurrency(getNumber(0.00)));
+                            $(".d-Total").text(GetCurrency(getNumber(0.00)));
+                            return;
+                        }
+
+                        var subTotal = 0.0;
+                        var total = 0.0;
+                        var amount = 0.0;
+
+                        for (var i = 0; i < cartItems.length; i++) {
+                            var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
+                            itemTotal *= cartItems[i].ItemQuantity;
+                            subTotal += itemTotal;
+                        }
+                        amount = subTotal;
+                        //apply discount
+
+                        if (DiscountIsPercentage == true) {
+                            var perc = DiscountValue / 100;
+                            amount = amount - (amount * perc);
+                        }
+                        else {
+                            amount -= DiscountValue;
+                        }
+
+                        //apply tax
+                        if (TaxIsPercentage == true) {
+                            var perc = TaxValue / 100;
+                            amount = amount + (amount * perc);
+                        }
+                        else {
+                            amount += TaxValue;
+                        }
+
+                        //apply charges
+                        if (ChargeIsPercentage == true) {
+                            var perc = ChargeValue / 100;
+                            amount = amount + (amount * perc);
+                        }
+                        else {
+                            amount += ChargeValue;
+                        }
+
+                        TotalAmount = amount.toFixed(2);
+                        var due = TotalAmount - PaidAmount;
+                        $("#d-SubTotal").text(GetCurrency(getNumber(subTotal.toFixed(2))));
+                        $(".d-Total").text(GetCurrency(getNumber(amount.toFixed(2))));
                     }
-                    var iframe = document.getElementById('invisibleStickerFrame');
-                    if(!iframe){
-                        iframe = document.createElement('iframe');
-                        iframe.id = 'invisibleStickerFrame';
-                        iframe.style.position = 'fixed';
-                        iframe.style.right = '0';
-                        iframe.style.bottom = '0';
-                        iframe.style.width = '0';
-                        iframe.style.height = '0';
-                        iframe.style.border = '0';
-                        document.body.appendChild(iframe);
+
+                    function SubmitOrder() {
+                        if (cartItems.length <= 0) {
+                            errorMessage('@Localize("Please add item in cart.")');
+                        }
+                        else if (OrderType <= 0) {
+                            errorMessage('@Localize("Please select order type.")');
+                        }
+                        else {
+                            var url = OrderId > 0 ? '/POS/UpdateRunningOrder' : '/POS/SaveRunningOrder';
+                            $("#submitBtn").addClass("disabled btn-progress");
+                            var data = new FormData();
+                            for (var i = 0; i < cartItems.length; i++) {
+                                data.append("ItemIds[]", cartItems[i].ItemId);
+                                data.append("Quantities[]", cartItems[i].ItemQuantity);
+                                var modifiers = [];
+                                for (var j = 0; j < cartItems[i].modifiers.length; j++) {
+                                    modifiers.push(cartItems[i].modifiers[j].Id);
+                                }
+                                var str = modifiers.toString();
+                                if (str.length > 0) {
+                                    data.append("Modifiers[]", str);
+                                }
+                                else {
+                                    data.append("Modifiers[]", "");
+                                }
+                            }
+                            data.append("OrderId", OrderId);
+                            data.append("OrderType", OrderType);
+                            data.append("Note", Note);
+                            data.append("CustomerId", CustomerId);
+                            data.append("TableName", TableName);
+                            data.append("TaxId", TaxId);
+                            data.append("DiscountId", DiscountId);
+                            data.append("ChargeId", ChargeId);
+                            data.append("Guests", Guests);
+                            data.append("WaiterOrDriver", WaiterOrDriver);
+
+                            $.ajax({
+                                url: url,
+                                type: 'POST',
+                                data: data,
+                                dataType: "json",
+                                contentType: false,
+                                processData: false,
+                                success: function (data) {
+                                    if (data.status == "success") {
+                                        successMessage('@Localize("Order submitted successfully.")');
+
+                                        var skipKitchen = '@GetSetting.SkipKitchenOrder' == 'True';
+                                        if (skipKitchen) {
+                                            if (data.id) OrderId = data.id;
+                                            GetOpenedOrder(OrderId, true);
+                                        }
+                                        else if (OrderId == 0)
+                                            ResetControls();
+                                        else
+                                            GetOpenedOrder(OrderId);
+                                    }
+                                    else {
+                                        errorMessage(data.message);
+                                    }
+                                },
+                                error: function (data) {
+                                    if (data.status == 401) {
+                                        window.location.href = '/Account/Login';
+                                    }
+                                    else if (data.status == 403) {
+                                        errorMessage('@Localize("Access denied.")');
+                                    }
+                                    else {
+                                        console.log(JSON.stringify(data));
+                                    }
+                                },
+                                complete: function () {
+                                    $("#submitBtn").removeClass("disabled btn-progress");
+                                }
+                            });
+                        }
                     }
-                    iframe.src = "/POS/PrintSticker/" + OrderId;
-                }
-            </script>
+
+                    function PrintFinalInvoice(id) {
+                        var iframe = document.getElementById('invisiblePrintFrame');
+                        if(!iframe){
+                            iframe = document.createElement('iframe');
+                            iframe.id = 'invisiblePrintFrame';
+                            iframe.style.position = 'fixed';
+                            iframe.style.right = '0';
+                            iframe.style.bottom = '0';
+                            iframe.style.width = '0';
+                            iframe.style.height = '0';
+                            iframe.style.border = '0';
+                            document.body.appendChild(iframe);
+                        }
+                        iframe.src = "/POS/PrintInvoice/" + id;
+                    }
+
+                    function BarcodeScan(e) {
+                        if(e.key === 'Enter' || e.keyCode === 13){
+                            var bcode = $("#barcodeInput").val();
+                            if(bcode !== ''){
+                                var itemFound = false;
+                                for (var i = 0; i < foodItems.length; i++) {
+                                    if (foodItems[i].Barcode == bcode) {
+                                        AddItemInCart(foodItems[i].Id, foodItems[i].ItemName, foodItems[i].Price, 1);
+                                        itemFound = true;
+                                        break;
+                                    }
+                                }
+                                if(!itemFound){
+                                    errorMessage('Item not found');
+                                }
+                                $("#barcodeInput").val('');
+                            }
+                        }
+                    }
+
+                    function PrintOrderSticker() {
+                        if(OrderId == 0){
+                            errorMessage('@Localize("Please select or save an order first.")');
+                            return;
+                        }
+                        var iframe = document.getElementById('invisibleStickerFrame');
+                        if(!iframe){
+                            iframe = document.createElement('iframe');
+                            iframe.id = 'invisibleStickerFrame';
+                            iframe.style.position = 'fixed';
+                            iframe.style.right = '0';
+                            iframe.style.bottom = '0';
+                            iframe.style.width = '0';
+                            iframe.style.height = '0';
+                            iframe.style.border = '0';
+                            document.body.appendChild(iframe);
+                        }
+                        iframe.src = "/POS/PrintSticker/" + OrderId;
+                    }
+                </script>
 }
 

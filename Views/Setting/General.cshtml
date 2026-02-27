@@ -65,6 +65,12 @@
                                 <option value="3">@Localize("Delivery")</option>
                             </select>
                         </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Gemini API Key")</label>
+                            <input asp-for="GeminiApiKey" type="password" class="form-control"
+                                placeholder="@Localize("Enter your Google Gemini API Key")" />
+                            <small class="text-muted">@Localize("Required for AI Report Assistant.")</small>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 form-group">

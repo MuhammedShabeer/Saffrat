@@ -1,0 +1,34 @@
+### SAFFRAT RMS DATABASE SCHEMA GUIDE
+
+This guide explains the relationships and data available in the system for dynamic report generation.
+
+#### 1. Sales & Orders
+- **Orders**: `Id`, `Total`, `SubTotal`, `DiscountTotal`, `TaxTotal`, `ChargeTotal`, `PaidAmount`, `DueAmount`, `CustomerId`, `CreatedAt`.
+- **OrderDetails**: `OrderId`, `FoodItemId` (linked to `Item`), `Quantity`, `Price`, `Total`.
+- **PaymentMethods**: `MethodName`.
+
+#### 2. Products & Inventory
+- **FoodItems**: `ItemName`, `Price`, `FoodGroupId`.
+- **FoodGroups**: `Name`.
+- **IngredientItems**: `ItemName`, `Quantity`, `AlertQuantity`, `Unit`.
+- **Purchases**: `SupplierId`, `TotalAmount`, `PurchaseDate`.
+
+#### 3. Customers & Suppliers
+- **Customers**: `CustomerName`, `Email`, `Phone`.
+- **Suppliers**: `SupplierName`, `Email`, `Phone`.
+
+#### 4. HRM & Staff
+- **Employees**: `FullName`, `Email`, `Phone`, `DepartmentId`, `DesignationId`, `Salary`.
+- **Attendances**: `EmployeeId`, `AttendaceDate`, `ClockIn`, `ClockOut`, `Status`.
+- **Departments**: `Name`.
+- **Designations**: `Name`.
+
+#### 5. Accounting
+- **GLAccounts**: `AccountName`, `AccountCode`.
+- **JournalEntries**: `Debit`, `Credit`, `Narration`, `CreatedAt`.
+- **Invoices**: `InvoiceNumber`, `TotalAmount`, `DueDate`.
+- **Bills**: `BillNumber`, `TotalAmount`, `DueDate`.
+
+#### 6. Infrastructure
+- **RestaurantTables**: `TableName`, `Capacity`.
+- **WorkPeriods**: `StartDate`, `EndDate`, `IsOpened`.

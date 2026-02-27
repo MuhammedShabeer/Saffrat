@@ -89,12 +89,13 @@ namespace Saffrat.Controllers
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> General([Required] string AppName,
             [Required] int DefaultCustomer, [Required] int DefaultOrderType, [Required] int SaleAccount, [Required] int PurchaseAccount, [Required] int PayrollAccount,
-            [Required] string Copyright, [Required] bool SendInvoiceEmail, [Required] bool SkipKitchenOrder, IFormFile Logo, IFormFile Favicon, IFormFile Preloader)
+            [Required] string Copyright, [Required] bool SendInvoiceEmail, [Required] bool SkipKitchenOrder, string GeminiApiKey, IFormFile Logo, IFormFile Favicon, IFormFile Preloader)
         {
             var response = new Dictionary<string, string>();
 
             if (GetSetting != null && ModelState.IsValid)
             {
+                GetSetting.GeminiApiKey = GeminiApiKey;
                 if (Logo != null)
                 {
                     string fileName = Uploader.UploadImage(Logo);
