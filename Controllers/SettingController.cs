@@ -31,7 +31,7 @@ namespace Saffrat.Controllers
         [Authorize(Roles = "admin")]
         public IActionResult General()
         {
-            ViewBag.accounts = _dbContext.Accounts.ToList();
+            ViewBag.accounts = _dbContext.GLAccounts.ToList();
             ViewBag.customers = _dbContext.Customers.ToList();
 
             return View(GetSetting);
@@ -212,7 +212,7 @@ namespace Saffrat.Controllers
 
         private bool IsAccountExist(int id)
         {
-            var account = _dbContext.Accounts.FirstOrDefault(x => x.Id == id);
+            var account = _dbContext.GLAccounts.FirstOrDefault(x => x.Id == id);
             return account != null;
         }
         private bool IsCustomerExist(int id)

@@ -4,6 +4,7 @@ using Saffrat.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Saffrat.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace Saffrat.Controllers
 {
@@ -101,7 +102,11 @@ namespace Saffrat.Controllers
                 if (workPeriod != null)
                 {
                     // Check if there are opened orders before ending the work period
-                    var trans = _dbContext.Transactions.Where(x => x.Date >= workPeriod.StartedAt).ToList();
+                    var saleAccountId = Convert.ToInt32(GetSetting.SaleAccount);
+                    var ledgerEntries = _dbContext.LedgerEntries
+                        .Include(x => x.JournalEntry)
+                        .Where(x => x.JournalEntry.EntryDate >= workPeriod.StartedAt && x.GLAccountId == saleAccountId)
+                        .ToList();
                     var openedOrders = _dbContext.RunningOrders.Where(x => x.Status > 0 && x.Status < 5).Count();
 
                     if (openedOrders > 0)
@@ -112,9 +117,9 @@ namespace Saffrat.Controllers
                     else
                     {
                         // Calculate closing balance and end the work period
-                        foreach (var item in trans)
+                        foreach (var item in ledgerEntries)
                         {
-                            workPeriod.ClosingBalance += (item.Credit - item.Debit);
+                            workPeriod.ClosingBalance += (item.Debit - item.Credit); // Debit increases cash, Credit decreases cash
                         }
                         workPeriod.ClosingBalance += workPeriod.OpeningBalance;
                         workPeriod.IsEnd = true;

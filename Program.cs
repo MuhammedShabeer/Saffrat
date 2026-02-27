@@ -52,38 +52,10 @@ builder.Services.AddSession(options =>
 //Services
 builder.Services.AddScoped<ILanguageService, LanguageService>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
-builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<Saffrat.Services.AccountingEngine.IAccountingEngine, Saffrat.Services.AccountingEngine.DefaultAccountingEngine>();
 
 
-var serviceProvider = builder.Services.BuildServiceProvider();
-var languageService = serviceProvider.GetRequiredService<ILanguageService>();
-var languages = languageService.GetLanguages();
 
-builder.Services.Configure<RequestLocalizationOptions>(options =>
-{
-    List<CultureInfo> uicultures = new();
-    List<CultureInfo> cultures = new();
-
-    foreach (var culture in languages.Select(x => x.Culture).ToArray())
-    {
-        var cul = new CultureInfo(culture);
-        cul.DateTimeFormat.Calendar = new GregorianCalendar();
-        uicultures.Add(cul);
-    }
-
-    foreach (var culture in CultureInfo.GetCultures(CultureTypes.AllCultures & ~CultureTypes.NeutralCultures).ToList())
-    {
-        var cul = new CultureInfo(culture.Name);
-        cul.DateTimeFormat.Calendar = new GregorianCalendar();
-        cultures.Add(cul);
-    }
-
-    options.DefaultRequestCulture = new RequestCulture(languageService.GetDefaultRegion() ?? "en-US", languageService.GetDefaultLanguage() ?? "en");
-
-    options.SupportedCultures = cultures;
-    options.SupportedUICultures = uicultures;
-});
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSignalR();
@@ -124,7 +96,37 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
-app.UseRequestLocalization();
+using (var scope = app.Services.CreateScope())
+{
+    var languageService = scope.ServiceProvider.GetRequiredService<ILanguageService>();
+    var languages = languageService.GetLanguages();
+
+    var options = new RequestLocalizationOptions();
+
+    List<CultureInfo> uicultures = new();
+    List<CultureInfo> cultures = new();
+
+    foreach (var culture in languages.Select(x => x.Culture).ToArray())
+    {
+        var cul = new CultureInfo(culture);
+        cul.DateTimeFormat.Calendar = new GregorianCalendar();
+        uicultures.Add(cul);
+    }
+
+    foreach (var culture in CultureInfo.GetCultures(CultureTypes.AllCultures & ~CultureTypes.NeutralCultures).ToList())
+    {
+        var cul = new CultureInfo(culture.Name);
+        cul.DateTimeFormat.Calendar = new GregorianCalendar();
+        cultures.Add(cul);
+    }
+
+    options.DefaultRequestCulture = new RequestCulture(languageService.GetDefaultRegion() ?? "en-US", languageService.GetDefaultLanguage() ?? "en");
+
+    options.SupportedCultures = cultures;
+    options.SupportedUICultures = uicultures;
+
+    app.UseRequestLocalization(options);
+}
 
 app.MapControllerRoute(
     name: "default",

@@ -7,6 +7,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Text.Json;
 using Saffrat.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace Saffrat.Controllers
 {
@@ -29,7 +30,10 @@ namespace Saffrat.Controllers
         {
             var totalSales = _dbContext.Orders.Sum(x => x.Total);
             var totalPurchases = _dbContext.Purchases.Sum(x => x.TotalAmount);
-            var totalExpenses = _dbContext.Expenses.Sum(x => x.Amount);
+            var totalExpenses = _dbContext.LedgerEntries.Include(x => x.GLAccount)
+                .Where(x => x.GLAccount.Category == 4 || x.GLAccount.Category == 5)
+                .ToList()
+                .Sum(x => Math.Max(0, x.Debit - x.Credit));
             var totalOrders = _dbContext.Orders.Count();
 
             ViewBag.TotalSales = Math.Round(totalSales, 2);
@@ -79,8 +83,9 @@ namespace Saffrat.Controllers
                 var purchase = _dbContext.Purchases.Where(x => x.PurchaseDate >= today);
                 decimal totalPurchases = purchase.Sum(x => x.TotalAmount);
                 decimal supplierDue = purchase.Sum(x => x.DueAmount);
-                var expense = _dbContext.Expenses.Where(x => x.ExpenseDate >= today);
-                decimal totalExpenses = expense.Sum(x => x.Amount);
+                var expense = _dbContext.LedgerEntries.Include(x => x.GLAccount).Include(x => x.JournalEntry)
+                    .Where(x => (x.GLAccount.Category == 4 || x.GLAccount.Category == 5) && x.JournalEntry.EntryDate >= today).ToList();
+                decimal totalExpenses = expense.Sum(x => Math.Max(0, x.Debit - x.Credit));
 
                 results.Add("totalSales", totalSales.ToString());
                 results.Add("customersDue", customerDue.ToString());
@@ -152,17 +157,18 @@ namespace Saffrat.Controllers
                         PurchaseDate = new DateTime(g.Key.Year, g.Key.Month, 1)
                     })
                     .ToList();
-                var expense = _dbContext.Expenses
-                    .Where(x => x.ExpenseDate >= from && x.ExpenseDate <= today)
+                var expense = _dbContext.LedgerEntries.Include(x => x.GLAccount).Include(x => x.JournalEntry)
+                    .Where(x => (x.GLAccount.Category == 4 || x.GLAccount.Category == 5) && x.JournalEntry.EntryDate >= from && x.JournalEntry.EntryDate <= today)
                     .OrderByDescending(a => a.Id)
+                    .ToList()
                     .GroupBy(p => new
                     {
-                        p.ExpenseDate.Month,
-                        p.ExpenseDate.Year
+                        p.JournalEntry.EntryDate.Month,
+                        p.JournalEntry.EntryDate.Year
                     })
-                    .Select(g => new Expense
+                    .Select(g => new
                     {
-                        Amount = g.Sum(x => x.Amount),
+                        Amount = g.Sum(x => Math.Max(0, x.Debit - x.Credit)),
                         ExpenseDate = new DateTime(g.Key.Year, g.Key.Month, 1)
                     })
                     .ToList();
@@ -308,7 +314,7 @@ namespace Saffrat.Controllers
                 var order = _dbContext.Orders
                     .Where(x => x.CreatedAt >= start);
 
-                var dineIn = order.Where(x => x.OrderType == 1).Sum(x=> x.Total);
+                var dineIn = order.Where(x => x.OrderType == 1).Sum(x => x.Total);
                 var pickUp = order.Where(x => x.OrderType == 2).Sum(x => x.Total);
                 var delivery = order.Where(x => x.OrderType == 3).Sum(x => x.Total);
                 results.Add("dineIn", dineIn.ToString());

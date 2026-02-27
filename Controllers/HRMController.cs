@@ -13,15 +13,15 @@ namespace Saffrat.Controllers
     {
         private readonly ILogger<HRMController> _logger;
         private readonly RestaurantDBContext _dbContext;
-        private readonly ITransactionService _transactionService;
 
-        public HRMController(ILogger<HRMController> logger, RestaurantDBContext dbContext, ITransactionService transactionService,
+
+        public HRMController(ILogger<HRMController> logger, RestaurantDBContext dbContext,
             ILanguageService languageService, ILocalizationService localizationService)
         : base(languageService, localizationService)
         {
             _logger = logger;
             _dbContext = dbContext;
-            _transactionService = transactionService;
+
         }
 
         /*
@@ -936,9 +936,11 @@ namespace Saffrat.Controllers
                         if (existing != null)
                         {
                             _dbContext.Payrolls.Remove(existing);
-                            var trans = _dbContext.Transactions.FirstOrDefault(x => x.TransactionReference == "payroll-" + existing.Id);
-                            if (trans != null)
-                                await _transactionService.DeleteTransaction(trans);
+                            var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id).ToList();
+                            if (existingJournals.Any())
+                            {
+                                _dbContext.JournalEntries.RemoveRange(existingJournals);
+                            }
                         }
 
                         var payroll = new Payroll()
@@ -1041,55 +1043,61 @@ namespace Saffrat.Controllers
                     payroll.PaymentStatus = "Paid";
                     _dbContext.Payrolls.Update(payroll);
                     await _dbContext.SaveChangesAsync();
-                    var salaryAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Salaries" && (x.AccountGroup == "Expenses" || x.AccountGroup == "Expense"));
+                    // Double-Entry Accounting Engine: Log Payroll Payment
                     int salaryAccountId = 0;
+                    var salaryAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Salaries" || (x.Category == 4 && x.Type == 15));
                     if (salaryAccount != null)
                     {
                         salaryAccountId = Convert.ToInt32(salaryAccount.Id);
                     }
                     else
                     {
-                        var newExpAccount = new Account
+                        var newExpAccount = new GLAccount
                         {
+                            AccountCode = "5000",
                             AccountName = "Salaries",
-                            AccountNumber = "5000",
-                            AccountGroup = "Expenses",
-                            AccountType = "Expense",
-                            Credit = 0,
-                            Debit = 0,
-                            Balance = 0,
-                            UpdatedAt = CurrentDateTime()
+                            Category = 4, // Expense
+                            Type = 15,    // Payroll/Remuneration
+                            CurrentBalance = 0,
+                            IsActive = true
                         };
-                        _dbContext.Accounts.Add(newExpAccount);
-                        _dbContext.SaveChanges();
-                        salaryAccountId = Convert.ToInt32(newExpAccount.Id);
+                        _dbContext.GLAccounts.Add(newExpAccount);
+                        await _dbContext.SaveChangesAsync();
+                        salaryAccountId = newExpAccount.Id;
                     }
 
-                    Transaction debitSalaryTrans = new()
+                    JournalEntry payrollJournal = new JournalEntry
                     {
-                        AccountId = salaryAccountId,
-                        TransactionReference = "payroll-" + payroll.Id,
-                        TransactionType = "payroll",
+                        ReferenceNumber = "PAYROLL-" + payroll.Id,
                         Description = "Salary Payment",
-                        Credit = 0,
+                        EntryDate = CurrentDateTime(),
+                        IsPosted = true,
+                        SourceDocumentType = "payroll",
+                        SourceDocumentId = payroll.Id,
+                        CreatedAt = CurrentDateTime()
+                    };
+                    _dbContext.JournalEntries.Add(payrollJournal);
+                    await _dbContext.SaveChangesAsync();
+
+                    LedgerEntry debitSalary = new LedgerEntry
+                    {
+                        JournalEntryId = payrollJournal.Id,
+                        GLAccountId = salaryAccountId,
+                        Description = "Salary Payment",
                         Debit = payroll.NetSalary,
-                        Amount = payroll.NetSalary,
-                        Date = CurrentDateTime(),
+                        Credit = 0
                     };
 
-                    Transaction creditAssetTrans = new()
+                    LedgerEntry creditAsset = new LedgerEntry
                     {
-                        AccountId = Convert.ToInt32(GetSetting.PayrollAccount),
-                        TransactionReference = "payroll-" + payroll.Id,
-                        TransactionType = "payroll",
+                        JournalEntryId = payrollJournal.Id,
+                        GLAccountId = Convert.ToInt32(GetSetting.PayrollAccount),
                         Description = "Salary Payment",
-                        Credit = payroll.NetSalary,
                         Debit = 0,
-                        Amount = payroll.NetSalary,
-                        Date = CurrentDateTime(),
+                        Credit = payroll.NetSalary
                     };
-
-                    _ = await _transactionService.AddDoubleEntryTransaction(debitSalaryTrans, creditAssetTrans);
+                    _dbContext.LedgerEntries.AddRange(debitSalary, creditAsset);
+                    await _dbContext.SaveChangesAsync();
 
                     return Json(new
                     {
@@ -1171,7 +1179,12 @@ namespace Saffrat.Controllers
                     _dbContext.Payrolls.Remove(existing);
                     await _dbContext.SaveChangesAsync();
 
-                    _ = await _transactionService.DeleteTransactionsByReference("payroll-" + existing.Id);
+                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id).ToList();
+                    if (existingJournals.Any())
+                    {
+                        _dbContext.JournalEntries.RemoveRange(existingJournals);
+                        await _dbContext.SaveChangesAsync();
+                    }
 
                     results.Add("status", "success");
                     results.Add("message", "success");

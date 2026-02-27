@@ -8,8 +8,85 @@
 
 BEGIN TRANSACTION;
 
--- Clean existing seeded transactions to be idempotent
-DELETE FROM Transactions WHERE TransactionReference = 'historical-2025-12-31';
+-- ==============================================================================
+-- PHASE 0: ACCOUNTING ENGINE SCHEMA SETUP
+-- ==============================================================================
+IF NOT EXISTS(SELECT 1 FROM sys.columns WHERE Name = N'FinancialYearStart' AND Object_ID = Object_ID(N'dbo.AppSettings'))
+BEGIN
+    ALTER TABLE [dbo].[AppSettings] ADD [FinancialYearStart] DATETIME NULL;
+END
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GLAccounts]') AND type in (N'U'))
+BEGIN
+CREATE TABLE [dbo].[GLAccounts] (
+    [Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [AccountCode] NVARCHAR(50) NOT NULL,
+    [AccountName] NVARCHAR(255) NOT NULL,
+    [Description] NVARCHAR(MAX) NULL,
+    [Category] INT NOT NULL,  
+    [Type] INT NOT NULL,      
+    [CurrentBalance] DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    [IsActive] BIT NOT NULL DEFAULT 1
+);
+END
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[JournalEntries]') AND type in (N'U'))
+BEGIN
+CREATE TABLE [dbo].[JournalEntries] (
+    [Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [ReferenceNumber] NVARCHAR(100) NOT NULL,
+    [Description] NVARCHAR(MAX) NULL,
+    [EntryDate] DATETIME NOT NULL,
+    [IsPosted] BIT NOT NULL DEFAULT 0,
+    [SourceDocumentType] NVARCHAR(100) NULL,
+    [SourceDocumentId] INT NULL,
+    [CreatedAt] DATETIME NOT NULL DEFAULT GETDATE()
+);
+END
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[LedgerEntries]') AND type in (N'U'))
+BEGIN
+CREATE TABLE [dbo].[LedgerEntries] (
+    [Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [JournalEntryId] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[JournalEntries]([Id]) ON DELETE CASCADE,
+    [GLAccountId] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[GLAccounts]([Id]),
+    [Description] NVARCHAR(MAX) NULL,
+    [Debit] DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    [Credit] DECIMAL(18, 2) NOT NULL DEFAULT 0.00
+);
+END
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Invoices]') AND type in (N'U'))
+BEGIN
+CREATE TABLE [dbo].[Invoices] (
+    [Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [CustomerId] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[Customers]([Id]),
+    [InvoiceNumber] NVARCHAR(100) NOT NULL,
+    [IssueDate] DATETIME NOT NULL,
+    [DueDate] DATETIME NOT NULL,
+    [TotalAmount] DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    [AmountPaid] DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    [Status] NVARCHAR(50) NOT NULL DEFAULT 'Draft',
+    [JournalEntryId] INT NULL FOREIGN KEY REFERENCES [dbo].[JournalEntries]([Id])
+);
+END
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Bills]') AND type in (N'U'))
+BEGIN
+CREATE TABLE [dbo].[Bills] (
+    [Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [SupplierId] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[Suppliers]([Id]),
+    [BillNumber] NVARCHAR(100) NOT NULL,
+    [Date] DATETIME NOT NULL,
+    [DueDate] DATETIME NOT NULL,
+    [TotalAmount] DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    [AmountPaid] DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    [Status] NVARCHAR(50) NOT NULL DEFAULT 'Draft',
+    [JournalEntryId] INT NULL FOREIGN KEY REFERENCES [dbo].[JournalEntries]([Id])
+);
+END
+-- Clean existing seeded GL entries to be idempotent
+DELETE FROM JournalEntries WHERE ReferenceNumber = 'OB-2025-12-31';
 
 DECLARE @TargetDate DATETIME = '2025-12-31';
 
@@ -139,10 +216,21 @@ FETCH NEXT FROM AccountsCursor INTO @Grp, @Name, @Type, @Deb, @Cred;
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM Accounts WHERE AccountName = @Name)
+
+    -- Hydrate the new Double-Entry GLAccounts based on mapped Types
+    IF NOT EXISTS(SELECT 1 FROM GLAccounts WHERE AccountName = @Name)
     BEGIN
-        INSERT INTO Accounts (AccountName, AccountNumber, AccountGroup, AccountType, Credit, Debit, Balance, UpdatedAt)
-        VALUES (@Name, '0000', @Grp, @Type, @Cred, @Deb, ABS(@Deb - @Cred), GETDATE());
+        DECLARE @Cat INT = CASE @Type WHEN 'Asset' THEN 0 WHEN 'Liability' THEN 1 WHEN 'Equity' THEN 2 WHEN 'Revenue' THEN 3 WHEN 'Expense' THEN 4 ELSE 0 END;
+        DECLARE @AccType INT = CASE @Grp
+            WHEN 'Bank Account' THEN 0 WHEN 'Cash In Hand' THEN 0 WHEN 'Petty Cash' THEN 0 WHEN 'Trade Receivables / Customers' THEN 1
+            WHEN 'Trade Payables / Vendors' THEN 4 WHEN 'Salary Payables' THEN 6 WHEN 'Capital' THEN 8 WHEN 'Partners Current Account' THEN 8
+            WHEN 'Sales' THEN 10 WHEN 'Purchase' THEN 13 WHEN 'Direct Expenses' THEN 18 WHEN 'Staff Welfare' THEN 15
+            WHEN 'Remuneration' THEN 15 WHEN 'Administration Expense' THEN 18 WHEN 'Selling And Distribution' THEN 17
+            WHEN 'Repairs And Maintenance' THEN 18 WHEN 'Vehicle Repair & Maintenance' THEN 18 ELSE 0 END;
+        
+        DECLARE @RndCode NVARCHAR(50) = CAST(ABS(CHECKSUM(NEWID())) % 100000 AS NVARCHAR(50));
+        INSERT INTO GLAccounts (AccountCode, AccountName, Description, Category, Type, CurrentBalance, IsActive)
+        VALUES (@RndCode, @Name, @Grp, @Cat, @AccType, ABS(@Deb - @Cred), 1);
     END
     FETCH NEXT FROM AccountsCursor INTO @Grp, @Name, @Type, @Deb, @Cred;
 END
@@ -177,9 +265,9 @@ DEALLOCATE @EmpCursor;
 -- PHASE 2: SYSTEM MAPPING AND CONTROL ACCOUNTS
 -- ==============================================================================
 
-DECLARE @SalesAcctId INT; SELECT TOP 1 @SalesAcctId = Id FROM Accounts WHERE AccountName = 'Sales Account';
-DECLARE @PurchaseAcctId INT; SELECT TOP 1 @PurchaseAcctId = Id FROM Accounts WHERE AccountGroup = 'Purchase';
-DECLARE @PayrollAcctId INT; SELECT TOP 1 @PayrollAcctId = Id FROM Accounts WHERE AccountName = 'SALARY EXPENSES' OR AccountName = 'SALARY';
+DECLARE @SalesAcctId INT; SELECT TOP 1 @SalesAcctId = Id FROM GLAccounts WHERE AccountName = 'Sales Account';
+DECLARE @PurchaseAcctId INT; SELECT TOP 1 @PurchaseAcctId = Id FROM GLAccounts WHERE Description = 'Purchase';
+DECLARE @PayrollAcctId INT; SELECT TOP 1 @PayrollAcctId = Id FROM GLAccounts WHERE AccountName = 'SALARY EXPENSES' OR AccountName = 'SALARY';
 
 IF EXISTS (SELECT 1 FROM AppSettings)
 BEGIN
@@ -194,20 +282,36 @@ END
 -- PHASE 3: OPENING BALANCES IMPORT (Transactions & Financial Logging)
 -- ==============================================================================
 
+-- Double-Entry Initialization: Create a central Journal Entry for Opening Balances
+DECLARE @JEntryId INT;
+IF NOT EXISTS(SELECT 1 FROM JournalEntries WHERE ReferenceNumber = 'OB-2025-12-31')
+BEGIN
+    INSERT INTO JournalEntries (ReferenceNumber, Description, EntryDate, IsPosted, SourceDocumentType, SourceDocumentId, CreatedAt)
+    VALUES ('OB-2025-12-31', 'Historical Opening Balances', @TargetDate, 1, 'historical', NULL, GETDATE());
+    SET @JEntryId = SCOPE_IDENTITY();
+END
+ELSE
+BEGIN
+    SELECT TOP 1 @JEntryId = Id FROM JournalEntries WHERE ReferenceNumber = 'OB-2025-12-31';
+END
+
 DECLARE DataCursor CURSOR FOR SELECT AccountGroup, AccountName, AccountType, Debit, Credit FROM @SeedData;
 OPEN DataCursor;
 FETCH NEXT FROM DataCursor INTO @Grp, @Name, @Type, @Deb, @Cred;
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
-    -- 1. General Ledger Journals (Posting native Opening Balance into Transactions table)
-    DECLARE @AccId INT;
-    SELECT TOP 1 @AccId = Id FROM Accounts WHERE AccountName = @Name;
-
+    -- 1. General Ledger Journals
     IF @Deb > 0 OR @Cred > 0
     BEGIN
-        INSERT INTO Transactions (AccountId, TransactionReference, TransactionType, Description, Credit, Debit, Amount, Date)
-        VALUES (@AccId, 'historical-2025-12-31', 'historical', 'Opening Balance via Trial Balance', @Cred, @Deb, ABS(@Deb - @Cred), @TargetDate);
+        -- Insert into new Double-Entry Subledgers
+        DECLARE @GLAccId INT;
+        SELECT TOP 1 @GLAccId = Id FROM GLAccounts WHERE AccountName = @Name;
+        IF @GLAccId IS NOT NULL AND NOT EXISTS(SELECT 1 FROM LedgerEntries WHERE JournalEntryId = @JEntryId AND GLAccountId = @GLAccId)
+        BEGIN
+            INSERT INTO LedgerEntries (JournalEntryId, GLAccountId, Description, Debit, Credit)
+            VALUES (@JEntryId, @GLAccId, 'Opening Balance via Trial Balance', @Deb, @Cred);
+        END
     END
 
     -- 2. Open Subledgers: Missing Payroll Slip creation
@@ -223,22 +327,13 @@ BEGIN
         END
     END
 
-    -- 3. Open Subledgers: Expenses
-    IF @Grp IN ('Direct Expenses', 'Staff Welfare', 'Administration Expense', 'Selling And Distribution', 'Repairs And Maintenance', 'Vehicle Repair & Maintenance') AND @Deb > 0
-    BEGIN
-        DECLARE @CashAccId INT;
-        SELECT TOP 1 @CashAccId = Id FROM Accounts WHERE AccountName = 'Cash';
-        INSERT INTO Expenses (AccountId, ExpenseDate, Amount, Note, Category, Item, UpdatedBy, UpdatedAt)
-        VALUES (ISNULL(@CashAccId, @AccId), @TargetDate, @Deb, 'Historical Transfer', @Grp, @Name, 'admin', GETDATE());
-    END
-
     -- 4. Open Subledgers: Purchases
     IF @Grp = 'Purchase' AND @Deb > 0
     BEGIN
-        DECLARE @SupplierId INT; SELECT TOP 1 @SupplierId = Id FROM Suppliers;
+        DECLARE @SupplierId INT = NULL; SELECT TOP 1 @SupplierId = Id FROM Suppliers;
         IF @SupplierId IS NULL BEGIN INSERT INTO Suppliers (SupplierName, Email, Phone, Address, UpdatedBy, UpdatedAt) VALUES ('Default Vendor', '-', '-', '-', 'admin', GETDATE()); SET @SupplierId = SCOPE_IDENTITY(); END
 
-        DECLARE @IngredientId INT;
+        DECLARE @IngredientId INT = NULL;
         SELECT TOP 1 @IngredientId = Id FROM IngredientItems WHERE ItemName = @Name;
         IF @IngredientId IS NULL BEGIN INSERT INTO IngredientItems (ItemName, Description, Unit, Price, Quantity, AlertQuantity, UpdatedBy, UpdatedAt) VALUES (@Name, '-', '-', @Deb, 1, 0, 'admin', GETDATE()); SET @IngredientId = SCOPE_IDENTITY(); END
 
@@ -254,21 +349,22 @@ BEGIN
     IF @Grp = 'Sales' AND @Cred > 0
     BEGIN
         -- Query Saffrat AppSettings explicitly for user-configured defaults
-        DECLARE @CustId INT; SELECT TOP 1 @CustId = DefaultCustomer FROM AppSettings;
-        DECLARE @OrderTypeId INT; SELECT TOP 1 @OrderTypeId = DefaultOrderType FROM AppSettings;
+        DECLARE @CustId INT = NULL; SELECT TOP 1 @CustId = DefaultCustomer FROM AppSettings;
+        DECLARE @OrderTypeId INT = NULL; SELECT TOP 1 @OrderTypeId = DefaultOrderType FROM AppSettings;
         
         IF @CustId IS NULL OR @CustId = 0 BEGIN SELECT TOP 1 @CustId = Id FROM Customers; END
         IF @CustId IS NULL OR @CustId = 0 BEGIN INSERT INTO Customers (CustomerName, Email, Phone, Address, UpdatedBy, UpdatedAt) VALUES ('Walk-in', '-', '-', '-', 'admin', GETDATE()); SET @CustId = SCOPE_IDENTITY(); END
 
-        DECLARE @FoodGrpId INT; SELECT TOP 1 @FoodGrpId = Id FROM FoodGroups; IF @FoodGrpId IS NULL BEGIN INSERT INTO FoodGroups (GroupName, Status, UpdatedBy, UpdatedAt) VALUES ('General Menu', 1, 'admin', GETDATE()); SET @FoodGrpId = SCOPE_IDENTITY(); END
+        DECLARE @FoodGrpId INT = NULL; SELECT TOP 1 @FoodGrpId = Id FROM FoodGroups; 
+        IF @FoodGrpId IS NULL BEGIN INSERT INTO FoodGroups (GroupName, Status, UpdatedBy, UpdatedAt) VALUES ('General Menu', 1, 'admin', GETDATE()); SET @FoodGrpId = SCOPE_IDENTITY(); END
         
-        DECLARE @FoodItemId INT;
+        DECLARE @FoodItemId INT = NULL;
         SELECT TOP 1 @FoodItemId = Id FROM FoodItems WHERE ItemName = @Name;
         IF @FoodItemId IS NULL BEGIN INSERT INTO FoodItems (GroupId, ItemName, Description, Price, VanSalePrice, WholeSalePrice, UpdatedBy, UpdatedAt) VALUES (@FoodGrpId, @Name, '-', @Cred, @Cred, @Cred, 'admin', GETDATE()); SET @FoodItemId = SCOPE_IDENTITY(); END
 
-        INSERT INTO Orders (CustomerId, WaiterOrDriver, SubTotal, TaxTotal, DiscountTotal, ChargeTotal, Total, PaymentMethod, PaidAmount, DueAmount, OrderType, Status, CreatedBy, CreatedAt)
-        VALUES (@CustId, 'System', @Cred, 0, 0, 0, @Cred, 'Cash', @Cred, 0, ISNULL(@OrderTypeId, 1), 3, 'admin', @TargetDate);
-        DECLARE @OrderId INT = SCOPE_IDENTITY();
+        DECLARE @OrderId INT = NULL; SELECT @OrderId = ISNULL(MAX(Id), 0) + 1 FROM Orders;
+        INSERT INTO Orders (Id, CustomerId, WaiterOrDriver, SubTotal, TaxTotal, DiscountTotal, ChargeTotal, Total, PaymentMethod, PaidAmount, DueAmount, OrderType, Status, CreatedBy, CreatedAt)
+        VALUES (@OrderId, @CustId, 'System', @Cred, 0, 0, 0, @Cred, 'Cash', @Cred, 0, ISNULL(@OrderTypeId, 1), 3, 'admin', @TargetDate);
 
         INSERT INTO OrderDetails (OrderId, ItemId, Price, ModifierTotal, Quantity, Total, CreatedAt)
         VALUES (@OrderId, @FoodItemId, @Cred, 0, 1, @Cred, GETDATE());

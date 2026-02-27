@@ -12,15 +12,15 @@ namespace Saffrat.Controllers
     {
         private readonly ILogger<PurchaseController> _logger;
         private readonly RestaurantDBContext _dbContext;
-        private readonly ITransactionService _transactionService;
 
-        public PurchaseController(ILogger<PurchaseController> logger, RestaurantDBContext dbContext, ITransactionService transactionService,
+
+        public PurchaseController(ILogger<PurchaseController> logger, RestaurantDBContext dbContext,
             ILanguageService languageService, ILocalizationService localizationService)
         : base(languageService, localizationService)
         {
             _logger = logger;
             _dbContext = dbContext;
-            _transactionService = transactionService;
+
         }
 
         /*
@@ -154,55 +154,61 @@ namespace Saffrat.Controllers
                             await _dbContext.SaveChangesAsync();
                             await transaction.CommitAsync();
 
-                            var purchasesAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Purchases" && (x.AccountGroup == "Expenses" || x.AccountGroup == "Expense"));
+                            // Double-Entry Accounting Engine: Log Purchase
                             int purchasesAccountId = 0;
+                            var purchasesAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Purchases" || x.Category == 4);
                             if (purchasesAccount != null)
                             {
                                 purchasesAccountId = Convert.ToInt32(purchasesAccount.Id);
                             }
                             else
                             {
-                                var newPurAccount = new Account
+                                var newPurAccount = new GLAccount
                                 {
+                                    AccountCode = "5000",
                                     AccountName = "Purchases",
-                                    AccountNumber = "5000",
-                                    AccountGroup = "Expenses",
-                                    AccountType = "Expense",
-                                    Credit = 0,
-                                    Debit = 0,
-                                    Balance = 0,
-                                    UpdatedAt = CurrentDateTime()
+                                    Category = 4, // Expense
+                                    Type = 13,    // FoodCost (or generic Cost of Goods Sold)
+                                    CurrentBalance = 0,
+                                    IsActive = true
                                 };
-                                _dbContext.Accounts.Add(newPurAccount);
-                                _dbContext.SaveChanges();
-                                purchasesAccountId = Convert.ToInt32(newPurAccount.Id);
+                                _dbContext.GLAccounts.Add(newPurAccount);
+                                await _dbContext.SaveChangesAsync();
+                                purchasesAccountId = newPurAccount.Id;
                             }
 
-                            Transaction debitPurchaseTrans = new()
+                            JournalEntry purchaseJournal = new JournalEntry
                             {
-                                AccountId = purchasesAccountId,
-                                TransactionReference = "pur-" + purchase.Id,
-                                TransactionType = "purchase",
+                                ReferenceNumber = "PUR-" + purchase.Id,
+                                Description = "Inventory Purchase " + purchase.InvoiceNo,
+                                EntryDate = CurrentDateTime(),
+                                IsPosted = true,
+                                SourceDocumentType = "purchase",
+                                SourceDocumentId = purchase.Id,
+                                CreatedAt = CurrentDateTime()
+                            };
+                            _dbContext.JournalEntries.Add(purchaseJournal);
+                            await _dbContext.SaveChangesAsync();
+
+                            LedgerEntry debitPurchase = new LedgerEntry
+                            {
+                                JournalEntryId = purchaseJournal.Id,
+                                GLAccountId = purchasesAccountId,
                                 Description = purchase.Description,
-                                Credit = 0,
                                 Debit = purchase.TotalAmount,
-                                Amount = purchase.TotalAmount,
-                                Date = CurrentDateTime(),
+                                Credit = 0
                             };
 
-                            Transaction creditAssetTrans = new()
+                            LedgerEntry creditAsset = new LedgerEntry
                             {
-                                AccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
-                                TransactionReference = "pur-" + purchase.Id,
-                                TransactionType = "purchase",
+                                JournalEntryId = purchaseJournal.Id,
+                                GLAccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
                                 Description = purchase.Description,
-                                Credit = purchase.TotalAmount,
                                 Debit = 0,
-                                Amount = purchase.TotalAmount,
-                                Date = CurrentDateTime(),
+                                Credit = purchase.TotalAmount
                             };
-
-                            _ = await _transactionService.AddDoubleEntryTransaction(debitPurchaseTrans, creditAssetTrans);
+                            _dbContext.LedgerEntries.AddRange(debitPurchase, creditAsset);
+                            await _dbContext.SaveChangesAsync();
 
                             response.Add("status", "success");
                             response.Add("message", "success");
@@ -285,57 +291,69 @@ namespace Saffrat.Controllers
                             await _dbContext.SaveChangesAsync();
                             await transaction.CommitAsync();
 
-                            var purchasesAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Purchases" && (x.AccountGroup == "Expenses" || x.AccountGroup == "Expense"));
+                            // Double-Entry Accounting Engine: Log Update Purchase
                             int purchasesAccountId = 0;
+                            var purchasesAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Purchases" || x.Category == 4);
                             if (purchasesAccount != null)
                             {
                                 purchasesAccountId = Convert.ToInt32(purchasesAccount.Id);
                             }
                             else
                             {
-                                var newPurAccount = new Account
+                                var newPurAccount = new GLAccount
                                 {
+                                    AccountCode = "5000",
                                     AccountName = "Purchases",
-                                    AccountNumber = "5000",
-                                    AccountGroup = "Expenses",
-                                    AccountType = "Expense",
-                                    Credit = 0,
-                                    Debit = 0,
-                                    Balance = 0,
-                                    UpdatedAt = CurrentDateTime()
+                                    Category = 4, // Expense
+                                    Type = 13,    // FoodCost
+                                    CurrentBalance = 0,
+                                    IsActive = true
                                 };
-                                _dbContext.Accounts.Add(newPurAccount);
-                                _dbContext.SaveChanges();
-                                purchasesAccountId = Convert.ToInt32(newPurAccount.Id);
+                                _dbContext.GLAccounts.Add(newPurAccount);
+                                await _dbContext.SaveChangesAsync();
+                                purchasesAccountId = newPurAccount.Id;
                             }
 
-                            await _transactionService.DeleteTransactionsByReference("pur-" + purchase.Id);
-
-                            Transaction debitPurchaseTrans = new()
+                            // Clean up existing journal entries for this purchase
+                            var oldJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "purchase" && x.SourceDocumentId == purchase.Id).ToList();
+                            if (oldJournals.Any())
                             {
-                                AccountId = purchasesAccountId,
-                                TransactionReference = "pur-" + purchase.Id,
-                                TransactionType = "purchase",
+                                _dbContext.JournalEntries.RemoveRange(oldJournals);
+                                await _dbContext.SaveChangesAsync();
+                            }
+
+                            JournalEntry purchaseJournal = new JournalEntry
+                            {
+                                ReferenceNumber = "PUR-" + purchase.Id,
+                                Description = "Inventory Purchase " + purchase.InvoiceNo,
+                                EntryDate = CurrentDateTime(),
+                                IsPosted = true,
+                                SourceDocumentType = "purchase",
+                                SourceDocumentId = purchase.Id,
+                                CreatedAt = CurrentDateTime()
+                            };
+                            _dbContext.JournalEntries.Add(purchaseJournal);
+                            await _dbContext.SaveChangesAsync();
+
+                            LedgerEntry debitPurchase = new LedgerEntry
+                            {
+                                JournalEntryId = purchaseJournal.Id,
+                                GLAccountId = purchasesAccountId,
                                 Description = purchase.Description,
-                                Credit = 0,
                                 Debit = purchase.TotalAmount,
-                                Amount = purchase.TotalAmount,
-                                Date = CurrentDateTime(),
+                                Credit = 0
                             };
 
-                            Transaction creditAssetTrans = new()
+                            LedgerEntry creditAsset = new LedgerEntry
                             {
-                                AccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
-                                TransactionReference = "pur-" + purchase.Id,
-                                TransactionType = "purchase",
+                                JournalEntryId = purchaseJournal.Id,
+                                GLAccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
                                 Description = purchase.Description,
-                                Credit = purchase.TotalAmount,
                                 Debit = 0,
-                                Amount = purchase.TotalAmount,
-                                Date = CurrentDateTime(),
+                                Credit = purchase.TotalAmount
                             };
-
-                            _ = await _transactionService.AddDoubleEntryTransaction(debitPurchaseTrans, creditAssetTrans);
+                            _dbContext.LedgerEntries.AddRange(debitPurchase, creditAsset);
+                            await _dbContext.SaveChangesAsync();
 
                             response.Add("status", "success");
                             response.Add("message", "success");
@@ -387,7 +405,12 @@ namespace Saffrat.Controllers
                     await _dbContext.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    _ = await _transactionService.DeleteTransactionsByReference("pur-" + existing.Id);
+                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "purchase" && x.SourceDocumentId == existing.Id).ToList();
+                    if (existingJournals.Any())
+                    {
+                        _dbContext.JournalEntries.RemoveRange(existingJournals);
+                        await _dbContext.SaveChangesAsync();
+                    }
 
                     response.Add("status", "success");
                     response.Add("message", "success");

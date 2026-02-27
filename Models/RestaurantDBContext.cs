@@ -19,15 +19,15 @@ namespace Saffrat.Models
         {
         }
 
-        public virtual DbSet<Account> Accounts { get; set; }
-        public virtual DbSet<AccountMoneyTransfer> AccountMoneyTransfers { get; set; }
+
+
         public virtual DbSet<AppSetting> AppSettings { get; set; }
         public virtual DbSet<Attendance> Attendances { get; set; }
         public virtual DbSet<AuditLog> AuditLogs { get; set; }
         public virtual DbSet<Charge> Charges { get; set; }
         public virtual DbSet<Customer> Customers { get; set; }
         public virtual DbSet<Department> Departments { get; set; }
-        public virtual DbSet<Deposit> Deposits { get; set; }
+
         public virtual DbSet<Designation> Designations { get; set; }
         public virtual DbSet<Discount> Discounts { get; set; }
         public virtual DbSet<EmailTemplate> EmailTemplates { get; set; }
@@ -35,7 +35,7 @@ namespace Saffrat.Models
         public virtual DbSet<EmployeeAttachment> EmployeeAttachments { get; set; }
         public virtual DbSet<EmployeeDeduction> EmployeeDeductions { get; set; }
         public virtual DbSet<EmployeeEarning> EmployeeEarnings { get; set; }
-        public virtual DbSet<Expense> Expenses { get; set; }
+
         public virtual DbSet<FoodGroup> FoodGroups { get; set; }
         public virtual DbSet<FoodItem> FoodItems { get; set; }
         public virtual DbSet<FoodItemIngredient> FoodItemIngredients { get; set; }
@@ -61,7 +61,7 @@ namespace Saffrat.Models
         public virtual DbSet<StringResource> StringResources { get; set; }
         public virtual DbSet<Supplier> Suppliers { get; set; }
         public virtual DbSet<TaxRate> TaxRates { get; set; }
-        public virtual DbSet<Transaction> Transactions { get; set; }
+
         public virtual DbSet<User> Users { get; set; }
         public virtual DbSet<UserToken> UserTokens { get; set; }
         public virtual DbSet<WorkPeriod> WorkPeriods { get; set; }
@@ -82,50 +82,9 @@ namespace Saffrat.Models
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Account>(entity =>
-            {
-                entity.Property(e => e.AccountName)
-                    .IsRequired()
-                    .HasMaxLength(150);
 
-                entity.Property(e => e.AccountNumber)
-                    .IsRequired()
-                    .HasMaxLength(150);
 
-                entity.Property(e => e.Balance).HasColumnType("decimal(18, 2)");
 
-                entity.Property(e => e.Credit).HasColumnType("decimal(18, 2)");
-
-                entity.Property(e => e.Debit).HasColumnType("decimal(18, 2)");
-
-                entity.Property(e => e.Note).HasMaxLength(500);
-
-                entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-                entity.Property(e => e.UpdatedBy).HasMaxLength(150);
-
-                entity.HasOne(d => d.ParentAccount)
-                    .WithMany(p => p.ChildAccounts)
-                    .HasForeignKey(d => d.ParentAccountId)
-                    .HasConstraintName("FK_Accounts_Accounts");
-            });
-
-            modelBuilder.Entity<AccountMoneyTransfer>(entity =>
-            {
-                entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
-
-                entity.Property(e => e.FromAccount).HasMaxLength(150);
-
-                entity.Property(e => e.Note).HasMaxLength(500);
-
-                entity.Property(e => e.ToAccount).HasMaxLength(150);
-
-                entity.Property(e => e.TransferDate).HasColumnType("date");
-
-                entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-                entity.Property(e => e.UpdatedBy).HasMaxLength(150);
-            });
 
             modelBuilder.Entity<AppSetting>(entity =>
             {
@@ -318,23 +277,7 @@ namespace Saffrat.Models
                 entity.Property(e => e.UpdatedBy).HasMaxLength(150);
             });
 
-            modelBuilder.Entity<Deposit>(entity =>
-            {
-                entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
 
-                entity.Property(e => e.DepositDate).HasColumnType("date");
-
-                entity.Property(e => e.Note).HasMaxLength(500);
-
-                entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-                entity.Property(e => e.UpdatedBy).HasMaxLength(150);
-
-                entity.HasOne(d => d.Account)
-                    .WithMany(p => p.Deposits)
-                    .HasForeignKey(d => d.AccountId)
-                    .HasConstraintName("FK_Deposits_Accounts");
-            });
 
             modelBuilder.Entity<Designation>(entity =>
             {
@@ -527,23 +470,7 @@ namespace Saffrat.Models
                     .HasConstraintName("FK_EmployeeEarnings_Employees");
             });
 
-            modelBuilder.Entity<Expense>(entity =>
-            {
-                entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
 
-                entity.Property(e => e.ExpenseDate).HasColumnType("date");
-
-                entity.Property(e => e.Note).HasMaxLength(500);
-
-                entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-                entity.Property(e => e.UpdatedBy).HasMaxLength(150);
-
-                entity.HasOne(d => d.Account)
-                    .WithMany(p => p.Expenses)
-                    .HasForeignKey(d => d.AccountId)
-                    .HasConstraintName("FK_Expenses_Accounts");
-            });
 
             modelBuilder.Entity<FoodGroup>(entity =>
             {
@@ -1061,31 +988,7 @@ namespace Saffrat.Models
                 entity.Property(e => e.Value).HasColumnType("decimal(18, 2)");
             });
 
-            modelBuilder.Entity<Transaction>(entity =>
-            {
-                entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
 
-                entity.Property(e => e.Credit).HasColumnType("decimal(18, 2)");
-
-                entity.Property(e => e.Date).HasColumnType("datetime");
-
-                entity.Property(e => e.Debit).HasColumnType("decimal(18, 2)");
-
-                entity.Property(e => e.Description).HasMaxLength(500);
-
-                entity.Property(e => e.TransactionReference)
-                    .IsRequired()
-                    .HasMaxLength(150);
-
-                entity.Property(e => e.TransactionType)
-                    .IsRequired()
-                    .HasMaxLength(150);
-
-                entity.HasOne(d => d.Account)
-                    .WithMany(p => p.Transactions)
-                    .HasForeignKey(d => d.AccountId)
-                    .HasConstraintName("FK_Transactions_Accounts");
-            });
 
             modelBuilder.Entity<User>(entity =>
             {

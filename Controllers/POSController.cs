@@ -25,9 +25,9 @@ namespace Saffrat.Controllers
         private readonly RestaurantDBContext _dbContext;
         private readonly IHubContext<NotificationHub> _hub;
         private readonly IConverter _converter;
-        private readonly ITransactionService _transactionService;
 
-        public POSController(ILogger<POSController> logger, RestaurantDBContext dbContext, ITransactionService transactionService,
+
+        public POSController(ILogger<POSController> logger, RestaurantDBContext dbContext,
             IHubContext<NotificationHub> hub, IConverter converter,
             ILanguageService languageService, ILocalizationService localizationService)
         : base(languageService, localizationService)
@@ -36,7 +36,7 @@ namespace Saffrat.Controllers
             _dbContext = dbContext;
             _hub = hub;
             _converter = converter;
-            _transactionService = transactionService;
+
         }
 
         [HttpGet]
@@ -815,56 +815,61 @@ namespace Saffrat.Controllers
                         await _dbContext.SaveChangesAsync();
                         await transaction.CommitAsync();
 
-                        // Find or create Sales Revenue Account
-                        var revenueAccount = _dbContext.Accounts.FirstOrDefault(x => x.AccountName == "Sales Account" || x.AccountGroup == "Revenue");
+                        // Double-Entry Accounting Engine: Log Sale
                         int revenueAccountId = 0;
+                        var revenueAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Sales Account" || x.Category == 3);
                         if (revenueAccount != null)
                         {
                             revenueAccountId = Convert.ToInt32(revenueAccount.Id);
                         }
                         else
                         {
-                            var newRevAccount = new Account
+                            var newRevAccount = new GLAccount
                             {
+                                AccountCode = "4000",
                                 AccountName = "Sales Account",
-                                AccountNumber = "4000",
-                                AccountGroup = "Revenue",
-                                AccountType = "Income",
-                                Credit = 0,
-                                Debit = 0,
-                                Balance = 0,
-                                UpdatedAt = CurrentDateTime()
+                                Category = 3, // Revenue
+                                Type = 10,    // Sales
+                                CurrentBalance = 0,
+                                IsActive = true
                             };
-                            _dbContext.Accounts.Add(newRevAccount);
-                            _dbContext.SaveChanges();
-                            revenueAccountId = Convert.ToInt32(newRevAccount.Id);
+                            _dbContext.GLAccounts.Add(newRevAccount);
+                            await _dbContext.SaveChangesAsync();
+                            revenueAccountId = newRevAccount.Id;
                         }
 
-                        Transaction debitAssetTrans = new()
+                        JournalEntry saleJournal = new JournalEntry
                         {
-                            AccountId = Convert.ToInt32(GetSetting.SaleAccount),
-                            TransactionReference = "sale-" + order.Id,
-                            TransactionType = "sale",
-                            Description = "Payment Recieved",
-                            Credit = 0,
+                            ReferenceNumber = "SALE-" + order.Id,
+                            Description = "POS Order Sales Revenue",
+                            EntryDate = CurrentDateTime(),
+                            IsPosted = true,
+                            SourceDocumentType = "pos",
+                            SourceDocumentId = order.Id,
+                            CreatedAt = CurrentDateTime()
+                        };
+                        _dbContext.JournalEntries.Add(saleJournal);
+                        await _dbContext.SaveChangesAsync();
+
+                        LedgerEntry debitCash = new LedgerEntry
+                        {
+                            JournalEntryId = saleJournal.Id,
+                            GLAccountId = Convert.ToInt32(GetSetting.SaleAccount),
+                            Description = "Payment Received",
                             Debit = order.Total,
-                            Amount = order.Total,
-                            Date = CurrentDateTime(),
+                            Credit = 0
                         };
 
-                        Transaction creditRevenueTrans = new()
+                        LedgerEntry creditRevenue = new LedgerEntry
                         {
-                            AccountId = revenueAccountId,
-                            TransactionReference = "sale-" + order.Id,
-                            TransactionType = "sale",
+                            JournalEntryId = saleJournal.Id,
+                            GLAccountId = revenueAccountId,
                             Description = "Order Sales Revenue",
-                            Credit = order.Total,
                             Debit = 0,
-                            Amount = order.Total,
-                            Date = CurrentDateTime(),
+                            Credit = order.Total
                         };
-
-                        _ = await _transactionService.AddDoubleEntryTransaction(debitAssetTrans, creditRevenueTrans);
+                        _dbContext.LedgerEntries.AddRange(debitCash, creditRevenue);
+                        await _dbContext.SaveChangesAsync();
 
                         await _hub.Clients.Group("admin").SendAsync("OrderNotification", "closed", order.Id);
                         await _hub.Clients.Group("staff").SendAsync("OrderNotification", "closed", order.Id);
@@ -1469,7 +1474,12 @@ namespace Saffrat.Controllers
                     _dbContext.Orders.Remove(existing);
                     await _dbContext.SaveChangesAsync();
 
-                    _ = await _transactionService.DeleteTransactionsByReference("sale-" + existing.Id);
+                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "pos" && x.SourceDocumentId == existing.Id).ToList();
+                    if (existingJournals.Any())
+                    {
+                        _dbContext.JournalEntries.RemoveRange(existingJournals);
+                        await _dbContext.SaveChangesAsync();
+                    }
 
                     response.Add("status", "success");
                     response.Add("message", "success");

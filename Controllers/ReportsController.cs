@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.Models;
+using Saffrat.Models.AccountingEngine;
 using System.Data;
 using Saffrat.Services;
 
@@ -160,7 +161,10 @@ namespace Saffrat.Controllers
             }
 
             ViewBag.purchaseTotal = _dbContext.Purchases.Where(x => x.PurchaseDate >= from && x.PurchaseDate <= to).Sum(x => x.TotalAmount);
-            ViewBag.expenseTotal = _dbContext.Expenses.Where(x => x.ExpenseDate >= from && x.ExpenseDate <= to).Sum(x => x.Amount);
+            ViewBag.purchaseTotal = _dbContext.Purchases.Where(x => x.PurchaseDate >= from && x.PurchaseDate <= to).Sum(x => x.TotalAmount);
+            ViewBag.expenseTotal = _dbContext.LedgerEntries.Include(x => x.GLAccount).Include(x => x.JournalEntry)
+                .Where(x => (x.GLAccount.Category == 4 || x.GLAccount.Category == 5) && x.JournalEntry.EntryDate >= from && x.JournalEntry.EntryDate <= to)
+                .Sum(x => Math.Max(0, x.Debit - x.Credit)); // Sum only net debits as expenses
 
             return View();
         }
@@ -292,76 +296,7 @@ namespace Saffrat.Controllers
             return View(purchases);
         }
 
-        // Expense Report
-        [HttpGet]
-        [Authorize(Roles = "admin")]
-        public IActionResult ExpenseReport(string period, DateTime? start, DateTime? end)
-        {
-            IEnumerable<Expense> expenses = new List<Expense>();
 
-            DateTime from = StartOfDay(start);
-            DateTime to = EndOfDay(end);
-
-            if (period == "yearly")
-            {
-                expenses = _dbContext.Expenses
-                .Where(x => x.ExpenseDate >= from && x.ExpenseDate <= to)
-                .OrderByDescending(a => a.Id)
-                .GroupBy(p => new
-                {
-                    p.ExpenseDate.Year
-                })
-                .Select(g => new Expense
-                {
-                    Amount = g.Sum(x => x.Amount),
-                    ExpenseDate = new DateTime(g.Key.Year, 1, 1)
-                })
-                .ToList();
-            }
-            else if (period == "monthly")
-            {
-                expenses = _dbContext.Expenses
-                .Where(x => x.ExpenseDate >= from && x.ExpenseDate <= to)
-                .OrderByDescending(a => a.Id)
-                .GroupBy(p => new
-                {
-                    p.ExpenseDate.Month,
-                    p.ExpenseDate.Year
-                })
-                .Select(g => new Expense
-                {
-                    Amount = g.Sum(x => x.Amount),
-                    ExpenseDate = new DateTime(g.Key.Year, g.Key.Month, 1)
-                })
-                .ToList();
-            }
-            else
-            {
-                expenses = _dbContext.Expenses
-                .Where(x => x.ExpenseDate >= from && x.ExpenseDate <= to)
-                .OrderByDescending(a => a.Id)
-                .GroupBy(p => new
-                {
-                    p.ExpenseDate.Day,
-                    p.ExpenseDate.Month,
-                    p.ExpenseDate.Year
-                })
-                .Select(g => new Expense
-                {
-                    Amount = g.Sum(x => x.Amount),
-                    ExpenseDate = new DateTime(g.Key.Year, g.Key.Month, g.Key.Day)
-                })
-                .ToList();
-
-                period = "daily";
-            }
-
-            ViewBag.start = from.ToString("yyyy-MM-dd");
-            ViewBag.end = to.ToString("yyyy-MM-dd");
-            ViewBag.period = period;
-
-            return View(expenses);
-        }
 
         // Stock Alert Report
         [HttpGet]
@@ -463,16 +398,17 @@ namespace Saffrat.Controllers
             ViewBag.start = from.ToString("yyyy-MM-dd");
             ViewBag.end = to.ToString("yyyy-MM-dd");
 
-            var accounts = await _dbContext.Accounts.ToListAsync();
-            var transactions = await _dbContext.Transactions
-                .Where(x => x.Date >= from && x.Date <= to)
+            var accounts = await _dbContext.GLAccounts.ToListAsync();
+            var ledgerEntries = await _dbContext.LedgerEntries
+                .Include(x => x.JournalEntry)
+                .Where(x => x.JournalEntry.EntryDate >= from && x.JournalEntry.EntryDate <= to)
                 .ToListAsync();
 
             var reportData = new List<Saffrat.ViewModels.TrialBalanceModel>();
 
             foreach (var account in accounts)
             {
-                var trans = transactions.Where(x => x.AccountId == account.Id).ToList();
+                var trans = ledgerEntries.Where(x => x.GLAccountId == account.Id).ToList();
                 var debit = trans.Sum(x => x.Debit);
                 var credit = trans.Sum(x => x.Credit);
 
@@ -482,7 +418,7 @@ namespace Saffrat.Controllers
                     {
                         AccountId = Convert.ToInt32(account.Id),
                         AccountName = account.AccountName,
-                        AccountGroup = string.IsNullOrEmpty(account.AccountGroup) ? "Uncategorized" : account.AccountGroup,
+                        AccountGroup = ((AccountCategory)account.Category).ToString(),
                         TotalDebit = debit,
                         TotalCredit = credit
                     });

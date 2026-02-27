@@ -172,21 +172,9 @@
                                     <li id="ingredientList-menu"><a class="nav-link" asp-controller="Ingredient" asp-action="Index">@Localize("Ingredients")</a></li>
                                 </ul>
                             </li>
-                            <li class="dropdown" id="accounting-menu">
-                                <a href="#" class="menu-toggle nav-link has-dropdown">
-                                    <i class="fas fa-calculator"></i><span>@Localize("Accounting")</span>
-                                </a>
-                                <ul class="dropdown-menu">
-                                    <li id="accountList-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Accounts">@Localize("Accounts")</a></li>
-                                    <li id="depositList-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Deposits">@Localize("Deposits")</a></li>
-                                    <li id="transferList-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Transfers">@Localize("Transfers")</a></li>
-                                    <li id="expenseList-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Expenses">@Localize("Expenses")</a></li>
-                                    <li id="transaction-menu"><a class="nav-link" asp-controller="Accounting" asp-action="Transactions">@Localize("Transactions")</a></li>
-                                </ul>
-                            </li>
                             <li class="dropdown" id="accounting-engine-menu">
                                 <a href="#" class="menu-toggle nav-link has-dropdown">
-                                    <i class="fas fa-file-invoice-dollar"></i><span>Accounting Engine</span>
+                                    <i class="fas fa-calculator"></i><span>@Localize("Accounting")</span>
                                 </a>
                                 <ul class="dropdown-menu">
                                     <li id="ae-chartofaccounts-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="ChartOfAccounts">@Localize("Chart of Accounts")</a></li>
@@ -219,7 +207,6 @@
                                     <li id="saleSummaryReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SaleSummaryReport">@Localize("Sale Summary Report")</a></li>
                                     <li id="saleDetailedReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SaleDetailedReport">@Localize("Sale Detailed Report")</a></li>
                                     <li id="purchaseReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="PurchaseReport">@Localize("Purchase Report")</a></li>
-                                    <li id="expenseReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="ExpenseReport">@Localize("Expense Report")</a></li>
                                     <li id="trialBalanceReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="TrialBalance">@Localize("Trial Balance Report")</a></li>
                                     <li id="stockAlertReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="StockAlert">@Localize("Stock Alert Report")</a></li>
                                     <li id="customerDueReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="CustomerDue">@Localize("Customer Due Report")</a></li>
