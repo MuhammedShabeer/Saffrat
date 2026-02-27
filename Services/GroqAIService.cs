@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -6,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace Saffrat.Services
 {
-    public class GeminiAIService : IAIService
+    public class GroqAIService : IAIService
     {
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
 
-        public GeminiAIService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public GroqAIService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _httpClient = httpClientFactory.CreateClient();
             _configuration = configuration;
@@ -19,37 +20,33 @@ namespace Saffrat.Services
 
         public async Task<string> GetResponseAsync(string prompt, string apiKey = null)
         {
-            // Use provided key or fall back to configuration
-            var finalApiKey = apiKey ?? _configuration["GeminiApiKey"];
+            var finalApiKey = apiKey ?? _configuration["GroqApiKey"];
 
             if (string.IsNullOrEmpty(finalApiKey))
-                return "Error: Gemini API Key is not configured in appsettings.json.";
+                return "Error: Groq API Key is not configured in appsettings.json.";
 
-            // Using v1beta and gemini-2.0-flash as confirmed by diagnostics
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={finalApiKey}";
+            var url = "https://api.groq.com/openai/v1/chat/completions";
 
             var requestBody = new
             {
-                contents = new[]
+                model = "llama-3.3-70b-versatile",
+                messages = new[]
                 {
-                    new
-                    {
-                        parts = new[]
-                        {
-                            new { text = prompt }
-                        }
-                    }
+                    new { role = "user", content = prompt }
                 }
             };
 
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {finalApiKey}");
+
             var response = await _httpClient.PostAsync(url, content);
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync();
-                return $"Error from Gemini API: {response.StatusCode}. {error}";
+                var errorBody = await response.Content.ReadAsStringAsync();
+                return $"Error from Groq API: {response.StatusCode}. {errorBody}";
             }
 
             var responseJson = await response.Content.ReadAsStringAsync();
@@ -58,15 +55,14 @@ namespace Saffrat.Services
             try
             {
                 return doc.RootElement
-                    .GetProperty("candidates")[0]
+                    .GetProperty("choices")[0]
+                    .GetProperty("message")
                     .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text")
                     .GetString();
             }
             catch
             {
-                return "Error: Failed to parse Gemini API response.";
+                return "Error: Failed to parse Groq API response.";
             }
         }
     }

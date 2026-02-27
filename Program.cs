@@ -54,7 +54,8 @@ builder.Services.AddScoped<ILanguageService, LanguageService>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddScoped<Saffrat.Services.AccountingEngine.IAccountingEngine, Saffrat.Services.AccountingEngine.DefaultAccountingEngine>();
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<IGeminiAIService, GeminiAIService>();
+builder.Services.AddScoped<IAIService, GeminiAIService>();
+builder.Services.AddScoped<GroqAIService>();
 builder.Services.AddScoped<ISqlQueryService, SqlQueryService>();
 
 

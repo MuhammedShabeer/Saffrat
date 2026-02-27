@@ -1,4 +1,9 @@
-﻿### SAFFRAT RMS DATABASE SCHEMA GUIDE (ENRICHED)
+﻿### SAFFRAT RMS DATABASE SCHEMA GUIDE (Microsoft SQL Server / T-SQL)
+
+**SQL DIALECT RULES:**
+- This is a **Microsoft SQL Server** database.
+- ALWAYS use `TOP` for limiting rows (e.g., `SELECT TOP 5 ...`).
+- NEVER use `LIMIT` or `OFFSET/FETCH` unless specifically required.
 
 **LOGIC & ENUM NOTES:**
 - **GLAccounts.Category**: 0=Asset, 1=Liability, 2=Equity, 3=Revenue, 4=Expense
