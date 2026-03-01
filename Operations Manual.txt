@@ -1,0 +1,114 @@
+# Saffrat Tech: Al Markiya Business Management Suite
+## Operations Manual
+
+**Version**: 1.1  
+**Date**: March 2026  
+**System**: Saffrat RMS - Enterprise Edition
+
+---
+
+### Table of Contents
+1. [Introduction](#introduction)
+2. [Work Period & Cash Reconciliation](#work-period)
+3. [Point of Sale (POS) Operations](#pos-operations)
+4. [Inventory & Purchasing](#inventory-management)
+5. [Accounting Data Entry Guide](#accounting-guide)
+6. [Partner Equity & Dashboard](#partner-equity)
+7. [HRM & Payroll](#hrm)
+8. [AI-Powered Reporting](#reporting)
+
+---
+
+### 1. Introduction <a name="introduction"></a>
+The **Al Markiya Business Management Suite** is a centralized ERP for enterprise-level operations. This manual focuses on data integrity, specifically in the accounting and inventory modules.
+
+---
+
+### 2. Work Period & Cash Reconciliation <a name="work-period"></a>
+Every business day **MUST** begin and end with a Work Period.
+- **Opening a Session**: Navigate to **Sale -> Cash Register**. Enter the "Opening Balance" (the cash currently in the drawer). This starts the tracking period.
+- **Closing a Session**: At the end of the shift, return to **Cash Register** and select **End Session**. Enter the "Closing Balance". 
+- **Verification**: The system will automatically calculate the difference between expected sales and actual cash, generating a reconciliation report.
+
+---
+
+### 3. Point of Sale (POS) Operations <a name="pos-operations"></a>
+- **Active Orders**: Use the **POS** screen to select tables. Items added here update the **Kitchen Display** in real-time.
+- **Finalizing Sales**: Once a customer pays, click **Settle**. Choose the payment method (Cash/Card). Closing the order triggers an automatic Journal Entry:
+    - *Debit: Cash/Bank Account*
+    - *Credit: Sales Revenue*
+
+---
+
+### 4. Inventory & Purchasing <a name="inventory-management"></a>
+**A. Adding Stock (Purchases)**
+1. Navigate to **Purchase -> Add Purchase**.
+2. Select the **Supplier** and enter their **Invoice Number**.
+3. Add items and specify the **Purchase Price** and **Quantity**.
+4. **Saving**: Upon save, the system updates ingredient quantities and creates an Accounts Payable (Bill) or reduces Cash if paid immediately.
+
+**B. Stock Adjustments & Wastage**
+1. Navigate to **Ingredients -> Stock Adjustment**.
+2. Select **New Adjustment**.
+3. Choose the item and the type (**Wastage** or **Manual Correction**).
+4. Enter the quantity and a mandatory reason (e.g., "Expired"). This ensures the P&L reflects the loss.
+
+---
+
+### 5. Accounting Data Entry Guide <a name="accounting-guide"></a>
+The system uses automated background accounting to ensure accuracy.
+
+**A. Chart of Accounts (COA)**
+- Found under **Accounting -> Chart of Accounts**.
+- Categories: **0=Asset, 1=Liability, 2=Equity, 3=Revenue, 4=Expense**.
+- Each account tracks its `CurrentBalance` automatically.
+
+**B. Entering Manual Transactions (Cash Ledger)**
+For day-to-day office expenses or small income:
+1. Go to **Accounting -> Cash Ledger**.
+2. Click **Add Transaction**.
+3. Select **Expense** (e.g., Office Supplies) or **Income**.
+4. Choose the specific **Offset Account** (e.g., Electricity Expense).
+5. Enter the amount and description.
+- *Tip: This replaces manual petty cash books and syncs directly with your Balance Sheet.*
+
+**C. Managing Invoices & Bills**
+- **AR Invoices**: For corporate clients who pay later.
+- **AP Bills**: For supplier credit.
+- Navigate to **Accounting -> AR Invoices** or **AP Bills** to track payment status (Paid/Unpaid/Partial).
+
+---
+
+### 6. Partner Equity & Dashboard <a name="partner-equity"></a>
+Designed for transparent capital management.
+1. **Adding Partners**: Go to **Accounting -> Partner Equity**. Add a partner to generate their unique Equity Account.
+2. **Managing Capital**:
+    - **Investments**: Use this when a partner injects cash.
+    - **Withdrawals**: For partner drawings.
+    - **Profit Distribution**: Distribute business earnings.
+3. **Visuals**: Use the Dashboard to see real-time ownership percentages and current net equity balances.
+
+---
+
+### 7. HRM & Payroll <a name="hrm"></a>
+- **Attendance**: Staff must clock in/out via the dashboard.
+- **Payroll Generation**: At the end of the month, use **HRM -> Payroll** to generate slips. The system calculates Net Salary based on base pay, deductions, and bonuses.
+
+---
+
+### 8. AI-Powered Reporting <a name="reporting"></a>
+Don't wait for monthly reports.
+1. Go to **Reports -> AI Assistant**.
+2. Ask questions like:
+    - *"Show me the sales trend for last week."*
+    - *"Who is our most active supplier?"*
+    - *"What is our current inventory value?"*
+3. The AI analyzes real-time database schema to provide instant, professional insights.
+
+---
+
+> [!WARNING]
+> Manual Journal Entries should only be performed by authorized accountants. Most business transactions (Sales, Purchases, Payroll) are handled automatically by the system.
+
+**Support & Training**  
+For technical assistance or comprehensive staff training, contact Saffrat Tech Support.

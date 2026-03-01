@@ -1,0 +1,116 @@
+# Saffrat Tech: Al Markiya Business Management Suite
+## Operations Manual - Enterprise Edition
+
+**Version**: 2.0  
+**Date**: March 2026  
+**Confidentiality**: Professional Use Only
+
+---
+
+## 1. Executive Summary
+The **Al Markiya Business Management Suite** is a unified .NET Core 8 enterprise solution designed for the hospitality and retail sectors. It integrates real-time Point of Sale (POS), Inventory Control, Human Resource Management (HRM), and a professional Double-Entry Accounting Engine.
+
+---
+
+## 2. Daily Operational Lifecycle
+Data integrity relies on the structured opening and closing of business sessions.
+
+### 2.1 Managing Work Periods
+The system operates within "Work Periods" to ensure cash reconciliation.
+- **Starting the Day**: Navigate to **Sale -> Cash Register**.
+  - Action: Enter the **Opening Balance** (Initial Cash-in-Hand).
+  - Impact: This initializes the session and begins tracking all cash/bank inflows.
+- **Ending the Day**:
+  - Prerequisite: All "Running Orders" must be settled (see Section 3).
+  - Action: Enter the **Closing Balance**.
+  - Logic: The system automatically calculates the `Net Balance` based on (`Opening Balance` + `Total Sales` - `Expenses`). Any variance is flagged in the Reconciliation Report.
+
+---
+
+## 3. Point of Sale (POS) Workflows
+The POS module is the primary revenue generator and data entry point for sales.
+
+### 3.1 Order Management
+- **Order Types**: Dine-In (Table-based), Takeaway, and Delivery.
+- **Modifiers**: Customize items (e.g., "Extra Cheese"). Modifiers update the Kitchen Display System (KDS) and adjust ingredient costs dynamically.
+- **Splitting Orders**: If guests require separate payments, use the **Split Order** feature to move specific items to a new sub-order.
+
+### 3.2 Settle & Payment
+- **Payment Methods**: Support for Cash, Credit Card, and Digital Wallets.
+- **Accounting Note**: Finalizing an order triggers an automated ledger entry:
+  - `DEBIT` [Cash/Bank Account]
+  - `CREDIT` [Sales Revenue]
+  - `CREDIT` [Sales Tax Liability]
+
+---
+
+## 4. Accounting & Financial Data Entry
+This module is the "General Ledger" of your business. It follows Standard Accounting Practices (SAP).
+
+### 4.1 Chart of Accounts (COA)
+The COA is categorized for ease of reporting:
+- **0 - Assets**: Cash, Inventory, Accounts Receivable.
+- **1 - Liabilities**: Sales Tax, Accounts Payable.
+- **2 - Equity**: Partner Capital, Retained Earnings.
+- **3 - Revenue**: Food Sales, Delivery Charges.
+- **4 - Expenses**: Cost of Goods Sold (COGS), Salaries, Utilities.
+
+### 4.2 Data Entry: Cash Ledger (Petty Cash)
+For expenses not related to inventory (e.g., fuel, cleaning supplies):
+1. Navigate to **Accounting -> Cash Ledger**.
+2. Select **Add Transaction**.
+3. **Fields**:
+   - `Type`: Expense (Outflow) or Income (Inflow).
+   - `Offset Account`: Choose the specific category (e.g., "Electricity Expense").
+   - `Description`: High-level note for audits.
+4. **Validation**: The system ensures debits and credits match before saving.
+
+### 4.3 Accounts Payable (AP) & Supplier Bills
+1. Go to **Purchase -> Add Purchase**.
+2. Enter the **Supplier Invoice** details.
+3. Saving does two things:
+   - Updates **Inventory Levels** (Ingredient stock).
+   - Records an **AP Bill** in the accounting engine.
+
+---
+
+## 5. Inventory & Stock Control
+### 5.1 Stock Adjustment & Wastage
+To maintain accurate balance sheets, physical inventory must match system records.
+- **Manual Adjustment**: Used for count corrections.
+- **Wastage**: Used for expired or damaged goods.
+- **Accounting Impact**: Wastage creates a `DEBIT` to "Stock Wastage Expense" and a `CREDIT` to "Inventory Asset," immediately reflecting the loss in your Profit & Loss statement.
+
+---
+
+## 6. Partner Equity Management
+A transparent portal for business owners.
+- **Initial Capital**: Recorded as an `Investment` to the partner's equity account.
+- **Drawings**: Partners can record `Withdrawals` for personal use, which reduces their equity balance.
+- **Profit Distribution**: Periodically move "Net Income" to partner accounts based on their ownership percentage.
+
+---
+
+## 7. Reporting & AI Analysis
+### 7.1 Financial Statements
+- **Balance Sheet**: Real-time view of Assets = Liabilities + Equity.
+- **Profit & Loss**: Detailed view of Net Income over a custom date range.
+
+### 7.2 AI Assistant Reporting
+Executives can query the system using natural language:
+- *"What is our current cash balance?"*
+- *"Show me the top 5 expenses this month."*
+- *"Calculate the ROI for Partner X."*
+The AI queries the SQL Schema directly to provide instantaneous, accurate professional responses.
+
+---
+
+## 8. Best Practices for Data Integrity
+- **Shift Handover**: Always end the Work Period before change of staff.
+- **Real-time Entry**: Log expenses as they occur to avoid reconciliation errors.
+- **Audit Trails**: Most entries (POs, Sales, Journals) record the `CreatedBy` user for accountability.
+
+---
+
+**Saffrat Tech Support**  
+For further training or technical implementation details, please contact your account manager.
