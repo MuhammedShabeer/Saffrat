@@ -1,0 +1,96 @@
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("New Stock Adjustment");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("New Stock Adjustment")</h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="StockAdjustment" asp-action="Index">@Localize("Stock Adjustment")</a></li>
+                    <li class="breadcrumb-item">@Localize("Add")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form id="adjForm" class="needs-validation" novalidate="">
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Date") <code>*</code></label>
+                        <input type="date" name="EntryDate" value="@DateTime.Now.ToString("yyyy-MM-dd")" class="form-control" required />
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Ingredient Item") <code>*</code></label>
+                        <select name="IngredientItemId" class="form-control selectpicker" data-live-search="true" required>
+                            <option value="">@Localize("Select Item")</option>
+                            @foreach (var item in ViewBag.Ingredients)
+                            {
+                                <option value="@item.Id">@item.ItemName (@item.Quantity @item.Unit)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Adjustment Type") <code>*</code></label>
+                        <select name="Type" class="form-control" required>
+                            <option value="Wastage">@Localize("Wastage (Subtract)")</option>
+                            <option value="Subtraction">@Localize("Manual Subtraction")</option>
+                            <option value="Addition">@Localize("Manual Addition")</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Quantity") <code>*</code></label>
+                        <input type="number" step="0.01" name="Quantity" class="form-control" required />
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Reason / Note") <code>*</code></label>
+                        <textarea name="Reason" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> @Localize("Save Adjustment")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $("#inventory-menu").addClass("active");
+        $("#stock-adj-menu").addClass("active");
+
+        $("#adjForm").on("submit", function (e) {
+            e.preventDefault();
+            if (this.checkValidity()) {
+                var formData = $(this).serialize();
+                $.ajax({
+                    url: '/StockAdjustment/Create',
+                    type: 'POST',
+                    data: formData,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage(data.message);
+                            window.location.href = '/StockAdjustment/Index';
+                        } else {
+                            errorMessage(data.message);
+                        }
+                    }
+                });
+            }
+            $(this).addClass('was-validated');
+        });
+    </script>
+}

@@ -1,0 +1,156 @@
+@model Saffrat.Models.Partner
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Manage Transactions") + " - " + Model.Name;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("Partner Transactions"): @Model.Name</h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i
+                                class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="PartnerDashboard"
+                            asp-action="Index">@Localize("Partner Equity")</a></li>
+                    <li class="breadcrumb-item">@Localize("Transactions")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-end">
+                            <div class="text-muted small">@Localize("Current Balance")</div>
+                            <h4 class="mb-0">@GetCurrency(Model.GLAccount?.CurrentBalance ?? 0)</h4>
+                        </div>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#transModal">
+                            <i class="fas fa-plus me-1"></i> @Localize("Add Transaction")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="datatable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Type")</th>
+                                <th>@Localize("Amount")</th>
+                                <th>@Localize("Note")</th>
+                                <th>@Localize("Created By")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var trans in Model.PartnerTransactions.OrderByDescending(t => t.EntryDate))
+                            {
+                                <tr>
+                                    <td>@trans.EntryDate.ToShortDateString()</td>
+                                    <td>
+                                        @if (trans.Type == "Investment")
+                                        {
+                                            <span class="badge bg-success">@Localize("Investment")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">@trans.Type</span>
+                                        }
+                                    </td>
+                                    <td>@GetCurrency(trans.Amount)</td>
+                                    <td>@trans.Note</td>
+                                    <td>@trans.CreatedBy</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Transaction Modal -->
+<div class="modal fade" id="transModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Localize("Add Transaction")</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="transForm" class="needs-validation" novalidate="">
+                    <input type="hidden" name="PartnerId" value="@Model.Id" />
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Date") <code>*</code></label>
+                        <input type="date" name="EntryDate" value="@DateTime.Now.ToString("yyyy-MM-dd")"
+                            class="form-control" required />
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Transaction Type") <code>*</code></label>
+                        <select name="Type" class="form-control" required>
+                            <option value="Investment">@Localize("Investment (Capital In)")</option>
+                            <option value="Withdrawal">@Localize("Withdrawal (Capital Out)")</option>
+                            <option value="ProfitDistribution">@Localize("Profit Distribution")</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Amount") <code>*</code></label>
+                        <input type="number" step="0.01" name="Amount" class="form-control" required />
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Note / Description") <code>*</code></label>
+                        <textarea name="Note" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">@Localize("Save Transaction")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $("#accounting-engine-menu").addClass("active");
+        $("#partner-equity-menu").addClass("active");
+
+        $('#datatable').DataTable({
+            order: [[0, 'desc']]
+        });
+
+        $("#transForm").on("submit", function (e) {
+            e.preventDefault();
+            if (this.checkValidity()) {
+                var formData = $(this).serialize();
+                $.ajax({
+                    url: '/PartnerDashboard/AddTransaction',
+                    type: 'POST',
+                    data: formData,
+                    success: function (data) {
+                        if (data.status == "success") {
+                            successMessage(data.message);
+                            location.reload();
+                        } else {
+                            errorMessage(data.message);
+                        }
+                    }
+                });
+            }
+            $(this).addClass('was-validated');
+        });
+    </script>
+}

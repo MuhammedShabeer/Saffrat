@@ -1,0 +1,127 @@
+@model IEnumerable<Saffrat.Models.Partner>
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Partner Equity Dashboard");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("Partner Equity Dashboard")</h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Partner Equity")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <a asp-controller="PartnerDashboard" asp-action="AddPartner" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> @Localize("New Partner")
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Summary Cards -->
+<div class="row">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5>@Localize("Total Net Equity")</h5>
+                <h2>@GetCurrency(ViewBag.TotalEquity)</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5>@Localize("Total Partners")</h5>
+                <h2>@Model.Count()</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>@Localize("Equity Distribution")</h4>
+            </div>
+            <div class="card-body">
+                <canvas id="equityChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>@Localize("Partner List")</h4>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>@Localize("Name")</th>
+                                <th>@Localize("Equity Balance")</th>
+                                <th>@Localize("Actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var partner in Model)
+                            {
+                                <tr>
+                                    <td>@partner.Name</td>
+                                    <td>@GetCurrency(partner.GLAccount?.CurrentBalance ?? 0)</td>
+                                    <td>
+                                        <a asp-action="ManageTransactions" asp-route-id="@partner.Id" class="btn btn-sm btn-light">
+                                            <i class="fas fa-wallet"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $("#accounting-engine-menu").addClass("active");
+        $("#partner-equity-menu").addClass("active");
+
+        var ctx = document.getElementById('equityChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: @Html.Raw(Json.Serialize(ViewBag.PartnerNames)),
+                datasets: [{
+                    data: @Html.Raw(Json.Serialize(ViewBag.PartnerBalances)),
+                    backgroundColor: [
+                        '#6777ef', '#ffa426', '#fc544b', '#63ed7a', '#3abaf4', '#f69040'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    </script>
+}

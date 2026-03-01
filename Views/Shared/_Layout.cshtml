@@ -170,6 +170,7 @@
                                 <ul class="dropdown-menu">
                                     <li id="addIngredient-menu"><a class="nav-link" asp-controller="Ingredient" asp-action="AddIngredient">@Localize("Add Ingredient")</a></li>
                                     <li id="ingredientList-menu"><a class="nav-link" asp-controller="Ingredient" asp-action="Index">@Localize("Ingredients")</a></li>
+                                    <li id="stock-adj-menu"><a class="nav-link" asp-controller="StockAdjustment" asp-action="Index">@Localize("Stock Adjustment")</a></li>
                                 </ul>
                             </li>
                             <li class="dropdown" id="accounting-engine-menu">
@@ -183,6 +184,8 @@
                                     <li id="ae-profitandloss-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="ProfitAndLoss">@Localize("Profit & Loss")</a></li>
                                     <li id="ae-invoices-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="Invoices">@Localize("AR Invoices")</a></li>
                                     <li id="ae-bills-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="Bills">@Localize("AP Bills")</a></li>
+                                    <li id="cash-ledger-menu"><a class="nav-link" asp-controller="CashLedger" asp-action="Index">@Localize("Cash Ledger")</a></li>
+                                    <li id="partner-equity-menu"><a class="nav-link" asp-controller="PartnerDashboard" asp-action="Index">@Localize("Partner Equity")</a></li>
                                 </ul>
                             </li>
                             <li class="dropdown" id="people-menu">
