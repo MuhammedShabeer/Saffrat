@@ -143,5 +143,32 @@ namespace Saffrat.Controllers
             ViewBag.Accounts = await _dbContext.Set<GLAccount>().Where(a => a.IsActive).ToListAsync();
             return View(entry);
         }
+        [HttpGet]
+        public async Task<IActionResult> GetJournalDetails(int id)
+        {
+            var entry = await _dbContext.Set<JournalEntry>()
+                .Include(j => j.LedgerEntries)
+                .ThenInclude(l => l.GLAccount)
+                .FirstOrDefaultAsync(j => j.Id == id);
+
+            if (entry == null) return NotFound();
+
+            var result = new
+            {
+                entry.ReferenceNumber,
+                entry.Description,
+                EntryDate = entry.EntryDate.ToString("yyyy-MM-dd"),
+                Lines = entry.LedgerEntries.Select(l => new
+                {
+                    AccountName = l.GLAccount.AccountName,
+                    AccountCode = l.GLAccount.AccountCode,
+                    l.Description,
+                    l.Debit,
+                    l.Credit
+                })
+            };
+
+            return Json(result);
+        }
     }
 }

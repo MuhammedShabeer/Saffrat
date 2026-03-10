@@ -95,6 +95,81 @@
     </div>
 </div>
 
+<!-- Journal Lines Modal -->
+<div class="modal fade" id="linesModal" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modalTitle">@Localize("Journal Entry")</h5>
+                <button type="button" class="btn btn-light" data-dismiss="modal">
+                    <span aria-hidden="true">x</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="p-4 bg-light border-bottom">
+                    <div class="row gx-5">
+                        <div class="col-md-4">
+                            <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Posting Date")</label>
+                            <div id="modalDate" class="h6 mb-0"></div>
+                        </div>
+                        <div class="col-md-8 border-start">
+                            <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Global Description")</label>
+                            <div id="modalDesc" class="h6 mb-0"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-dark text-white text-uppercase small">
+                            <tr>
+                                <th class="ps-4">@Localize("Account")</th>
+                                <th>@Localize("Line Description")</th>
+                                <th class="text-end">@Localize("Debit")</th>
+                                <th class="text-end pe-4">@Localize("Credit")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalBody" class="border-top-0">
+                        </tbody>
+                        <tfoot class="fw-bold border-top-2">
+                            <tr class="table-info border-bottom-0">
+                                <td colspan="2" class="ps-4 text-end">@Localize("Totals")</td>
+                                <td class="text-end" id="totalDebit"></td>
+                                <td class="text-end pe-4" id="totalCredit"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@Localize("Close")</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #linesModal .table thead th {
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+
+    #linesModal .modal-content {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    #linesModal .modal-header {
+        border-bottom: 0;
+    }
+
+    #linesModal .table-info {
+        background-color: rgba(23, 162, 184, 0.1) !important;
+        border-top: 2px solid #dee2e6;
+    }
+</style>
+
 @section Scripts {
     <script>
         $(document).ready(function () {
@@ -115,6 +190,37 @@
                     }
                 });
             }
+        }
+
+        function viewLines(id) {
+            $.get('@Url.Action("GetJournalDetails", "AccountingEngine")/' + id, function (data) {
+                $('#modalRef').text(data.referenceNumber);
+                $('#modalDate').text(data.entryDate);
+                $('#modalDesc').text(data.description);
+
+                var html = '';
+                var totalDebit = 0;
+                var totalCredit = 0;
+
+                $.each(data.lines, function (i, line) {
+                html += `<tr>
+                    <td class="ps-4"><strong>${line.accountCode}</strong> - ${line.accountName}</td>
+                    <td>${line.description || ''}</td>
+                    <td class="text-end text-success font-monospace">${line.debit > 0 ? parseFloat(line.debit).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                    <td class="text-end text-danger pe-4 font-monospace">${line.credit > 0 ? parseFloat(line.credit).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                </tr>`;
+                totalDebit += line.debit;
+                totalCredit += line.credit;
+            });
+
+                $('#modalBody').html(html);
+                $('#totalDebit').text(totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+                $('#totalCredit').text(totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+
+                $('#linesModal').modal('show');
+            }).fail(function() {
+                toastr.error("Error loading journal details");
+            });
         }
     </script>
 }
