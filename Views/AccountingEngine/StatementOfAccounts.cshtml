@@ -1,0 +1,351 @@
+@model Saffrat.ViewModels.StatementOfAccountsVM
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = Localize("Statement of Accounts");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("Statement of Accounts")</h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i> @Localize("Dashboard")</a></li>
+                    <li class="breadcrumb-item">@Localize("Accounting Engine")</li>
+                    <li class="breadcrumb-item">@Localize("Statement of Accounts")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <form asp-action="StatementOfAccounts" method="get" id="filterForm">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">@Localize("Select Account")</label>
+                            <select name="accountId" class="form-control selectpicker" data-live-search="true" asp-for="SelectedAccountId">
+                                <option value="">-- @Localize("Choose Account") --</option>
+                                @foreach (var acc in Model.Accounts)
+                                {
+                                    <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">@Localize("From Date")</label>
+                            <input type="date" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">@Localize("To Date")</label>
+                            <input type="date" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-search me-1"></i> @Localize("Generate")</button>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-muted small me-2">@Localize("Shortcuts"):</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="setDates('today')">@Localize("Today")</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="setDates('thismonth')">@Localize("This Month")</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="setDates('thisyear')">@Localize("This Year")</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDates('last30')">@Localize("Last 30 Days")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if (Model.SelectedAccountId.HasValue)
+        {
+            var selectedAcc = Model.Accounts.FirstOrDefault(a => a.Id == Model.SelectedAccountId);
+            <div class="card shadow-sm border-0">
+                <div class="card-header py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-primary">
+                        <i class="fa fa-file-invoice-dollar me-2"></i>
+                        @selectedAcc?.AccountName (@selectedAcc?.AccountCode)
+                    </h5>
+                    <div>
+                        <button class="btn btn-outline-success btn-sm me-2" onclick="window.print()"><i class="fa fa-print me-1"></i> @Localize("Print")</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="bg-light p-4 border-bottom">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="text-muted small text-uppercase">@Localize("Opening Balance")</div>
+                                <div class="h4 mb-0 fw-bold @(Model.OpeningBalance >= 0 ? "text-success" : "text-danger")">@GetCurrency(Math.Abs(Model.OpeningBalance)) @(Model.OpeningBalance < 0 ? "DR" : "")</div>
+                                <div class="small text-muted">@Localize("As of") @Model.StartDate.ToString("yyyy-MM-dd")</div>
+                            </div>
+                            <div class="col-md-4 border-start border-end">
+                                <div class="text-muted small text-uppercase">@Localize("Period Net Change")</div>
+                                @{
+                                    decimal netChange = Model.ClosingBalance - Model.OpeningBalance;
+                                }
+                                <div class="h4 mb-0 fw-bold @(netChange >= 0 ? "text-primary" : "text-warning")">@GetCurrency(Math.Abs(netChange)) @(netChange < 0 ? "-" : "+")</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small text-uppercase">@Localize("Closing Balance")</div>
+                                <div class="h4 mb-0 fw-bold @(Model.ClosingBalance >= 0 ? "text-success" : "text-danger")">@GetCurrency(Math.Abs(Model.ClosingBalance)) @(Model.ClosingBalance < 0 ? "DR" : "")</div>
+                                <div class="small text-muted">@Localize("As of") @Model.EndDate.ToString("yyyy-MM-dd")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">@Localize("Date")</th>
+                                    <th>@Localize("Reference")</th>
+                                    <th>@Localize("Description")</th>
+                                    <th class="text-end">@Localize("Debit")</th>
+                                    <th class="text-end">@Localize("Credit")</th>
+                                    <th class="text-end pe-4">@Localize("Balance")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-info fw-bold">
+                                    <td colspan="3" class="ps-4">@Localize("Opening Balance")</td>
+                                    <td class="text-end">-</td>
+                                    <td class="text-end">-</td>
+                                    <td class="text-end pe-4">@GetCurrency(Math.Abs(Model.OpeningBalance)) @(Model.OpeningBalance < 0 ? "DR" : "")</td>
+                                </tr>
+                                @foreach (var row in Model.Transactions)
+                                {
+                                    <tr class="cursor-pointer" onclick="viewLines(@row.JournalEntryId)">
+                                        <td class="ps-4">@row.Date.ToString("yyyy-MM-dd")</td>
+                                        <td><strong>@row.Reference</strong></td>
+                                        <td>@row.Description</td>
+                                        <td class="text-end text-success">@(row.Debit > 0 ? GetCurrency(row.Debit) : "-")</td>
+                                        <td class="text-end text-danger">@(row.Credit > 0 ? GetCurrency(row.Credit) : "-")</td>
+                                        <td class="text-end pe-4 fw-bold">@GetCurrency(Math.Abs(row.RunningBalance)) @(row.RunningBalance < 0 ? "DR" : "")</td>
+                                    </tr>
+                                }
+                                @if (!Model.Transactions.Any())
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">@Localize("No transactions found in this period.")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="bg-light fw-bold">
+                                <tr>
+                                    <td colspan="3" class="ps-4">@Localize("Closing Balance")</td>
+                                    <td class="text-end text-success">@GetCurrency(Model.Transactions.Sum(t => t.Debit))</td>
+                                    <td class="text-end text-danger">@GetCurrency(Model.Transactions.Sum(t => t.Credit))</td>
+                                    <td class="text-end pe-4 text-primary">@GetCurrency(Math.Abs(Model.ClosingBalance)) @(Model.ClosingBalance < 0 ? "DR" : "")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section models {
+    <!-- Reuse the modals from JournalEntries for drill-down -->
+    <div class="modal fade" id="linesModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold" id="mainModalTitle"><i class="fa fa-book me-2 text-primary"></i> @Localize("Journal Entry Detail")</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="p-4 bg-light border-bottom">
+                    <div class="row gx-5">
+                        <div class="col-md-4">
+                            <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Posting Date")</label>
+                            <div id="modalDate" class="h6 mb-0 fw-bold"></div>
+                        </div>
+                        <div class="col-md-8 border-start">
+                            <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Global Description")</label>
+                            <div id="modalDesc" class="h6 mb-0"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light text-uppercase small">
+                            <tr>
+                                <th class="ps-4">@Localize("Account")</th>
+                                <th>@Localize("Line Description")</th>
+                                <th class="text-end">@Localize("Debit")</th>
+                                <th class="text-end pe-4">@Localize("Credit")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalBody" class="border-top-0">
+                        </tbody>
+                        <tfoot class="fw-bold border-top-2">
+                            <tr class="table-info border-bottom-0">
+                                <td colspan="2" class="ps-4 text-end">@Localize("Totals")</td>
+                                <td class="text-end" id="totalDebit"></td>
+                                <td class="text-end pe-4" id="totalCredit"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <div id="sourceInfo" class="me-auto small text-muted"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@Localize("Close")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="sourceDetailModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-info"><i class="fa fa-info-circle me-2"></i> <span id="sourceTitle">Details</span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0" id="sourceDetailBody">
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="$('#sourceDetailModal').modal('hide'); $('#linesModal').modal('show');"><i class="fa fa-arrow-left"></i> @Localize("Back to Journal")</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@Localize("Close")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .table-hover tbody tr:hover { background-color: rgba(0,0,0,.03); }
+    #linesModal .modal-content { border-radius: 12px; overflow: hidden; }
+</style>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Selectpicker is initialized globally in site.js
+        });
+
+        function setDates(type) {
+            const now = new Date();
+            let start = new Date();
+            let end = new Date();
+
+            switch(type) {
+                case 'today':
+                    break;
+                case 'thismonth':
+                    start = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
+                case 'thisyear':
+                    start = new Date(now.getFullYear(), 0, 1);
+                    break;
+                case 'last30':
+                    start.setDate(now.getDate() - 30);
+                    break;
+            }
+
+            $('input[name="startDate"]').val(start.toISOString().split('T')[0]);
+            $('input[name="endDate"]').val(end.toISOString().split('T')[0]);
+        }
+
+        let currentSourceType = '';
+        let currentSourceId = 0;
+
+        function viewLines(id) {
+            $.get('@Url.Action("GetJournalDetails", "AccountingEngine")/' + id, function (data) {
+                $('#modalDate').text(data.entryDate);
+                $('#modalDesc').text(data.description);
+                currentSourceType = data.sourceDocumentType;
+                currentSourceId = data.sourceDocumentId;
+
+                if (currentSourceType && currentSourceId) {
+                    $('#sourceInfo').html(`<i class="fa fa-link"></i> Linked to <strong>${currentSourceType} #${currentSourceId}</strong>. <span class="text-primary cursor-pointer" onclick="showSourceDetails()">Click for details</span>`);
+                } else {
+                    $('#sourceInfo').text('');
+                }
+
+                var html = '';
+                var totalDebit = 0;
+                var totalCredit = 0;
+
+                $.each(data.lines, function (i, line) {
+                    html += `<tr>
+                        <td class="ps-4"><strong>${line.accountCode}</strong> - ${line.accountName}</td>
+                        <td>${line.description || ''}</td>
+                        <td class="text-end text-success">${line.debit > 0 ? line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                        <td class="text-end text-danger pe-4">${line.credit > 0 ? line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                    </tr>`;
+                    totalDebit += line.debit;
+                    totalCredit += line.credit;
+                });
+
+                $('#modalBody').html(html);
+                $('#totalDebit').text(totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+                $('#totalCredit').text(totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+                $('#linesModal').modal('show');
+            });
+        }
+
+        function showSourceDetails() {
+            if (!currentSourceType || !currentSourceId) return;
+            $('#linesModal').modal('hide');
+            $.get('@Url.Action("GetSourceDocumentDetails", "AccountingEngine")', { type: currentSourceType, id: currentSourceId }, function (response) {
+                if (response.status === 'success') {
+                    $('#sourceTitle').text(response.type);
+                    // This function is defined in JournalEntries.cshtml, but since this is a new page we need a simplified version or copy it
+                    $('#sourceDetailBody').html('<div class="p-4 text-center">Loading extended details...</div>');
+                    // For now, let's just show raw data or implement the renderer
+                    let content = renderSourceContent(response.type, response.data);
+                    $('#sourceDetailBody').html(content);
+                    $('#sourceDetailModal').modal('show');
+                }
+            });
+        }
+
+        // Copy of the renderer for standalone use or better yet, it should be in a shared JS
+        function renderSourceContent(type, data) {
+            let html = '<div class="p-4">';
+            switch(type.toLowerCase()) {
+                case 'payroll':
+                    html += `<div class="mb-3"><strong>Employee:</strong> ${data.employeeName}</div>`;
+                    html += `<div class="mb-3"><strong>Period:</strong> ${data.period}</div>`;
+                    html += `<table class="table table-sm border"><thead><tr class="bg-light"><th>Title</th><th>Type</th><th class="text-end">Amount</th></tr></thead><tbody>`;
+                    html += `<tr><td>Basic Salary</td><td>Base</td><td class="text-end">${data.salary.toFixed(2)}</td></tr>`;
+                    data.details.forEach(d => {
+                        html += `<tr><td>${d.title}</td><td>${d.amountType}</td><td class="text-end">${d.amount.toFixed(2)}</td></tr>`;
+                    });
+                    html += `</tbody><tfoot><tr class="fw-bold"><td>Net Salary</td><td></td><td class="text-end">${data.netSalary.toFixed(2)}</td></tr></tfoot></table>`;
+                    break;
+                case 'purchase':
+                    html += `<div class="mb-3"><strong>Supplier:</strong> ${data.supplierName}</div>`;
+                    html += `<div class="mb-3"><strong>Invoice:</strong> ${data.invoiceNo}</div>`;
+                    html += `<table class="table table-sm border"><thead><tr class="bg-light"><th>Item</th><th>Qty</th><th class="text-end">Total</th></tr></thead><tbody>`;
+                    data.items.forEach(i => {
+                        html += `<tr><td>${i.itemName}</td><td>${i.quantity}</td><td class="text-end">${i.total.toFixed(2)}</td></tr>`;
+                    });
+                    html += `</tbody><tfoot><tr class="fw-bold"><td>Total</td><td></td><td class="text-end">${data.totalAmount.toFixed(2)}</td></tr></tfoot></table>`;
+                    break;
+                case 'pos order':
+                    html += `<div class="mb-3"><strong>Customer:</strong> ${data.customerName || 'Walking'}</div>`;
+                    html += `<table class="table table-sm border"><thead><tr class="bg-light"><th>Item</th><th>Qty</th><th class="text-end">Total</th></tr></thead><tbody>`;
+                    data.items.forEach(i => {
+                        html += `<tr><td>${i.itemName}</td><td>${i.quantity}</td><td class="text-end">${i.total.toFixed(2)}</td></tr>`;
+                    });
+                    html += `</tbody><tfoot><tr class="fw-bold"><td>Grand Total</td><td></td><td class="text-end">${data.total.toFixed(2)}</td></tr></tfoot></table>`;
+                    break;
+                default:
+                    html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            html += '</div>';
+            return html;
+        }
+    </script>
+}

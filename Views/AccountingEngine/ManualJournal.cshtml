@@ -72,7 +72,7 @@
                                 {
                                     <tr>
                                         <td>
-                                            <select name="LedgerEntries[@i].GLAccountId" class="form-select account-select">
+                                            <select name="LedgerEntries[@i].GLAccountId" class="form-control selectpicker account-select" data-live-search="true">
                                                 <option value="0">@Localize("-- Select Account --")</option>
                                                 @if (accounts != null)
                                                 {
@@ -141,7 +141,7 @@
         function addRow() {
             var newRow = `<tr>
                     <td>
-                        <select name="LedgerEntries[${rowIdx}].GLAccountId" class="form-select account-select">
+                        <select name="LedgerEntries[${rowIdx}].GLAccountId" class="form-control selectpicker account-select" data-live-search="true">
                             <option value="0">@Localize("-- Select Account --")</option>
         @Html.Raw(accounts != null ? string.Join("", accounts.Select(a => $"<option value='{a.Id}'>{a.AccountCode} - {a.AccountName.Replace("'", "\\'")}</option>")) : "")
                         </select>
@@ -154,7 +154,9 @@
                     </td>
                 </tr>`;
 
-            $('#ledgerTable tbody').append(newRow);
+            var $row = $(newRow);
+            $('#ledgerTable tbody').append($row);
+            $row.find('.selectpicker').selectpicker();
             rowIdx++;
         }
 

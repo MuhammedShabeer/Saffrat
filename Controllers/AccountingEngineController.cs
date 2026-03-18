@@ -5,6 +5,7 @@ using Saffrat.Models;
 using Saffrat.Models.AccountingEngine;
 using Saffrat.Services;
 using Saffrat.Services.AccountingEngine;
+using Saffrat.ViewModels;
 
 namespace Saffrat.Controllers
 {
@@ -31,13 +32,31 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> JournalEntries()
+        public async Task<IActionResult> JournalEntries(DateTime? start, DateTime? end, int? accountId)
         {
-            var entries = await _dbContext.Set<JournalEntry>()
+            var startDate = start ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var endDate = end ?? DateTime.Today;
+
+            var query = _dbContext.Set<JournalEntry>()
                 .Include(j => j.LedgerEntries)
                 .ThenInclude(l => l.GLAccount)
-                .OrderByDescending(j => j.EntryDate)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (start.HasValue) query = query.Where(j => j.EntryDate >= startDate);
+            if (end.HasValue) query = query.Where(j => j.EntryDate <= endDate);
+            
+            if (accountId.HasValue && accountId > 0)
+            {
+                query = query.Where(j => j.LedgerEntries.Any(l => l.GLAccountId == accountId));
+            }
+
+            var entries = await query.OrderByDescending(j => j.EntryDate).ToListAsync();
+            
+            ViewBag.Start = startDate.ToString("yyyy-MM-dd");
+            ViewBag.End = endDate.ToString("yyyy-MM-dd");
+            ViewBag.AccountId = accountId;
+            ViewBag.Accounts = await _dbContext.Set<GLAccount>().OrderBy(a => a.AccountCode).ToListAsync();
+
             return View(entries);
         }
 
@@ -481,6 +500,72 @@ namespace Saffrat.Controllers
             {
                 return Json(new { status = "error", message = ex.Message });
             }
+        }
+        [HttpGet]
+        public async Task<IActionResult> StatementOfAccounts(int? accountId, DateTime? startDate, DateTime? endDate)
+        {
+            var model = new StatementOfAccountsVM
+            {
+                Accounts = await _dbContext.Set<GLAccount>().Where(a => a.IsActive).ToListAsync(),
+                SelectedAccountId = accountId,
+                StartDate = startDate ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1),
+                EndDate = endDate ?? DateTime.Today
+            };
+
+            if (accountId.HasValue)
+            {
+                var account = await _dbContext.Set<GLAccount>().FirstOrDefaultAsync(a => a.Id == accountId.Value);
+                if (account != null)
+                {
+                    // 1. Calculate Opening Balance
+                    var openingEntries = await _dbContext.Set<LedgerEntry>()
+                        .Where(l => l.GLAccountId == accountId.Value && l.JournalEntry.EntryDate < model.StartDate && l.JournalEntry.IsPosted)
+                        .Select(l => new { l.Debit, l.Credit })
+                        .ToListAsync();
+
+                    if (account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense)
+                        model.OpeningBalance = openingEntries.Sum(e => e.Debit - e.Credit);
+                    else
+                        model.OpeningBalance = openingEntries.Sum(e => e.Credit - e.Debit);
+
+                    // 2. Fetch Transactions in Range
+                    var transactions = await _dbContext.Set<LedgerEntry>()
+                        .Include(l => l.JournalEntry)
+                        .Where(l => l.GLAccountId == accountId.Value && l.JournalEntry.EntryDate >= model.StartDate && l.JournalEntry.EntryDate <= model.EndDate && l.JournalEntry.IsPosted)
+                        .OrderBy(l => l.JournalEntry.EntryDate)
+                        .ThenBy(l => l.JournalEntryId)
+                        .ToListAsync();
+
+                    decimal currentRunningBalance = model.OpeningBalance;
+                    foreach (var trans in transactions)
+                    {
+                        decimal effect = 0;
+                        if (account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense)
+                            effect = trans.Debit - trans.Credit;
+                        else
+                            effect = trans.Credit - trans.Debit;
+
+                        currentRunningBalance += effect;
+
+                        model.Transactions.Add(new StatementOfAccountRow
+                        {
+                            JournalEntryId = trans.JournalEntryId,
+                            Date = trans.JournalEntry.EntryDate,
+                            Reference = trans.JournalEntry.ReferenceNumber,
+                            Description = trans.Description ?? trans.JournalEntry.Description,
+                            Debit = trans.Debit,
+                            Credit = trans.Credit,
+                            RunningBalance = currentRunningBalance,
+                            SourceDocumentType = trans.JournalEntry.SourceDocumentType,
+                            SourceDocumentId = trans.JournalEntry.SourceDocumentId
+                        });
+                    }
+
+                    model.ClosingBalance = currentRunningBalance;
+                }
+            }
+
+            return View(model);
         }
     }
 }
