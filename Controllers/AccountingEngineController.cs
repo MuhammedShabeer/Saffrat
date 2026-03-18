@@ -32,7 +32,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> JournalEntries(DateTime? start, DateTime? end, int? accountId)
+        public async Task<IActionResult> JournalEntries(DateTime? start, DateTime? end, int? accountId, string search)
         {
             var startDate = start ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var endDate = end ?? DateTime.Today;
@@ -44,17 +44,68 @@ namespace Saffrat.Controllers
 
             if (start.HasValue) query = query.Where(j => j.EntryDate >= startDate);
             if (end.HasValue) query = query.Where(j => j.EntryDate <= endDate);
-            
+
             if (accountId.HasValue && accountId > 0)
             {
                 query = query.Where(j => j.LedgerEntries.Any(l => l.GLAccountId == accountId));
             }
 
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.ToLower().Trim();
+
+                // Ingredient search for purchases
+                var purchaseIdsByIngredient = await _dbContext.PurchaseDetails
+                    .Include(pd => pd.IngredientItem)
+                    .Where(pd => pd.IngredientItem != null && pd.IngredientItem.ItemName.ToLower().Contains(s))
+                    .Select(pd => pd.PurchaseId)
+                    .ToListAsync();
+
+                // Food item search for POS Orders
+                var orderIdsByFoodItem = await _dbContext.OrderDetails
+                    .Include(od => od.Item)
+                    .Where(od => od.Item != null && od.Item.ItemName.ToLower().Contains(s))
+                    .Select(od => od.OrderId)
+                    .ToListAsync();
+
+                var purchaseIds = await _dbContext.Purchases
+                    .Include(p => p.Supplier)
+                    .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
+                    .Where(p =>
+                        (p.InvoiceNo != null && p.InvoiceNo.ToLower().Contains(s)) ||
+                        (p.Description != null && p.Description.ToLower().Contains(s)) ||
+                        (p.Supplier != null && p.Supplier.SupplierName.ToLower().Contains(s)) ||
+                        p.PurchaseDetails.Any(d => d.IngredientItem != null && d.IngredientItem.ItemName.ToLower().Contains(s)))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+                // Merge and filter nulls
+                foreach (var id in purchaseIds) if (id.HasValue) matchingPurchaseIds.Add(id.Value);
+                foreach (var id in purchaseIdsByIngredient) if (id != 0) matchingPurchaseIds.Add(id); // purchaseIdsByIngredient is List<int>
+
+                var payrollIds = await _dbContext.Payrolls
+                    .Include(p => p.Employee)
+                    .Where(p => p.Employee != null && p.Employee.Name.ToLower().Contains(s))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+                foreach (var id in payrollIds) matchingPayrollIds.Add(id);
+
+                var orderIds = await _dbContext.Orders
+                    .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
+                    .Where(o =>
+                        (o.Note != null && o.Note.ToLower().Contains(s)) ||
+                        o.OrderDetails.Any(d => d.Item != null && d.Item.ItemName.ToLower().Contains(s)))
+                    .Select(o => o.Id)
+                    .ToListAsync();
+                foreach (var id in orderIds) matchingOrderIds.Add(id);
+                foreach (var id in orderIdsByFoodItem) if (id.HasValue && id.Value != 0) matchingOrderIds.Add(id.Value);
+            }
+
             var entries = await query.OrderByDescending(j => j.EntryDate).ToListAsync();
-            
+
             ViewBag.Start = startDate.ToString("yyyy-MM-dd");
             ViewBag.End = endDate.ToString("yyyy-MM-dd");
             ViewBag.AccountId = accountId;
+            ViewBag.Search = search;
             ViewBag.Accounts = await _dbContext.Set<GLAccount>().OrderBy(a => a.AccountCode).ToListAsync();
 
             return View(entries);
@@ -502,22 +553,77 @@ namespace Saffrat.Controllers
             }
         }
         [HttpGet]
-        public async Task<IActionResult> StatementOfAccounts(int? accountId, DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> StatementOfAccounts(int? accountId, DateTime? startDate, DateTime? endDate, string search)
         {
             var model = new StatementOfAccountsVM
             {
-                Accounts = await _dbContext.Set<GLAccount>().Where(a => a.IsActive).ToListAsync(),
+                Accounts = await _dbContext.Set<GLAccount>().Where(a => a.IsActive).OrderBy(a => a.AccountCode).ToListAsync(),
                 SelectedAccountId = accountId,
                 StartDate = startDate ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1),
-                EndDate = endDate ?? DateTime.Today
+                EndDate = endDate ?? DateTime.Today,
+                Search = search
             };
+
+            // Build cross-entity search sets if a search term is provided (shared for both modes)
+            HashSet<int> matchingPurchaseIds = new HashSet<int>();
+            HashSet<int> matchingPayrollIds = new HashSet<int>();
+            HashSet<int> matchingOrderIds = new HashSet<int>();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.ToLower().Trim();
+
+                // Ingredient search for purchases
+                var purchaseIdsByIngredient = await _dbContext.PurchaseDetails
+                    .Include(pd => pd.IngredientItem)
+                    .Where(pd => pd.IngredientItem != null && pd.IngredientItem.ItemName.ToLower().Contains(s))
+                    .Select(pd => pd.PurchaseId)
+                    .ToListAsync();
+
+                // Food item search for POS Orders
+                var orderIdsByFoodItem = await _dbContext.OrderDetails
+                    .Include(od => od.Item)
+                    .Where(od => od.Item != null && od.Item.ItemName.ToLower().Contains(s))
+                    .Select(od => od.OrderId)
+                    .ToListAsync();
+
+                var purchaseIds = await _dbContext.Purchases
+                    .Include(p => p.Supplier)
+                    .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
+                    .Where(p =>
+                        (p.InvoiceNo != null && p.InvoiceNo.ToLower().Contains(s)) ||
+                        (p.Description != null && p.Description.ToLower().Contains(s)) ||
+                        (p.Supplier != null && p.Supplier.SupplierName.ToLower().Contains(s)) ||
+                        p.PurchaseDetails.Any(d => d.IngredientItem != null && d.IngredientItem.ItemName.ToLower().Contains(s)))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+                foreach (var id in purchaseIds) if (id.HasValue) matchingPurchaseIds.Add(id.Value);
+                foreach (var id in purchaseIdsByIngredient) if (id != 0) matchingPurchaseIds.Add(id);
+
+                var payrollIds = await _dbContext.Payrolls
+                    .Include(p => p.Employee)
+                    .Where(p => p.Employee != null && p.Employee.Name.ToLower().Contains(s))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+                foreach (var id in payrollIds) matchingPayrollIds.Add(id);
+
+                var orderIds = await _dbContext.Orders
+                    .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
+                    .Where(o =>
+                        (o.Note != null && o.Note.ToLower().Contains(s)) ||
+                        o.OrderDetails.Any(d => d.Item != null && d.Item.ItemName.ToLower().Contains(s)))
+                    .Select(o => o.Id)
+                    .ToListAsync();
+                foreach (var id in orderIds) matchingOrderIds.Add(id);
+                foreach (var id in orderIdsByFoodItem) if (id.HasValue && id.Value != 0) matchingOrderIds.Add(id.Value);
+            }
 
             if (accountId.HasValue)
             {
+                // Single-account mode: show running balance
                 var account = await _dbContext.Set<GLAccount>().FirstOrDefaultAsync(a => a.Id == accountId.Value);
                 if (account != null)
                 {
-                    // 1. Calculate Opening Balance
                     var openingEntries = await _dbContext.Set<LedgerEntry>()
                         .Where(l => l.GLAccountId == accountId.Value && l.JournalEntry.EntryDate < model.StartDate && l.JournalEntry.IsPosted)
                         .Select(l => new { l.Debit, l.Credit })
@@ -528,9 +634,9 @@ namespace Saffrat.Controllers
                     else
                         model.OpeningBalance = openingEntries.Sum(e => e.Credit - e.Debit);
 
-                    // 2. Fetch Transactions in Range
                     var transactions = await _dbContext.Set<LedgerEntry>()
                         .Include(l => l.JournalEntry)
+                        .Include(l => l.GLAccount)
                         .Where(l => l.GLAccountId == accountId.Value && l.JournalEntry.EntryDate >= model.StartDate && l.JournalEntry.EntryDate <= model.EndDate && l.JournalEntry.IsPosted)
                         .OrderBy(l => l.JournalEntry.EntryDate)
                         .ThenBy(l => l.JournalEntryId)
@@ -539,30 +645,110 @@ namespace Saffrat.Controllers
                     decimal currentRunningBalance = model.OpeningBalance;
                     foreach (var trans in transactions)
                     {
-                        decimal effect = 0;
-                        if (account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense)
-                            effect = trans.Debit - trans.Credit;
-                        else
-                            effect = trans.Credit - trans.Debit;
-
+                        decimal effect = (account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense)
+                            ? trans.Debit - trans.Credit
+                            : trans.Credit - trans.Debit;
                         currentRunningBalance += effect;
 
-                        model.Transactions.Add(new StatementOfAccountRow
+                        var row = new StatementOfAccountRow
                         {
                             JournalEntryId = trans.JournalEntryId,
                             Date = trans.JournalEntry.EntryDate,
                             Reference = trans.JournalEntry.ReferenceNumber,
-                            Description = trans.Description ?? trans.JournalEntry.Description,
+                            Description = trans.GLAccount?.AccountName,
+                            AccountName = trans.GLAccount?.AccountName,
                             Debit = trans.Debit,
                             Credit = trans.Credit,
                             RunningBalance = currentRunningBalance,
                             SourceDocumentType = trans.JournalEntry.SourceDocumentType,
                             SourceDocumentId = trans.JournalEntry.SourceDocumentId
-                        });
+                        };
+
+                        if (!string.IsNullOrWhiteSpace(search))
+                        {
+                            var s = search.ToLower().Trim();
+                            bool directMatch = (row.Description != null && row.Description.ToLower().Contains(s)) ||
+                                              (row.Reference != null && row.Reference.ToLower().Contains(s)) ||
+                                              (row.SourceDocumentType != null && row.SourceDocumentType.ToLower().Contains(s));
+                            bool sourceMatch =
+                                (row.SourceDocumentType == "Purchase" && row.SourceDocumentId.HasValue && matchingPurchaseIds.Contains(row.SourceDocumentId.Value)) ||
+                                (row.SourceDocumentType == "Payroll" && row.SourceDocumentId.HasValue && matchingPayrollIds.Contains(row.SourceDocumentId.Value)) ||
+                                (row.SourceDocumentType == "POS Order" && row.SourceDocumentId.HasValue && matchingOrderIds.Contains(row.SourceDocumentId.Value));
+                            if (!directMatch && !sourceMatch) continue;
+                        }
+
+                        model.Transactions.Add(row);
                     }
 
                     model.ClosingBalance = currentRunningBalance;
                 }
+            }
+            else
+            {
+                // All-accounts mode: show all ledger lines in date range
+                var transactions = await _dbContext.Set<LedgerEntry>()
+                    .Include(l => l.JournalEntry)
+                    .Include(l => l.GLAccount)
+                    .Where(l => l.JournalEntry.EntryDate >= model.StartDate && l.JournalEntry.EntryDate <= model.EndDate && l.JournalEntry.IsPosted)
+                    .OrderBy(l => l.JournalEntry.EntryDate)
+                    .ThenBy(l => l.JournalEntryId)
+                    .ToListAsync();
+
+                foreach (var trans in transactions)
+                {
+                    var row = new StatementOfAccountRow
+                    {
+                        JournalEntryId = trans.JournalEntryId,
+                        Date = trans.JournalEntry.EntryDate,
+                        Reference = trans.JournalEntry.ReferenceNumber,
+                        Description = trans.GLAccount?.AccountName,
+                        AccountName = trans.GLAccount?.AccountName,
+                        Debit = trans.Debit,
+                        Credit = trans.Credit,
+                        RunningBalance = 0, // Not meaningful without a specific account
+                        SourceDocumentType = trans.JournalEntry.SourceDocumentType,
+                        SourceDocumentId = trans.JournalEntry.SourceDocumentId
+                    };
+
+                    if (!string.IsNullOrWhiteSpace(search))
+                    {
+                        var s = search.ToLower().Trim();
+                        bool directMatch = (row.Description != null && row.Description.ToLower().Contains(s)) ||
+                                          (row.Reference != null && row.Reference.ToLower().Contains(s)) ||
+                                          (row.SourceDocumentType != null && row.SourceDocumentType.ToLower().Contains(s)) ||
+                                          (row.AccountName != null && row.AccountName.ToLower().Contains(s));
+                        bool sourceMatch =
+                            (row.SourceDocumentType == "Purchase" && row.SourceDocumentId.HasValue && matchingPurchaseIds.Contains(row.SourceDocumentId.Value)) ||
+                            (row.SourceDocumentType == "Payroll" && row.SourceDocumentId.HasValue && matchingPayrollIds.Contains(row.SourceDocumentId.Value)) ||
+                            (row.SourceDocumentType == "POS Order" && row.SourceDocumentId.HasValue && matchingOrderIds.Contains(row.SourceDocumentId.Value));
+
+                        // Ingredient/food item search for purchases
+                        bool ingredientMatch = false;
+                        if (!directMatch && !sourceMatch && row.SourceDocumentType == "Purchase" && row.SourceDocumentId.HasValue)
+                        {
+                            var purchase = await _dbContext.Purchases
+                                .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
+                                .FirstOrDefaultAsync(p => p.Id == row.SourceDocumentId.Value);
+                            if (purchase != null && purchase.PurchaseDetails.Any(d => d.IngredientItem != null && d.IngredientItem.ItemName.ToLower().Contains(s)))
+                                ingredientMatch = true;
+                        }
+                        // Food item search for POS Orders
+                        if (!directMatch && !sourceMatch && row.SourceDocumentType == "POS Order" && row.SourceDocumentId.HasValue)
+                        {
+                            var order = await _dbContext.Orders
+                                .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
+                                .FirstOrDefaultAsync(o => o.Id == row.SourceDocumentId.Value);
+                            if (order != null && order.OrderDetails.Any(d => d.Item != null && d.Item.ItemName.ToLower().Contains(s)))
+                                ingredientMatch = true;
+                        }
+                        if (!directMatch && !sourceMatch && !ingredientMatch) continue;
+                    }
+
+                    model.Transactions.Add(row);
+                }
+
+                model.OpeningBalance = 0;
+                model.ClosingBalance = model.Transactions.Sum(t => t.Debit) - model.Transactions.Sum(t => t.Credit);
             }
 
             return View(model);

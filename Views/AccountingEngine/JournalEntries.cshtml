@@ -69,6 +69,29 @@
                             <button type="submit" class="btn btn-primary w-100"><i class="fa fa-filter me-1"></i> @Localize("Filter")</button>
                         </div>
                     </div>
+                    <div class="row g-3 mt-1 align-items-end">
+                        <div class="col-md-10">
+                            <label class="form-label fw-bold small text-muted text-uppercase">@Localize("Search")</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                <input type="text" name="search" class="form-control" value="@ViewBag.Search"
+                                       placeholder="@Localize("Search by description, reference, supplier, employee, food item, ingredient...")" />
+                                @if (!string.IsNullOrEmpty(ViewBag.Search as string))
+                                {
+                                    <a asp-action="JournalEntries" asp-route-start="@ViewBag.Start" asp-route-end="@ViewBag.End" asp-route-accountId="@ViewBag.AccountId" class="btn btn-outline-secondary" title="@Localize("Clear search")"><i class="fa fa-times"></i></a>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-outline-primary w-100"><i class="fa fa-search me-1"></i> @Localize("Search")</button>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(ViewBag.Search as string))
+                    {
+                        <div class="mt-2">
+                            <span class="badge bg-info text-white"><i class="fa fa-search me-1"></i> @Localize("Searching for"): "@ViewBag.Search"</span>
+                        </div>
+                    }
                 </form>
             </div>
         </div>
