@@ -37,38 +37,31 @@ namespace Saffrat.Controllers
             var startDate = start ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var endDate = end ?? DateTime.Today;
 
+            // 1. Initialize HashSet for faster lookups and to avoid duplicate IDs
+            var matchingPurchaseIds = new HashSet<int>();
+            var matchingOrderIds = new HashSet<int>();
+            var matchingPayrollIds = new HashSet<int>();
+
             var query = _dbContext.Set<JournalEntry>()
                 .Include(j => j.LedgerEntries)
                 .ThenInclude(l => l.GLAccount)
                 .AsQueryable();
 
-            if (start.HasValue) query = query.Where(j => j.EntryDate >= startDate);
-            if (end.HasValue) query = query.Where(j => j.EntryDate <= endDate);
+            // 2. Standard Date and Account Filtering
+            query = query.Where(j => j.EntryDate >= startDate && j.EntryDate <= endDate);
 
             if (accountId.HasValue && accountId > 0)
             {
                 query = query.Where(j => j.LedgerEntries.Any(l => l.GLAccountId == accountId));
             }
 
+            // 3. Complex Search Logic
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.ToLower().Trim();
 
-                // Ingredient search for purchases
-                var purchaseIdsByIngredient = await _dbContext.PurchaseDetails
-                    .Include(pd => pd.IngredientItem)
-                    .Where(pd => pd.IngredientItem != null && pd.IngredientItem.ItemName.ToLower().Contains(s))
-                    .Select(pd => pd.PurchaseId)
-                    .ToListAsync();
-
-                // Food item search for POS Orders
-                var orderIdsByFoodItem = await _dbContext.OrderDetails
-                    .Include(od => od.Item)
-                    .Where(od => od.Item != null && od.Item.ItemName.ToLower().Contains(s))
-                    .Select(od => od.OrderId)
-                    .ToListAsync();
-
-                var purchaseIds = await _dbContext.Purchases
+                // Search Ingredients & Purchases
+                var purchases = await _dbContext.Purchases
                     .Include(p => p.Supplier)
                     .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
                     .Where(p =>
@@ -78,30 +71,44 @@ namespace Saffrat.Controllers
                         p.PurchaseDetails.Any(d => d.IngredientItem != null && d.IngredientItem.ItemName.ToLower().Contains(s)))
                     .Select(p => p.Id)
                     .ToListAsync();
-                // Merge and filter nulls
-                foreach (var id in purchaseIds) if (id.HasValue) matchingPurchaseIds.Add(id.Value);
-                foreach (var id in purchaseIdsByIngredient) if (id != 0) matchingPurchaseIds.Add(id); // purchaseIdsByIngredient is List<int>
 
-                var payrollIds = await _dbContext.Payrolls
+                foreach (var id in purchases) matchingPurchaseIds.Add(id ?? 0);
+
+                // Search Payroll (Matches D-NIZAR, MD NUR RASUL, etc.)
+                var payrolls = await _dbContext.Payrolls
                     .Include(p => p.Employee)
                     .Where(p => p.Employee != null && p.Employee.Name.ToLower().Contains(s))
                     .Select(p => p.Id)
                     .ToListAsync();
-                foreach (var id in payrollIds) matchingPayrollIds.Add(id);
 
-                var orderIds = await _dbContext.Orders
+                foreach (var id in payrolls) matchingPayrollIds.Add(id);
+
+                // Search POS Orders (Matches Samosa types/Notes)
+                var orders = await _dbContext.Orders
                     .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
                     .Where(o =>
                         (o.Note != null && o.Note.ToLower().Contains(s)) ||
                         o.OrderDetails.Any(d => d.Item != null && d.Item.ItemName.ToLower().Contains(s)))
                     .Select(o => o.Id)
                     .ToListAsync();
-                foreach (var id in orderIds) matchingOrderIds.Add(id);
-                foreach (var id in orderIdsByFoodItem) if (id.HasValue && id.Value != 0) matchingOrderIds.Add(id.Value);
+
+                foreach (var id in orders) matchingOrderIds.Add(id);
+
+                // 4. APPLY the filters to the main Journal query
+                // Assuming JournalEntry has SourceId and SourceDoc properties
+                query = query.Where(j =>
+                    (j.Description != null && j.Description.ToLower().Contains(s)) ||
+                    (j.ReferenceNumber != null && j.ReferenceNumber.ToLower().Contains(s)) ||
+                    (j.SourceDoc == "purchase" && matchingPurchaseIds.Contains(j.SourceId ?? 0)) ||
+                    (j.SourceDoc == "pos" && matchingOrderIds.Contains(j.SourceId ?? 0)) ||
+                    (j.SourceDoc == "payroll" && matchingPayrollIds.Contains(j.SourceId ?? 0)
+                    )
+                );
             }
 
             var entries = await query.OrderByDescending(j => j.EntryDate).ToListAsync();
 
+            // 5. Populate ViewBags for the UI
             ViewBag.Start = startDate.ToString("yyyy-MM-dd");
             ViewBag.End = endDate.ToString("yyyy-MM-dd");
             ViewBag.AccountId = accountId;
@@ -110,7 +117,6 @@ namespace Saffrat.Controllers
 
             return View(entries);
         }
-
         [HttpGet]
         public async Task<IActionResult> BalanceSheet(DateTime? asOfDate)
         {
@@ -137,12 +143,12 @@ namespace Saffrat.Controllers
         {
             var invoice = await _dbContext.Set<Invoice>()
                 .FirstOrDefaultAsync(i => i.Id == id);
-                
+
             if (invoice == null) return NotFound();
 
             var customer = await _dbContext.Customers.FirstOrDefaultAsync(c => c.Id == invoice.CustomerId);
 
-            return Json(new 
+            return Json(new
             {
                 invoice.InvoiceNumber,
                 CustomerName = customer?.CustomerName ?? "Unknown",
@@ -171,7 +177,7 @@ namespace Saffrat.Controllers
                 invoice.InvoiceNumber = $"INV-{DateTime.Now:yyyyMMddHHmmss}";
                 invoice.Status = "Draft";
                 invoice.AmountPaid = 0;
-                
+
                 _dbContext.Set<Invoice>().Add(invoice);
                 await _dbContext.SaveChangesAsync();
 
@@ -209,7 +215,7 @@ namespace Saffrat.Controllers
                 invoice.AmountPaid = invoice.TotalAmount;
                 // Note: We don't overwrite invoice.JournalEntryId because that points to the original AR generation.
                 // The payment journal acts as a separate ledger entry linked via SourceDocumentId in the Engine.
-                
+
                 _dbContext.Set<Invoice>().Update(invoice);
                 await _dbContext.SaveChangesAsync();
 
@@ -237,7 +243,7 @@ namespace Saffrat.Controllers
 
             var supplier = await _dbContext.Suppliers.FirstOrDefaultAsync(s => s.Id == bill.SupplierId);
 
-            return Json(new 
+            return Json(new
             {
                 bill.BillNumber,
                 SupplierName = supplier?.SupplierName ?? "Unknown",
@@ -292,7 +298,7 @@ namespace Saffrat.Controllers
 
                 bill.Status = "Paid";
                 bill.AmountPaid = bill.TotalAmount;
-                
+
                 _dbContext.Set<Bill>().Update(bill);
                 await _dbContext.SaveChangesAsync();
 
