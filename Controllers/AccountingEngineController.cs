@@ -37,17 +37,15 @@ namespace Saffrat.Controllers
             var startDate = start ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var endDate = end ?? DateTime.Today;
 
-            // 1. Initialize HashSet for faster lookups and to avoid duplicate IDs
-            var matchingPurchaseIds = new HashSet<int>();
-            var matchingOrderIds = new HashSet<int>();
-            var matchingPayrollIds = new HashSet<int>();
+            // 1. Use a HashSet of strings to store matching reference patterns (e.g., "PUR-5")
+            var matchingReferenceNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var query = _dbContext.Set<JournalEntry>()
                 .Include(j => j.LedgerEntries)
                 .ThenInclude(l => l.GLAccount)
                 .AsQueryable();
 
-            // 2. Standard Date and Account Filtering
+            // Standard Filters
             query = query.Where(j => j.EntryDate >= startDate && j.EntryDate <= endDate);
 
             if (accountId.HasValue && accountId > 0)
@@ -55,13 +53,13 @@ namespace Saffrat.Controllers
                 query = query.Where(j => j.LedgerEntries.Any(l => l.GLAccountId == accountId));
             }
 
-            // 3. Complex Search Logic
+            // 2. Complex Search Logic using Reference Number patterns
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.ToLower().Trim();
 
-                // Search Ingredients & Purchases
-                var purchases = await _dbContext.Purchases
+                // Search Purchases by Invoice, Description, Supplier, or Ingredients
+                var purchaseIds = await _dbContext.Purchases
                     .Include(p => p.Supplier)
                     .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
                     .Where(p =>
@@ -72,19 +70,22 @@ namespace Saffrat.Controllers
                     .Select(p => p.Id)
                     .ToListAsync();
 
-                foreach (var id in purchases) matchingPurchaseIds.Add(id ?? 0);
+                foreach (var id in purchaseIds)
+                {
+                    if (id.HasValue) matchingReferenceNumbers.Add($"PUR-{id.Value}");
+                }
 
-                // Search Payroll (Matches D-NIZAR, MD NUR RASUL, etc.)
-                var payrolls = await _dbContext.Payrolls
+                // Search Payroll by Employee Name
+                var payrollIds = await _dbContext.Payrolls
                     .Include(p => p.Employee)
                     .Where(p => p.Employee != null && p.Employee.Name.ToLower().Contains(s))
                     .Select(p => p.Id)
                     .ToListAsync();
 
-                foreach (var id in payrolls) matchingPayrollIds.Add(id);
+                foreach (var id in payrollIds) matchingReferenceNumbers.Add($"PAYROLL-{id}");
 
-                // Search POS Orders (Matches Samosa types/Notes)
-                var orders = await _dbContext.Orders
+                // Search Orders by Note or Food Item Name
+                var orderIds = await _dbContext.Orders
                     .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
                     .Where(o =>
                         (o.Note != null && o.Note.ToLower().Contains(s)) ||
@@ -92,23 +93,20 @@ namespace Saffrat.Controllers
                     .Select(o => o.Id)
                     .ToListAsync();
 
-                foreach (var id in orders) matchingOrderIds.Add(id);
+                foreach (var id in orderIds) matchingReferenceNumbers.Add($"SALE-{id}");
 
-                // 4. APPLY the filters to the main Journal query
-                // Assuming JournalEntry has SourceId and SourceDoc properties
+                // 3. APPLY the filter to the main Journal query using ReferenceNumber
                 query = query.Where(j =>
                     (j.Description != null && j.Description.ToLower().Contains(s)) ||
-                    (j.ReferenceNumber != null && j.ReferenceNumber.ToLower().Contains(s)) ||
-                    (j.SourceDoc == "purchase" && matchingPurchaseIds.Contains(j.SourceId ?? 0)) ||
-                    (j.SourceDoc == "pos" && matchingOrderIds.Contains(j.SourceId ?? 0)) ||
-                    (j.SourceDoc == "payroll" && matchingPayrollIds.Contains(j.SourceId ?? 0)
-                    )
+                    (j.ReferenceNumber != null && (
+                        j.ReferenceNumber.ToLower().Contains(s) ||
+                        matchingReferenceNumbers.Contains(j.ReferenceNumber)
+                    ))
                 );
             }
 
             var entries = await query.OrderByDescending(j => j.EntryDate).ToListAsync();
 
-            // 5. Populate ViewBags for the UI
             ViewBag.Start = startDate.ToString("yyyy-MM-dd");
             ViewBag.End = endDate.ToString("yyyy-MM-dd");
             ViewBag.AccountId = accountId;
@@ -570,30 +568,17 @@ namespace Saffrat.Controllers
                 Search = search
             };
 
-            // Build cross-entity search sets if a search term is provided (shared for both modes)
             HashSet<int> matchingPurchaseIds = new HashSet<int>();
             HashSet<int> matchingPayrollIds = new HashSet<int>();
             HashSet<int> matchingOrderIds = new HashSet<int>();
 
+            // 1. PRE-GATHER ALL MATCHING IDs (Execute these queries only once)
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.ToLower().Trim();
 
-                // Ingredient search for purchases
-                var purchaseIdsByIngredient = await _dbContext.PurchaseDetails
-                    .Include(pd => pd.IngredientItem)
-                    .Where(pd => pd.IngredientItem != null && pd.IngredientItem.ItemName.ToLower().Contains(s))
-                    .Select(pd => pd.PurchaseId)
-                    .ToListAsync();
-
-                // Food item search for POS Orders
-                var orderIdsByFoodItem = await _dbContext.OrderDetails
-                    .Include(od => od.Item)
-                    .Where(od => od.Item != null && od.Item.ItemName.ToLower().Contains(s))
-                    .Select(od => od.OrderId)
-                    .ToListAsync();
-
-                var purchaseIds = await _dbContext.Purchases
+                // Search Purchases by Invoice, Supplier, or Ingredients (like "Onions")
+                var purchases = await _dbContext.Purchases
                     .Include(p => p.Supplier)
                     .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
                     .Where(p =>
@@ -601,163 +586,114 @@ namespace Saffrat.Controllers
                         (p.Description != null && p.Description.ToLower().Contains(s)) ||
                         (p.Supplier != null && p.Supplier.SupplierName.ToLower().Contains(s)) ||
                         p.PurchaseDetails.Any(d => d.IngredientItem != null && d.IngredientItem.ItemName.ToLower().Contains(s)))
-                    .Select(p => p.Id)
-                    .ToListAsync();
-                foreach (var id in purchaseIds) if (id.HasValue) matchingPurchaseIds.Add(id.Value);
-                foreach (var id in purchaseIdsByIngredient) if (id != 0) matchingPurchaseIds.Add(id);
+                    .Select(p => p.Id).ToListAsync();
+                foreach (var id in purchases) if (id.HasValue) matchingPurchaseIds.Add(id.Value);
 
-                var payrollIds = await _dbContext.Payrolls
+                // Search Payroll (Matches names like "MD Nur Rasul")
+                var payrolls = await _dbContext.Payrolls
                     .Include(p => p.Employee)
                     .Where(p => p.Employee != null && p.Employee.Name.ToLower().Contains(s))
-                    .Select(p => p.Id)
-                    .ToListAsync();
-                foreach (var id in payrollIds) matchingPayrollIds.Add(id);
+                    .Select(p => p.Id).ToListAsync();
+                foreach (var id in payrolls) matchingPayrollIds.Add(id);
 
-                var orderIds = await _dbContext.Orders
+                // Search POS Orders (Matches Notes or Food Item names)
+                var orders = await _dbContext.Orders
                     .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
                     .Where(o =>
                         (o.Note != null && o.Note.ToLower().Contains(s)) ||
                         o.OrderDetails.Any(d => d.Item != null && d.Item.ItemName.ToLower().Contains(s)))
-                    .Select(o => o.Id)
-                    .ToListAsync();
-                foreach (var id in orderIds) matchingOrderIds.Add(id);
-                foreach (var id in orderIdsByFoodItem) if (id.HasValue && id.Value != 0) matchingOrderIds.Add(id.Value);
+                    .Select(o => o.Id).ToListAsync();
+                foreach (var id in orders) matchingOrderIds.Add(id);
             }
+
+            // 2. FETCH ALL RELEVANT LEDGER DATA
+            var ledgerQuery = _dbContext.Set<LedgerEntry>()
+                .Include(l => l.JournalEntry)
+                .Include(l => l.GLAccount)
+                .Where(l => l.JournalEntry.IsPosted);
 
             if (accountId.HasValue)
             {
-                // Single-account mode: show running balance
-                var account = await _dbContext.Set<GLAccount>().FirstOrDefaultAsync(a => a.Id == accountId.Value);
+                var account = model.Accounts.FirstOrDefault(a => a.Id == accountId.Value);
                 if (account != null)
                 {
-                    var openingEntries = await _dbContext.Set<LedgerEntry>()
-                        .Where(l => l.GLAccountId == accountId.Value && l.JournalEntry.EntryDate < model.StartDate && l.JournalEntry.IsPosted)
-                        .Select(l => new { l.Debit, l.Credit })
-                        .ToListAsync();
+                    // Opening Balance Calculation
+                    var openingEntries = await ledgerQuery
+                        .Where(l => l.GLAccountId == accountId.Value && l.JournalEntry.EntryDate < model.StartDate)
+                        .Select(l => new { l.Debit, l.Credit }).ToListAsync();
 
-                    if (account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense)
-                        model.OpeningBalance = openingEntries.Sum(e => e.Debit - e.Credit);
-                    else
-                        model.OpeningBalance = openingEntries.Sum(e => e.Credit - e.Debit);
+                    bool isDebitAccount = account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense;
+                    model.OpeningBalance = isDebitAccount
+                        ? openingEntries.Sum(e => e.Debit - e.Credit)
+                        : openingEntries.Sum(e => e.Credit - e.Debit);
 
-                    var transactions = await _dbContext.Set<LedgerEntry>()
-                        .Include(l => l.JournalEntry)
-                        .Include(l => l.GLAccount)
-                        .Where(l => l.GLAccountId == accountId.Value && l.JournalEntry.EntryDate >= model.StartDate && l.JournalEntry.EntryDate <= model.EndDate && l.JournalEntry.IsPosted)
-                        .OrderBy(l => l.JournalEntry.EntryDate)
-                        .ThenBy(l => l.JournalEntryId)
-                        .ToListAsync();
+                    var transactions = await ledgerQuery
+                        .Where(l => l.GLAccountId == accountId.Value && l.JournalEntry.EntryDate >= model.StartDate && l.JournalEntry.EntryDate <= model.EndDate)
+                        .OrderBy(l => l.JournalEntry.EntryDate).ThenBy(l => l.JournalEntryId).ToListAsync();
 
-                    decimal currentRunningBalance = model.OpeningBalance;
+                    decimal runningBal = model.OpeningBalance;
                     foreach (var trans in transactions)
                     {
-                        decimal effect = (account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense)
-                            ? trans.Debit - trans.Credit
-                            : trans.Credit - trans.Debit;
-                        currentRunningBalance += effect;
+                        var row = MapToRow(trans);
 
-                        var row = new StatementOfAccountRow
-                        {
-                            JournalEntryId = trans.JournalEntryId,
-                            Date = trans.JournalEntry.EntryDate,
-                            Reference = trans.JournalEntry.ReferenceNumber,
-                            Description = trans.GLAccount?.AccountName,
-                            AccountName = trans.GLAccount?.AccountName,
-                            Debit = trans.Debit,
-                            Credit = trans.Credit,
-                            RunningBalance = currentRunningBalance,
-                            SourceDocumentType = trans.JournalEntry.SourceDocumentType,
-                            SourceDocumentId = trans.JournalEntry.SourceDocumentId
-                        };
+                        // 3. APPLY FILTER IN MEMORY (Instant performance)
+                        if (!IsRowMatch(row, search, matchingPurchaseIds, matchingPayrollIds, matchingOrderIds)) continue;
 
-                        if (!string.IsNullOrWhiteSpace(search))
-                        {
-                            var s = search.ToLower().Trim();
-                            bool directMatch = (row.Description != null && row.Description.ToLower().Contains(s)) ||
-                                              (row.Reference != null && row.Reference.ToLower().Contains(s)) ||
-                                              (row.SourceDocumentType != null && row.SourceDocumentType.ToLower().Contains(s));
-                            bool sourceMatch =
-                                (row.SourceDocumentType == "Purchase" && row.SourceDocumentId.HasValue && matchingPurchaseIds.Contains(row.SourceDocumentId.Value)) ||
-                                (row.SourceDocumentType == "Payroll" && row.SourceDocumentId.HasValue && matchingPayrollIds.Contains(row.SourceDocumentId.Value)) ||
-                                (row.SourceDocumentType == "POS Order" && row.SourceDocumentId.HasValue && matchingOrderIds.Contains(row.SourceDocumentId.Value));
-                            if (!directMatch && !sourceMatch) continue;
-                        }
-
+                        runningBal += isDebitAccount ? (trans.Debit - trans.Credit) : (trans.Credit - trans.Debit);
+                        row.RunningBalance = runningBal;
                         model.Transactions.Add(row);
                     }
-
-                    model.ClosingBalance = currentRunningBalance;
+                    model.ClosingBalance = runningBal;
                 }
             }
             else
             {
-                // All-accounts mode: show all ledger lines in date range
-                var transactions = await _dbContext.Set<LedgerEntry>()
-                    .Include(l => l.JournalEntry)
-                    .Include(l => l.GLAccount)
-                    .Where(l => l.JournalEntry.EntryDate >= model.StartDate && l.JournalEntry.EntryDate <= model.EndDate && l.JournalEntry.IsPosted)
-                    .OrderBy(l => l.JournalEntry.EntryDate)
-                    .ThenBy(l => l.JournalEntryId)
-                    .ToListAsync();
+                // All-Accounts Mode (Day Book view)
+                var transactions = await ledgerQuery
+                    .Where(l => l.JournalEntry.EntryDate >= model.StartDate && l.JournalEntry.EntryDate <= model.EndDate)
+                    .OrderBy(l => l.JournalEntry.EntryDate).ThenBy(l => l.JournalEntryId).ToListAsync();
 
                 foreach (var trans in transactions)
                 {
-                    var row = new StatementOfAccountRow
-                    {
-                        JournalEntryId = trans.JournalEntryId,
-                        Date = trans.JournalEntry.EntryDate,
-                        Reference = trans.JournalEntry.ReferenceNumber,
-                        Description = trans.GLAccount?.AccountName,
-                        AccountName = trans.GLAccount?.AccountName,
-                        Debit = trans.Debit,
-                        Credit = trans.Credit,
-                        RunningBalance = 0, // Not meaningful without a specific account
-                        SourceDocumentType = trans.JournalEntry.SourceDocumentType,
-                        SourceDocumentId = trans.JournalEntry.SourceDocumentId
-                    };
-
-                    if (!string.IsNullOrWhiteSpace(search))
-                    {
-                        var s = search.ToLower().Trim();
-                        bool directMatch = (row.Description != null && row.Description.ToLower().Contains(s)) ||
-                                          (row.Reference != null && row.Reference.ToLower().Contains(s)) ||
-                                          (row.SourceDocumentType != null && row.SourceDocumentType.ToLower().Contains(s)) ||
-                                          (row.AccountName != null && row.AccountName.ToLower().Contains(s));
-                        bool sourceMatch =
-                            (row.SourceDocumentType == "Purchase" && row.SourceDocumentId.HasValue && matchingPurchaseIds.Contains(row.SourceDocumentId.Value)) ||
-                            (row.SourceDocumentType == "Payroll" && row.SourceDocumentId.HasValue && matchingPayrollIds.Contains(row.SourceDocumentId.Value)) ||
-                            (row.SourceDocumentType == "POS Order" && row.SourceDocumentId.HasValue && matchingOrderIds.Contains(row.SourceDocumentId.Value));
-
-                        // Ingredient/food item search for purchases
-                        bool ingredientMatch = false;
-                        if (!directMatch && !sourceMatch && row.SourceDocumentType == "Purchase" && row.SourceDocumentId.HasValue)
-                        {
-                            var purchase = await _dbContext.Purchases
-                                .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
-                                .FirstOrDefaultAsync(p => p.Id == row.SourceDocumentId.Value);
-                            if (purchase != null && purchase.PurchaseDetails.Any(d => d.IngredientItem != null && d.IngredientItem.ItemName.ToLower().Contains(s)))
-                                ingredientMatch = true;
-                        }
-                        // Food item search for POS Orders
-                        if (!directMatch && !sourceMatch && row.SourceDocumentType == "POS Order" && row.SourceDocumentId.HasValue)
-                        {
-                            var order = await _dbContext.Orders
-                                .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
-                                .FirstOrDefaultAsync(o => o.Id == row.SourceDocumentId.Value);
-                            if (order != null && order.OrderDetails.Any(d => d.Item != null && d.Item.ItemName.ToLower().Contains(s)))
-                                ingredientMatch = true;
-                        }
-                        if (!directMatch && !sourceMatch && !ingredientMatch) continue;
-                    }
-
+                    var row = MapToRow(trans);
+                    if (!IsRowMatch(row, search, matchingPurchaseIds, matchingPayrollIds, matchingOrderIds)) continue;
                     model.Transactions.Add(row);
                 }
-
-                model.OpeningBalance = 0;
-                model.ClosingBalance = model.Transactions.Sum(t => t.Debit) - model.Transactions.Sum(t => t.Credit);
             }
 
             return View(model);
+        }
+
+        // Helper: Map LedgerEntry to ViewModel Row
+        private StatementOfAccountRow MapToRow(LedgerEntry l) => new StatementOfAccountRow
+        {
+            JournalEntryId = l.JournalEntryId,
+            Date = l.JournalEntry.EntryDate,
+            Reference = l.JournalEntry.ReferenceNumber,
+            Description = l.Description ?? l.JournalEntry.Description,
+            AccountName = l.GLAccount?.AccountName,
+            Debit = l.Debit,
+            Credit = l.Credit,
+            SourceDocumentType = l.JournalEntry.SourceDocumentType,
+            SourceDocumentId = l.JournalEntry.SourceDocumentId
+        };
+
+        // Helper: Perform fast in-memory search
+        private bool IsRowMatch(StatementOfAccountRow row, string search, HashSet<int> pIds, HashSet<int> payIds, HashSet<int> oIds)
+        {
+            if (string.IsNullOrWhiteSpace(search)) return true;
+            var s = search.ToLower().Trim();
+
+            bool directMatch = (row.Description?.ToLower().Contains(s) ?? false) ||
+                               (row.Reference?.ToLower().Contains(s) ?? false) ||
+                               (row.AccountName?.ToLower().Contains(s) ?? false);
+
+            // Matches using the pre-collected IDs from sub-entities (Ingredients, Employee Names, etc.)
+            bool sourceMatch = (row.SourceDocumentType == "Purchase" && pIds.Contains(row.SourceDocumentId ?? 0)) ||
+                               (row.SourceDocumentType == "Payroll" && payIds.Contains(row.SourceDocumentId ?? 0)) ||
+                               (row.SourceDocumentType == "POS Order" && oIds.Contains(row.SourceDocumentId ?? 0));
+
+            return directMatch || sourceMatch;
         }
     }
 }
