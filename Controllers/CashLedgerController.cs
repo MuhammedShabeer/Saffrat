@@ -64,6 +64,9 @@ namespace Saffrat.Controllers
                 model.CreatedAt = CurrentDateTime();
                 model.CreatedBy = userName;
 
+                _dbContext.CashLedgers.Add(model);
+                await _dbContext.SaveChangesAsync();
+
                 // 1. Create Journal Entry for Accounting integration
                 var journalEntry = new JournalEntry
                 {
@@ -71,7 +74,9 @@ namespace Saffrat.Controllers
                     Description = model.Description,
                     EntryDate = model.EntryDate,
                     SourceDocumentType = "CashLedger",
+                    SourceDocumentId = model.Id,
                     IsPosted = false,
+                    CreatedAt = CurrentDateTime(),
                     LedgerEntries = new List<LedgerEntry>()
                 };
 
@@ -109,7 +114,7 @@ namespace Saffrat.Controllers
                 await _accountingEngine.PostJournalEntryAsync(journalEntry);
 
                 model.JournalEntryId = journalEntry.Id;
-                _dbContext.CashLedgers.Add(model);
+                _dbContext.CashLedgers.Update(model);
                 await _dbContext.SaveChangesAsync();
 
                 await transaction.CommitAsync();

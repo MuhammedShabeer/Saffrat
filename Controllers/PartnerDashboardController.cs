@@ -110,6 +110,9 @@ namespace Saffrat.Controllers
                 var partner = await _dbContext.Partners.FindAsync(trans.PartnerId);
                 if (partner == null) throw new Exception("Partner not found.");
 
+                _dbContext.PartnerTransactions.Add(trans);
+                await _dbContext.SaveChangesAsync();
+
                 // 1. Create Journal Entry
                 var journalEntry = new JournalEntry
                 {
@@ -117,7 +120,9 @@ namespace Saffrat.Controllers
                     Description = $"{trans.Type} for {partner.Name}: {trans.Note}",
                     EntryDate = trans.EntryDate,
                     SourceDocumentType = "PartnerTransaction",
+                    SourceDocumentId = trans.Id,
                     IsPosted = false,
+                    CreatedAt = CurrentDateTime(),
                     LedgerEntries = new List<LedgerEntry>()
                 };
 
@@ -140,7 +145,7 @@ namespace Saffrat.Controllers
                 await _accountingEngine.PostJournalEntryAsync(journalEntry);
 
                 trans.JournalEntryId = journalEntry.Id;
-                _dbContext.PartnerTransactions.Add(trans);
+                _dbContext.PartnerTransactions.Update(trans);
                 await _dbContext.SaveChangesAsync();
 
                 await transaction.CommitAsync();

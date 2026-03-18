@@ -40,8 +40,17 @@ namespace Saffrat.Services.AccountingEngine
 
         /// <summary>
         /// Handles the translation of a new Bill (AP) into a pending Journal Entry.
-        /// </summary>
         Task<JournalEntry> DraftBillJournalEntryAsync(Bill bill);
+
+        /// <summary>
+        /// Handles the translation of a payment receipt against an Invoice into a pending Journal Entry.
+        /// </summary>
+        Task<JournalEntry> RecordInvoicePaymentAsync(Invoice invoice);
+
+        /// <summary>
+        /// Handles the translation of a payment sent against a Bill into a pending Journal Entry.
+        /// </summary>
+        Task<JournalEntry> RecordBillPaymentAsync(Bill bill);
     }
 
     // Report DTOs

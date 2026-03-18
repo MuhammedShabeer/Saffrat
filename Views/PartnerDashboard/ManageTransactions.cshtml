@@ -83,46 +83,51 @@
 </div>
 
 <!-- Add Transaction Modal -->
-<div class="modal fade" id="transModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">@Localize("Add Transaction")</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="transForm" class="needs-validation" novalidate="">
-                    <input type="hidden" name="PartnerId" value="@Model.Id" />
-                    <div class="form-group mb-3">
-                        <label class="control-label">@Localize("Date") <code>*</code></label>
-                        <input type="date" name="EntryDate" value="@DateTime.Now.ToString("yyyy-MM-dd")"
-                            class="form-control" required />
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="control-label">@Localize("Transaction Type") <code>*</code></label>
-                        <select name="Type" class="form-control" required>
-                            <option value="Investment">@Localize("Investment (Capital In)")</option>
-                            <option value="Withdrawal">@Localize("Withdrawal (Capital Out)")</option>
-                            <option value="ProfitDistribution">@Localize("Profit Distribution")</option>
-                        </select>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="control-label">@Localize("Amount") <code>*</code></label>
-                        <input type="number" step="0.01" name="Amount" class="form-control" required />
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="control-label">@Localize("Note / Description") <code>*</code></label>
-                        <textarea name="Note" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary">@Localize("Save Transaction")</button>
-                    </div>
-                </form>
+@section models {
+    <div class="modal fade" id="transModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header text-dark border-bottom-0 py-3">
+                    <h5 class="modal-title fw-bold" id="mainModalTitle"><i class="fa fa-book me-2"></i> @Localize("Add Transaction")</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="p-4">
+                    <form id="transForm" class="needs-validation" novalidate="">
+                        <input type="hidden" name="PartnerId" value="@Model.Id" />
+                        <div class="form-group mb-3">
+                            <label class="control-label">@Localize("Date") <code>*</code></label>
+                            <input type="date" name="EntryDate" value="@DateTime.Now.ToString("yyyy-MM-dd")"
+                                class="form-control" required />
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="control-label">@Localize("Transaction Type") <code>*</code></label>
+                            <select name="Type" class="form-control" required>
+                                <option value="Investment">@Localize("Investment (Capital In)")</option>
+                                <option value="Withdrawal">@Localize("Withdrawal (Capital Out)")</option>
+                                <option value="ProfitDistribution">@Localize("Profit Distribution")</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="control-label">@Localize("Amount") <code>*</code></label>
+                            <input type="number" step="0.01" name="Amount" class="form-control" required />
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="control-label">@Localize("Note / Description") <code>*</code></label>
+                            <textarea name="Note" class="form-control" rows="3" required></textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">@Localize("Save Transaction")</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <div id="sourceInfo" class="me-auto small text-muted"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@Localize("Close")</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
+}
 @section scripts {
     <script>
         $("#accounting-engine-menu").addClass("active");

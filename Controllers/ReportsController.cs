@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.Models;
 using Saffrat.Models.AccountingEngine;
+using Saffrat.ViewModels;
 using System.Data;
 using Saffrat.Services;
 
@@ -426,6 +427,87 @@ namespace Saffrat.Controllers
             }
 
             return View(reportData);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> PurchaseComparison(DateTime? startA, DateTime? endA, DateTime? startB, DateTime? endB)
+        {
+            DateTime sA = StartOfDay(startA);
+            DateTime eA = EndOfDay(endA);
+            DateTime sB = startB ?? sA.AddMonths(-1);
+            DateTime eB = endB ?? eA.AddMonths(-1);
+
+            if (startA == null) 
+            {
+                sA = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                eA = DateTime.Today;
+                sB = sA.AddMonths(-1);
+                eB = sB.AddMonths(1).AddDays(-1);
+            }
+
+            var purchaseDetails = await _dbContext.PurchaseDetails
+                .Include(x => x.Purchase)
+                .Include(x => x.IngredientItem)
+                .ToListAsync();
+
+            var dataA = purchaseDetails
+                .Where(x => x.Purchase.PurchaseDate >= sA && x.Purchase.PurchaseDate <= eA)
+                .GroupBy(x => x.IngredientItemId)
+                .Select(g => new
+                {
+                    IngredientId = g.Key,
+                    Qty = g.Sum(x => x.Quantity),
+                    Total = g.Sum(x => x.Total),
+                    Ingredient = g.First().IngredientItem
+                }).ToList();
+
+            var dataB = purchaseDetails
+                .Where(x => x.Purchase.PurchaseDate >= sB && x.Purchase.PurchaseDate <= eB)
+                .GroupBy(x => x.IngredientItemId)
+                .Select(g => new
+                {
+                    IngredientId = g.Key,
+                    Qty = g.Sum(x => x.Quantity),
+                    Total = g.Sum(x => x.Total)
+                }).ToList();
+
+            var viewModel = new PurchaseComparisonVM
+            {
+                StartA = sA,
+                EndA = eA,
+                StartB = sB,
+                EndB = eB
+            };
+
+            var allIngredientIds = dataA.Select(x => x.IngredientId).Union(dataB.Select(x => x.IngredientId)).Distinct();
+
+            foreach (var id in allIngredientIds)
+            {
+                var a = dataA.FirstOrDefault(x => x.IngredientId == id);
+                var b = dataB.FirstOrDefault(x => x.IngredientId == id);
+                var ingredient = a?.Ingredient ?? _dbContext.IngredientItems.Find(id);
+
+                viewModel.Items.Add(new PurchaseComparisonItem
+                {
+                    IngredientId = id,
+                    IngredientName = ingredient?.ItemName ?? "Unknown",
+                    Unit = ingredient?.Unit ?? "",
+                    QtyA = a?.Qty ?? 0,
+                    TotalA = a?.Total ?? 0,
+                    AvgPriceA = (a?.Qty ?? 0) == 0 ? 0 : (a.Total / a.Qty),
+                    QtyB = b?.Qty ?? 0,
+                    TotalB = b?.Total ?? 0,
+                    AvgPriceB = (b?.Qty ?? 0) == 0 ? 0 : (b.Total / b.Qty)
+                });
+            }
+
+            ViewBag.startA = sA.ToString("yyyy-MM-dd");
+            ViewBag.endA = eA.ToString("yyyy-MM-dd");
+            ViewBag.startB = sB.ToString("yyyy-MM-dd");
+            ViewBag.endB = eB.ToString("yyyy-MM-dd");
+
+            return View(viewModel);
         }
 
         private Dictionary<int, string> GetEmployees()

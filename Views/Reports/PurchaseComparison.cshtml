@@ -1,0 +1,195 @@
+@model Saffrat.ViewModels.PurchaseComparisonVM
+
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = @Localize("Purchase Comparison Report");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>
+                        @Localize("Purchase Comparison Report")
+                    </h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
+                    <li class="breadcrumb-item">@Localize("Purchase Comparison Report")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form asp-action="PurchaseComparison" asp-controller="Reports" method="get" class="needs-validation" novalidate="">
+                    <div class="row g-3">
+                        <div class="col-md-6 border-end">
+                            <h6 class="text-primary mb-3">@Localize("Period A (Current)")</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">@Localize("From")</label>
+                                    <input type="date" name="startA" value="@ViewBag.startA" class="form-control" required />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">@Localize("To")</label>
+                                    <input type="date" name="endA" value="@ViewBag.endA" class="form-control" required />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-secondary mb-3">@Localize("Period B (Comparison)")</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">@Localize("From")</label>
+                                    <input type="date" name="startB" value="@ViewBag.startB" class="form-control" required />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">@Localize("To")</label>
+                                    <input type="date" name="endB" value="@ViewBag.endB" class="form-control" required />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 mt-4 text-center">
+                            <button class="btn btn-primary px-5" type="submit"><i class="fas fa-sync-alt me-2"></i> @Localize("Run Comparison")</button>
+                        </div>
+                    </div>
+                </form>
+
+                <hr class="my-4" />
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-bordered table-hover align-middle" id="exportTable">
+                        <thead class="bg-light text-center">
+                            <tr>
+                                <th rowspan="2" class="align-middle">@Localize("Ingredient Name")</th>
+                                <th colspan="3" class="bg-primary text-white">@Localize("Period A")</th>
+                                <th colspan="3" class="bg-secondary text-white">@Localize("Period B")</th>
+                                <th colspan="3" class="bg-info text-white">@Localize("Comparison (A vs B)")</th>
+                            </tr>
+                            <tr class="small fw-bold">
+                                <th>@Localize("Qty")</th>
+                                <th>@Localize("Avg Price")</th>
+                                <th>@Localize("Total")</th>
+                                <th>@Localize("Qty")</th>
+                                <th>@Localize("Avg Price")</th>
+                                <th>@Localize("Total")</th>
+                                <th>@Localize("Qty Δ")</th>
+                                <th>@Localize("Price Δ")</th>
+                                <th>@Localize("Total Δ")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items.OrderByDescending(x => Math.Abs(x.TotalDiff)))
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@item.IngredientName</strong>
+                                        <br/><small class="text-muted">@item.Unit</small>
+                                    </td>
+                                    <td class="text-center">@item.QtyA.ToString("N2")</td>
+                                    <td class="text-end">@GetCurrency(item.AvgPriceA)</td>
+                                    <td class="text-end fw-bold">@GetCurrency(item.TotalA)</td>
+                                    
+                                    <td class="text-center">@item.QtyB.ToString("N2")</td>
+                                    <td class="text-end">@GetCurrency(item.AvgPriceB)</td>
+                                    <td class="text-end">@GetCurrency(item.TotalB)</td>
+
+                                    <td class="text-center @(item.QtyDiff > 0 ? "text-danger" : "text-success")">
+                                        @(item.QtyDiff > 0 ? "+" : "")@item.QtyDiff.ToString("N2")
+                                        <div class="small">(@(item.QtyDiffPercent >= 0 ? "+" : "")@item.QtyDiffPercent.ToString("N1")%)</div>
+                                    </td>
+                                    <td class="text-center @(item.PriceDiff > 0 ? "text-danger" : "text-success")">
+                                        @(item.PriceDiff > 0 ? "+" : "")@item.PriceDiff.ToString("N2")
+                                        <div class="small">(@(item.PriceDiffPercent >= 0 ? "+" : "")@item.PriceDiffPercent.ToString("N1")%)</div>
+                                    </td>
+                                    <td class="text-center @(item.TotalDiff > 0 ? "text-danger" : "text-success") font-weight-bold">
+                                        @(item.TotalDiff > 0 ? "+" : "")@GetCurrency(item.TotalDiff)
+                                        <div class="small">(@(item.TotalDiffPercent >= 0 ? "+" : "")@item.TotalDiffPercent.ToString("N1")%)</div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.html5.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.print.min.js"></script>
+
+    <script>
+        var fileName = '@Localize("Purchase Comparison Report")';
+
+        $("#report-menu").addClass("active");
+        $("#purchaseComparison-menu").addClass("active");
+
+        $(document).ready(function () {
+            $('#exportTable').DataTable({
+                dom: 'Bfrtip',
+                'language': {
+                    "processing": '@Localize("Processing...")',
+                    "loadingRecords": "@Localize("Loading...")",
+                    'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                    "zeroRecords": "@Localize("No Result Found")",
+                    "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                    "infoEmpty": '',
+                    "infoFiltered": '',
+                    "search": '@Localize("Search")',
+                    'paginate': {
+                        'previous': '<i class="fa fa-chevron-left"></i>',
+                        'next': '<i class="fa fa-chevron-right"></i>'
+                    }
+                },
+                "ordering": true,
+                "order": [[9, "desc"]], // Default sort by total diff
+                buttons: [
+                    {
+                        extend: 'excel',
+                        title: fileName,
+                        text: '<i title="excel" class="fa fa-file-excel"></i>',
+                        className: 'btn btn-outline-success',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    },
+                    {
+                        extend: 'pdf',
+                        orientation: 'landscape',
+                        pageSize: 'A4',
+                        title: fileName,
+                        text: '<i title="pdf" class="fa fa-file-pdf"></i>',
+                        className: 'btn btn-outline-danger',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        title: fileName,
+                        text: '<i title="print" class="fa fa-print"></i>',
+                        className: 'btn btn-outline-info',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    }
+                ]
+            });
+        });
+    </script>
+}

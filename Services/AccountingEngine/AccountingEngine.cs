@@ -44,6 +44,7 @@ namespace Saffrat.Services.AccountingEngine
                 EntryDate = closeDate,
                 SourceDocumentType = "DailyClose",
                 IsPosted = false,
+                CreatedAt = DateTime.Now,
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -206,6 +207,7 @@ namespace Saffrat.Services.AccountingEngine
                 SourceDocumentType = "Invoice",
                 SourceDocumentId = invoice.Id,
                 IsPosted = false,
+                CreatedAt = DateTime.Now,
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -230,6 +232,7 @@ namespace Saffrat.Services.AccountingEngine
                 SourceDocumentType = "Bill",
                 SourceDocumentId = bill.Id,
                 IsPosted = false,
+                CreatedAt = DateTime.Now,
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -240,6 +243,56 @@ namespace Saffrat.Services.AccountingEngine
             journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Expense Booked", Debit = bill.TotalAmount, Credit = 0, GLAccountId = foodCostAccId });
             // Credit Accounts Payable
             journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "AP Increase", Debit = 0, Credit = bill.TotalAmount, GLAccountId = apAccId });
+
+            return journalEntry;
+        }
+
+        public async Task<JournalEntry> RecordInvoicePaymentAsync(Invoice invoice)
+        {
+            var journalEntry = new JournalEntry
+            {
+                ReferenceNumber = $"PAY-{invoice.InvoiceNumber}",
+                Description = $"Payment Receipt for Invoice {invoice.InvoiceNumber}",
+                EntryDate = DateTime.Today,
+                SourceDocumentType = "InvoicePayment",
+                SourceDocumentId = invoice.Id,
+                IsPosted = false,
+                CreatedAt = DateTime.Now,
+                LedgerEntries = new List<LedgerEntry>()
+            };
+
+            int cashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
+            int arAccId = await GetOrCreateGLAccountAsync("Accounts Receivable", AccountType.AccountsReceivable, AccountCategory.Asset);
+
+            // Debit Cash (Asset Increase)
+            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Cash Received", Debit = invoice.TotalAmount, Credit = 0, GLAccountId = cashAccId });
+            // Credit Accounts Receivable (Asset Decrease)
+            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "AR Cleared", Debit = 0, Credit = invoice.TotalAmount, GLAccountId = arAccId });
+
+            return journalEntry;
+        }
+
+        public async Task<JournalEntry> RecordBillPaymentAsync(Bill bill)
+        {
+            var journalEntry = new JournalEntry
+            {
+                ReferenceNumber = $"PMT-{bill.BillNumber}",
+                Description = $"Payment Sent for Bill {bill.BillNumber}",
+                EntryDate = DateTime.Today,
+                SourceDocumentType = "BillPayment",
+                SourceDocumentId = bill.Id,
+                IsPosted = false,
+                CreatedAt = DateTime.Now,
+                LedgerEntries = new List<LedgerEntry>()
+            };
+
+            int apAccId = await GetOrCreateGLAccountAsync("Accounts Payable", AccountType.AccountsPayable, AccountCategory.Liability);
+            int cashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
+
+            // Debit Accounts Payable (Liability Decrease)
+            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "AP Cleared", Debit = bill.TotalAmount, Credit = 0, GLAccountId = apAccId });
+            // Credit Cash (Asset Decrease)
+            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Cash Sent", Debit = 0, Credit = bill.TotalAmount, GLAccountId = cashAccId });
 
             return journalEntry;
         }

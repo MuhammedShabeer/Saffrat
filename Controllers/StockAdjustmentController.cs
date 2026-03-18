@@ -67,6 +67,9 @@ namespace Saffrat.Controllers
 
                 decimal adjustmentAmount = model.Quantity * item.Price; // Use current price for valuation
 
+                _dbContext.StockAdjustments.Add(model);
+                await _dbContext.SaveChangesAsync();
+
                 // 1. Create Journal Entry
                 var journalEntry = new JournalEntry
                 {
@@ -74,7 +77,9 @@ namespace Saffrat.Controllers
                     Description = $"{model.Type}: {item.ItemName} - {model.Reason}",
                     EntryDate = model.EntryDate,
                     SourceDocumentType = "StockAdjustment",
+                    SourceDocumentId = model.Id,
                     IsPosted = false,
+                    CreatedAt = CurrentDateTime(),
                     LedgerEntries = new List<LedgerEntry>()
                 };
 
@@ -101,7 +106,7 @@ namespace Saffrat.Controllers
                 await _accountingEngine.PostJournalEntryAsync(journalEntry);
 
                 model.JournalEntryId = journalEntry.Id;
-                _dbContext.StockAdjustments.Add(model);
+                _dbContext.StockAdjustments.Update(model);
                 await _dbContext.SaveChangesAsync();
 
                 await transaction.CommitAsync();

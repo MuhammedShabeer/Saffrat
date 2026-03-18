@@ -96,21 +96,20 @@
 </div>
 
 <!-- Journal Lines Modal -->
-<div class="modal fade" id="linesModal" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modalTitle">@Localize("Journal Entry")</h5>
-                <button type="button" class="btn btn-light" data-dismiss="modal">
-                    <span aria-hidden="true">x</span>
-                </button>
-            </div>
-            <div class="modal-body">
+@section models {
+    <div class="modal fade" id="linesModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-dark text-white border-bottom-0 py-3">
+                    <h5 class="modal-title fw-bold" id="mainModalTitle"><i class="fa fa-book me-2"></i> @Localize("Journal Entry Detail")</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
                 <div class="p-4 bg-light border-bottom">
                     <div class="row gx-5">
                         <div class="col-md-4">
                             <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Posting Date")</label>
-                            <div id="modalDate" class="h6 mb-0"></div>
+                            <div id="modalDate" class="h6 mb-0 fw-bold"></div>
                         </div>
                         <div class="col-md-8 border-start">
                             <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Global Description")</label>
@@ -119,8 +118,8 @@
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="bg-dark text-white text-uppercase small">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-secondary text-white text-uppercase small">
                             <tr>
                                 <th class="ps-4">@Localize("Account")</th>
                                 <th>@Localize("Line Description")</th>
@@ -139,14 +138,33 @@
                         </tfoot>
                     </table>
                 </div>
-            </div>
-            <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@Localize("Close")</button>
+                <div class="modal-footer bg-light py-2">
+                    <div id="sourceInfo" class="me-auto small text-muted"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@Localize("Close")</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
+    <!-- Source Document Detail Modal -->
+    <div class="modal fade" id="sourceDetailModal" tabindex="-1" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-info-circle me-2"></i> <span id="sourceTitle">Details</span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0" id="sourceDetailBody">
+                    <!-- Dynamic Content -->
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="$('#sourceDetailModal').modal('hide'); $('#linesModal').modal('show');"><i class="fa fa-arrow-left"></i> @Localize("Back to Journal")</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">@Localize("Close")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 <style>
     #linesModal .table thead th {
         font-weight: 600;
@@ -168,6 +186,14 @@
         background-color: rgba(23, 162, 184, 0.1) !important;
         border-top: 2px solid #dee2e6;
     }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    #modalBody tr:hover.cursor-pointer {
+        background-color: rgba(0, 123, 255, 0.1) !important;
+    }
 </style>
 
 @section Scripts {
@@ -183,35 +209,49 @@
             if (closeDate) {
                 $.post('@Url.Action("RunDailyClose", "AccountingEngine")', { closeDate: closeDate }, function(response) {
                     if (response.status === 'success') {
-                        toastr.success(response.message);
+                        successMessage(response.message);
                         setTimeout(() => location.reload(), 1500);
                     } else {
-                        toastr.error(response.message);
+                        errorMessage(response.message);
                     }
                 });
             }
         }
 
+        let currentSourceType = '';
+        let currentSourceId = 0;
+
         function viewLines(id) {
             $.get('@Url.Action("GetJournalDetails", "AccountingEngine")/' + id, function (data) {
-                $('#modalRef').text(data.referenceNumber);
                 $('#modalDate').text(data.entryDate);
                 $('#modalDesc').text(data.description);
+                
+                currentSourceType = data.sourceDocumentType;
+                currentSourceId = data.sourceDocumentId;
+
+                if (currentSourceType && currentSourceId) {
+                    $('#sourceInfo').html(`<i class="fa fa-link"></i> Linked to <strong>${currentSourceType} #${currentSourceId}</strong>. Click an account row for details.`);
+                } else {
+                    $('#sourceInfo').text('');
+                }
 
                 var html = '';
                 var totalDebit = 0;
                 var totalCredit = 0;
 
                 $.each(data.lines, function (i, line) {
-                html += `<tr>
-                    <td class="ps-4"><strong>${line.accountCode}</strong> - ${line.accountName}</td>
-                    <td>${line.description || ''}</td>
-                    <td class="text-end text-success font-monospace">${line.debit > 0 ? parseFloat(line.debit).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                    <td class="text-end text-danger pe-4 font-monospace">${line.credit > 0 ? parseFloat(line.credit).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                </tr>`;
-                totalDebit += line.debit;
-                totalCredit += line.credit;
-            });
+                    let clickableAttr = (currentSourceType && currentSourceId) ? `onclick="showSourceDetails()"` : '';
+                    let clickableClass = (currentSourceType && currentSourceId) ? 'cursor-pointer table-primary' : '';
+                    
+                    html += `<tr ${clickableAttr} class="${clickableClass}">
+                        <td class="ps-4"><strong>${line.accountCode}</strong> - ${line.accountName}</td>
+                        <td>${line.description || ''}</td>
+                        <td class="text-end text-success font-monospace">${line.debit > 0 ? parseFloat(line.debit).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                        <td class="text-end text-danger pe-4 font-monospace">${line.credit > 0 ? parseFloat(line.credit).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                    </tr>`;
+                    totalDebit += line.debit;
+                    totalCredit += line.credit;
+                });
 
                 $('#modalBody').html(html);
                 $('#totalDebit').text(totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 }));
@@ -219,8 +259,199 @@
 
                 $('#linesModal').modal('show');
             }).fail(function() {
-                toastr.error("Error loading journal details");
+                errorMessage("Error loading journal details");
             });
+        }
+
+        function showSourceDetails() {
+            if (!currentSourceType || !currentSourceId) return;
+
+            $('#linesModal').modal('hide');
+            
+            $.get('@Url.Action("GetSourceDocumentDetails", "AccountingEngine")', { type: currentSourceType, id: currentSourceId }, function (response) {
+                if (response.status === 'success') {
+                    $('#sourceTitle').text(response.type);
+                    let content = renderSourceContent(response.type, response.data);
+                    $('#sourceDetailBody').html(content);
+                    $('#sourceDetailModal').modal('show');
+                } else {
+                    errorMessage(response.message);
+                    $('#linesModal').modal('show');
+                }
+            }).fail(function() {
+                errorMessage("Error loading source details");
+                $('#linesModal').modal('show');
+            });
+        }
+
+        function renderSourceContent(type, data) {
+            let html = '<div class="p-4">';
+            
+            switch(type.toLowerCase()) {
+                case 'payroll':
+                    html += `
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="text-muted small fw-bold">EMPLOYEE</label>
+                                <div class="h5 fw-bold text-primary">${data.employeeName}</div>
+                                <div class="text-muted">${data.designation} (${data.department})</div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <label class="text-muted small fw-bold">PAY PERIOD</label>
+                                <div class="h5 fw-bold">${data.period}</div>
+                            </div>
+                        </div>
+                        <div class="card border-0 bg-light mb-0">
+                            <div class="card-body p-0">
+                                <table class="table table-sm mb-0">
+                                    <thead class="bg-secondary text-white small">
+                                        <tr><th class="ps-3">DESCRIPTION</th><th class="text-end pe-3">AMOUNT</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td class="ps-3">Basic Salary</td><td class="text-end pe-3 fst-italic">${parseFloat(data.salary).toFixed(2)}</td></tr>
+                                        ${data.details.map(d => `
+                                            <tr class="${d.amountType === 'Earning' ? 'text-success' : 'text-danger'}">
+                                                <td class="ps-3">${d.title} (${d.amountType})</td>
+                                                <td class="text-end pe-3">${d.amountType === 'Earning' ? '+' : '-'}${parseFloat(d.amount).toFixed(2)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                    <tfoot class="fw-bold bg-white">
+                                        <tr><td class="ps-3 text-end">NET SALARY</td><td class="text-end pe-3 text-primary h6 fw-bold mb-0">${parseFloat(data.netSalary).toFixed(2)}</td></tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>`;
+                    break;
+
+                case 'purchase':
+                    html += `
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="text-muted small fw-bold">SUPPLIER</label>
+                                <div class="h5 fw-bold text-primary">${data.supplierName || 'N/A'}</div>
+                                <div class="text-muted">Invoice #: ${data.invoiceNo}</div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <label class="text-muted small fw-bold">PURCHASE DATE</label>
+                                <div class="h5 fw-bold">${data.purchaseDate}</div>
+                            </div>
+                        </div>
+                        <table class="table table-sm border">
+                            <thead class="bg-secondary text-white small">
+                                <tr><th class="ps-3">ITEM</th><th class="text-center">QTY</th><th class="text-end">PRICE</th><th class="text-end pe-3">TOTAL</th></tr>
+                            </thead>
+                            <tbody>
+                                ${data.items.map(i => `
+                                    <tr>
+                                        <td class="ps-3">${i.itemName}</td>
+                                        <td class="text-center">${i.quantity}</td>
+                                        <td class="text-end">${parseFloat(i.purchasePrice).toFixed(2)}</td>
+                                        <td class="text-end pe-3">${parseFloat(i.total).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot class="fw-bold bg-light">
+                                <tr><td colspan="3" class="text-end">GRAND TOTAL</td><td class="text-end pe-3">${parseFloat(data.totalAmount).toFixed(2)}</td></tr>
+                                <tr class="text-success small"><td colspan="3" class="text-end">PAID AMOUNT</td><td class="text-end pe-3">${parseFloat(data.paidAmount).toFixed(2)}</td></tr>
+                                <tr class="text-danger small"><td colspan="3" class="text-end">DUE AMOUNT</td><td class="text-end pe-3">${parseFloat(data.dueAmount).toFixed(2)}</td></tr>
+                            </tfoot>
+                        </table>`;
+                    break;
+
+                case 'pos order':
+                    html += `
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="text-muted small fw-bold">CUSTOMER</label>
+                                <div class="h5 fw-bold text-primary">${data.customerName || 'Walking Customer'}</div>
+                                <div class="text-muted">Method: ${data.paymentMethod}</div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <label class="text-muted small fw-bold">ORDER DATE</label>
+                                <div class="h5 fw-bold">${data.orderDate}</div>
+                            </div>
+                        </div>
+                        <table class="table table-sm border">
+                            <thead class="bg-secondary text-white small">
+                                <tr><th class="ps-3">ITEM</th><th class="text-center">QTY</th><th class="text-end pe-3">TOTAL</th></tr>
+                            </thead>
+                            <tbody>
+                                ${data.items.map(i => `
+                                    <tr>
+                                        <td class="ps-3">
+                                            <div>${i.itemName}</div>
+                                            ${i.modifiers.length > 0 ? `<div class="small text-muted ps-2">- ${i.modifiers.join(', ')}</div>` : ''}
+                                        </td>
+                                        <td class="text-center">${i.quantity}</td>
+                                        <td class="text-end pe-3">${parseFloat(i.total).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot class="small bg-light">
+                                <tr><td colspan="2" class="text-end">Subtotal</td><td class="text-end pe-3">${parseFloat(data.subTotal).toFixed(2)}</td></tr>
+                                ${data.taxTotal > 0 ? `<tr><td colspan="2" class="text-end">Tax</td><td class="text-end pe-3">${parseFloat(data.taxTotal).toFixed(2)}</td></tr>` : ''}
+                                ${data.discountTotal > 0 ? `<tr class="text-danger"><td colspan="2" class="text-end">Discount</td><td class="text-end pe-3">-${parseFloat(data.discountTotal).toFixed(2)}</td></tr>` : ''}
+                                ${data.chargeTotal > 0 ? `<tr><td colspan="2" class="text-end">Charges</td><td class="text-end pe-3">${parseFloat(data.chargeTotal).toFixed(2)}</td></tr>` : ''}
+                                <tr class="fw-bold h6"><td colspan="2" class="text-end">GRAND TOTAL</td><td class="text-end pe-3 text-primary">${parseFloat(data.total).toFixed(2)}</td></tr>
+                            </tfoot>
+                        </table>`;
+                    break;
+
+                case 'stock adjustment':
+                    html += `
+                        <div class="card bg-light border-0">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6"><label class="small text-muted fw-bold">ITEM</label><div class="h6 fw-bold">${data.itemName}</div></div>
+                                    <div class="col-6"><label class="small text-muted fw-bold">ADJUSTMENT TYPE</label><div class="h6 fw-bold text-${data.type === 'Addition' ? 'success' : 'danger'}">${data.type}</div></div>
+                                    <hr class="my-2">
+                                    <div class="col-6"><label class="small text-muted fw-bold">QUANTITY</label><div class="h6">${data.quantity}</div></div>
+                                    <div class="col-6"><label class="small text-muted fw-bold">DATE</label><div class="h6">${data.date}</div></div>
+                                    <div class="col-12 mt-2"><label class="small text-muted fw-bold">REASON</label><div class="p-2 border bg-white rounded">${data.reason || 'No reason provided'}</div></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    break;
+
+                case 'cash transaction':
+                    html += `
+                        <div class="card bg-light border-0">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6"><label class="small text-muted fw-bold">TYPE</label><div class="h6 fw-bold text-${data.type === 'Income' ? 'success' : 'danger'}">${data.type}</div></div>
+                                    <div class="col-6"><label class="small text-muted fw-bold">AMOUNT</label><div class="h6 fw-bold">${parseFloat(data.amount).toFixed(2)}</div></div>
+                                    <hr class="my-2">
+                                    <div class="col-6"><label class="small text-muted fw-bold">DATE</label><div class="h6">${data.date}</div></div>
+                                    <div class="col-6"><label class="small text-muted fw-bold">OFFSET ACCOUNT</label><div class="h6">${data.offsetAccount}</div></div>
+                                    <div class="col-12 mt-2"><label class="small text-muted fw-bold">DESCRIPTION</label><div class="p-2 border bg-white rounded">${data.description || 'No description'}</div></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    break;
+
+                case 'partner equity transaction':
+                    html += `
+                        <div class="card bg-light border-0">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6"><label class="small text-muted fw-bold">PARTNER</label><div class="h6 fw-bold text-primary">${data.partnerName}</div></div>
+                                    <div class="col-6"><label class="small text-muted fw-bold">TYPE</label><div class="h6 fw-bold text-info">${data.type}</div></div>
+                                    <hr class="my-2">
+                                    <div class="col-6"><label class="small text-muted fw-bold">AMOUNT</label><div class="h6 fw-bold">${parseFloat(data.amount).toFixed(2)}</div></div>
+                                    <div class="col-6"><label class="small text-muted fw-bold">DATE</label><div class="h6">${data.date}</div></div>
+                                    <div class="col-12 mt-2"><label class="small text-muted fw-bold">NOTE</label><div class="p-2 border bg-white rounded">${data.note || 'No note provided'}</div></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    break;
+
+                default:
+                    html += `<div class="alert alert-warning">Details for this document type are not yet customizable.</div>`;
+            }
+            
+            html += '</div>';
+            return html;
         }
     </script>
 }

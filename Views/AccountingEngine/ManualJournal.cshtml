@@ -189,7 +189,7 @@
             $('#journalForm').submit(function (e) {
                 if ($('#btnSubmit').is(':disabled')) {
                     e.preventDefault();
-                    toastr.error("@Localize("Ledger must balance before posting!")");
+                    errorMessage("@Localize("Ledger must balance before posting!")");
                 }
             });
         });
