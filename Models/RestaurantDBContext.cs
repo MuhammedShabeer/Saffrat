@@ -51,6 +51,7 @@ namespace Saffrat.Models
         public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
         public virtual DbSet<Payroll> Payrolls { get; set; }
         public virtual DbSet<PayrollDetail> PayrollDetails { get; set; }
+        public virtual DbSet<PayrollPayment> PayrollPayments { get; set; }
         public virtual DbSet<Purchase> Purchases { get; set; }
         public virtual DbSet<PurchaseDetail> PurchaseDetails { get; set; }
         public virtual DbSet<RestaurantTable> RestaurantTables { get; set; }

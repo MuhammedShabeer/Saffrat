@@ -51,6 +51,16 @@ namespace Saffrat.Services.AccountingEngine
         /// Handles the translation of a payment sent against a Bill into a pending Journal Entry.
         /// </summary>
         Task<JournalEntry> RecordBillPaymentAsync(Bill bill);
+
+        /// <summary>
+        /// Creates a draft payroll accrual journal entry when payroll is generated.
+        /// </summary>
+        Task<JournalEntry> DraftPayrollJournalEntryAsync(Payroll payroll);
+
+        /// <summary>
+        /// Records a flexible/partial payroll payment.
+        /// </summary>
+        Task<JournalEntry> RecordFlexiblePayrollPaymentAsync(PayrollPayment payment, Payroll payroll);
     }
 
     // Report DTOs

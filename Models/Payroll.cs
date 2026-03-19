@@ -8,6 +8,7 @@ namespace Saffrat.Models
         public Payroll()
         {
             PayrollDetails = new HashSet<PayrollDetail>();
+            PayrollPayments = new HashSet<PayrollPayment>();
         }
 
         [Key]
@@ -25,10 +26,19 @@ namespace Saffrat.Models
         public int Year { get; set; }
         [Required]
         public string PaymentStatus { get; set; }
+
+        // Flexible Payment Tracking
+        public decimal AdvanceAmountPaid { get; set; } = 0;
+        public decimal TotalAmountPaid { get; set; } = 0;
+        public decimal RemainingBalance { get; set; }
+        public int? JournalEntryId { get; set; }
+
         public DateTime? GeneratedAt { get; set; }
         public string GeneratedBy { get; set; }
 
         public virtual Employee Employee { get; set; }
         public virtual ICollection<PayrollDetail> PayrollDetails { get; set; }
+        public virtual ICollection<PayrollPayment> PayrollPayments { get; set; }
+        public virtual JournalEntry JournalEntry { get; set; }
     }
 }

@@ -321,6 +321,277 @@ namespace Saffrat.Controllers
                 return Json(new { status = "error", message = ex.Message });
             }
         }
+
+        // --- PAYROLL PAYMENT FLOWS ---
+
+        [HttpGet]
+        public async Task<IActionResult> Payrolls()
+        {
+            var payrolls = await _dbContext.Payrolls
+                .Include(p => p.Employee)
+                .Include(p => p.PayrollPayments)
+                .OrderByDescending(p => p.Year)
+                .ThenByDescending(p => p.Month)
+                .ToListAsync();
+            return View(payrolls);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetPayrollsList()
+        {
+            try
+            {
+                var payrolls = await _dbContext.Payrolls
+                    .Include(p => p.Employee)
+                    .Include(p => p.PayrollPayments)
+                    .OrderByDescending(p => p.Year)
+                    .ThenByDescending(p => p.Month)
+                    .ToListAsync();
+
+                return Json(new
+                {
+                    status = "success",
+                    data = payrolls.Select(p => new
+                    {
+                        p.Id,
+                        p.Month,
+                        p.Year,
+                        p.Salary,
+                        p.NetSalary,
+                        p.TotalAmountPaid,
+                        p.RemainingBalance,
+                        p.PaymentStatus,
+                        Employee = new
+                        {
+                            p.Employee.Id,
+                            p.Employee.Name,
+                            p.Employee.Email,
+                            p.Employee.Phone
+                        }
+                    })
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AccruePayroll(int payrollId)
+        {
+            try
+            {
+                var payroll = await _dbContext.Payrolls
+                    .Include(p => p.Employee)
+                    .FirstOrDefaultAsync(p => p.Id == payrollId);
+
+                if (payroll == null)
+                    return Json(new { status = "error", message = "Payroll not found." });
+
+                if (payroll.JournalEntryId.HasValue)
+                    return Json(new { status = "warning", message = "Payroll is already accrued." });
+
+                // Create accrual journal entry
+                var accrualEntry = await _accountingEngine.DraftPayrollJournalEntryAsync(payroll);
+                await _accountingEngine.PostJournalEntryAsync(accrualEntry);
+
+                // Update payroll with journal entry reference
+                payroll.JournalEntryId = accrualEntry.Id;
+                payroll.RemainingBalance = payroll.NetSalary;
+                _dbContext.Payrolls.Update(payroll);
+                await _dbContext.SaveChangesAsync();
+
+                return Json(new { status = "success", message = "Payroll accrued successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PayPartialSalary(int payrollId, decimal amount, string paymentMethod = "Cash", string notes = "")
+        {
+            try
+            {
+                var payroll = await _dbContext.Payrolls
+                    .Include(p => p.Employee)
+                    .Include(p => p.PayrollPayments)
+                    .FirstOrDefaultAsync(p => p.Id == payrollId);
+
+                if (payroll == null)
+                    return Json(new { status = "error", message = "Payroll not found." });
+
+                if (!payroll.JournalEntryId.HasValue)
+                    return Json(new { status = "error", message = "Payroll must be accrued before making payments." });
+
+                if (amount <= 0)
+                    return Json(new { status = "error", message = "Payment amount must be greater than 0." });
+
+                // Check if payment exceeds remaining balance
+                decimal remainingBalance = payroll.NetSalary - payroll.TotalAmountPaid;
+                if (amount > remainingBalance)
+                    return Json(new { status = "error", message = $"Payment amount exceeds remaining balance of {remainingBalance:C}." });
+
+                // Create payment record
+                var payment = new PayrollPayment
+                {
+                    PayrollId = payrollId,
+                    Amount = amount,
+                    PaymentMethod = paymentMethod,
+                    PaymentDate = DateTime.Today,
+                    Notes = notes,
+                    CreatedAt = DateTime.Now
+                };
+
+                _dbContext.PayrollPayments.Add(payment);
+                await _dbContext.SaveChangesAsync();
+
+                // Create journal entry for the payment
+                var paymentEntry = await _accountingEngine.RecordFlexiblePayrollPaymentAsync(payment, payroll);
+                await _accountingEngine.PostJournalEntryAsync(paymentEntry);
+
+                // Update payment with journal entry reference
+                payment.JournalEntryId = paymentEntry.Id;
+                _dbContext.PayrollPayments.Update(payment);
+
+                // Update payroll tracking
+                payroll.TotalAmountPaid += amount;
+                payroll.RemainingBalance = payroll.NetSalary - payroll.TotalAmountPaid;
+
+                // Update payment status
+                if (payroll.RemainingBalance <= 0)
+                {
+                    payroll.PaymentStatus = "Paid";
+                }
+                else if (payroll.TotalAmountPaid > 0)
+                {
+                    payroll.PaymentStatus = "PartiallyPaid";
+                }
+
+                _dbContext.Payrolls.Update(payroll);
+                await _dbContext.SaveChangesAsync();
+
+                return Json(new
+                {
+                    status = "success",
+                    message = $"Payment of {amount:C} recorded successfully.",
+                    payroll = new
+                    {
+                        payroll.Id,
+                        payroll.NetSalary,
+                        payroll.TotalAmountPaid,
+                        payroll.RemainingBalance,
+                        payroll.PaymentStatus
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PayrollPaymentDetails(int payrollId)
+        {
+            try
+            {
+                var payroll = await _dbContext.Payrolls
+                    .Include(p => p.Employee)
+                    .Include(p => p.PayrollPayments)
+                    .FirstOrDefaultAsync(p => p.Id == payrollId);
+
+                if (payroll == null)
+                    return Json(new { status = "error", message = "Payroll not found." });
+
+                return Json(new
+                {
+                    status = "success",
+                    data = new
+                    {
+                        payroll.Id,
+                        EmployeeName = payroll.Employee?.Name,
+                        Period = $"{payroll.Month}/{payroll.Year}",
+                        payroll.Salary,
+                        payroll.NetSalary,
+                        payroll.TotalAmountPaid,
+                        payroll.AdvanceAmountPaid,
+                        payroll.RemainingBalance,
+                        payroll.PaymentStatus,
+                        Payments = payroll.PayrollPayments.OrderByDescending(p => p.PaymentDate).Select(p => new
+                        {
+                            p.Id,
+                            p.Amount,
+                            p.PaymentMethod,
+                            PaymentDate = p.PaymentDate.ToString("yyyy-MM-dd"),
+                            p.Notes
+                        })
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ReversePayrollPayment(int paymentId)
+        {
+            try
+            {
+                var payment = await _dbContext.PayrollPayments
+                    .Include(p => p.Payroll)
+                    .FirstOrDefaultAsync(p => p.Id == paymentId);
+
+                if (payment == null)
+                    return Json(new { status = "error", message = "Payment not found." });
+
+                var payroll = payment.Payroll;
+
+                // Reverse the payment tracking
+                payroll.TotalAmountPaid -= payment.Amount;
+                payroll.RemainingBalance = payroll.NetSalary - payroll.TotalAmountPaid;
+
+                // Update payment status
+                if (payroll.TotalAmountPaid == 0)
+                {
+                    payroll.PaymentStatus = "Unpaid";
+                }
+                else if (payroll.TotalAmountPaid < payroll.NetSalary)
+                {
+                    payroll.PaymentStatus = "PartiallyPaid";
+                }
+
+                _dbContext.Payrolls.Update(payroll);
+
+                // Delete payment and its journal entry
+                if (payment.JournalEntryId.HasValue)
+                {
+                    var journalEntry = await _dbContext.JournalEntries
+                        .Include(j => j.LedgerEntries)
+                        .FirstOrDefaultAsync(j => j.Id == payment.JournalEntryId.Value);
+
+                    if (journalEntry != null)
+                    {
+                        _dbContext.LedgerEntries.RemoveRange(journalEntry.LedgerEntries);
+                        _dbContext.JournalEntries.Remove(journalEntry);
+                    }
+                }
+
+                _dbContext.PayrollPayments.Remove(payment);
+                await _dbContext.SaveChangesAsync();
+
+                return Json(new { status = "success", message = "Payment reversed successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
+
         // --- DATA ENTRY FLOWS ---
 
         [HttpGet]

@@ -316,5 +316,87 @@ namespace Saffrat.Services.AccountingEngine
             }
             return account.Id;
         }
+
+        /// <summary>
+        /// Creates a draft payroll journal entry when payroll is first generated
+        /// </summary>
+        public async Task<JournalEntry> DraftPayrollJournalEntryAsync(Payroll payroll)
+        {
+            var journalEntry = new JournalEntry
+            {
+                ReferenceNumber = $"PAYROLL-{payroll.Id}",
+                Description = $"Payroll Accrual for {payroll.Month}/{payroll.Year}",
+                EntryDate = DateTime.Today,
+                SourceDocumentType = "PayrollAccrual",
+                SourceDocumentId = payroll.Id,
+                IsPosted = false,
+                CreatedAt = DateTime.Now,
+                LedgerEntries = new List<LedgerEntry>()
+            };
+
+            int salaryExpenseAccId = await GetOrCreateGLAccountAsync("Salaries Expense", AccountType.Labor, AccountCategory.Expense);
+            int salariesPayableAccId = await GetOrCreateGLAccountAsync("Salaries Payable", AccountType.OtherCurrentLiability, AccountCategory.Liability);
+
+            // Debit Salary Expense
+            journalEntry.LedgerEntries.Add(new LedgerEntry 
+            { 
+                Description = $"Payroll Accrual - {payroll.Employee?.Name}", 
+                Debit = payroll.NetSalary, 
+                Credit = 0, 
+                GLAccountId = salaryExpenseAccId 
+            });
+
+            // Credit Salaries Payable
+            journalEntry.LedgerEntries.Add(new LedgerEntry 
+            { 
+                Description = $"Salaries Payable - {payroll.Employee?.Name}", 
+                Debit = 0, 
+                Credit = payroll.NetSalary, 
+                GLAccountId = salariesPayableAccId 
+            });
+
+            return journalEntry;
+        }
+
+        /// <summary>
+        /// Records a partial/flexible payroll payment
+        /// </summary>
+        public async Task<JournalEntry> RecordFlexiblePayrollPaymentAsync(PayrollPayment payment, Payroll payroll)
+        {
+            var journalEntry = new JournalEntry
+            {
+                ReferenceNumber = $"PAYROL-PAY-{payment.Id}",
+                Description = $"Partial Payroll Payment - {payroll.Employee?.Name}",
+                EntryDate = payment.PaymentDate,
+                SourceDocumentType = "PayrollPayment",
+                SourceDocumentId = payroll.Id,
+                IsPosted = false,
+                CreatedAt = DateTime.Now,
+                LedgerEntries = new List<LedgerEntry>()
+            };
+
+            int cashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
+            int salariesPayableAccId = await GetOrCreateGLAccountAsync("Salaries Payable", AccountType.OtherCurrentLiability, AccountCategory.Liability);
+
+            // Debit Cash & Bank (Asset Increase) - but it's a decrease in cash
+            journalEntry.LedgerEntries.Add(new LedgerEntry 
+            { 
+                Description = $"Salary Payment - {payroll.Employee?.Name}", 
+                Debit = 0, 
+                Credit = payment.Amount, 
+                GLAccountId = cashAccId 
+            });
+
+            // Credit Salaries Payable (Liability Decrease)
+            journalEntry.LedgerEntries.Add(new LedgerEntry 
+            { 
+                Description = $"Salaries Payable Cleared - {payroll.Employee?.Name}", 
+                Debit = payment.Amount, 
+                Credit = 0, 
+                GLAccountId = salariesPayableAccId 
+            });
+
+            return journalEntry;
+        }
     }
 }

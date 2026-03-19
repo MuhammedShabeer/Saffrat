@@ -914,6 +914,34 @@ namespace Saffrat.Controllers
             }
         }
 
+        // Get employees for customizable payroll generation
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> GetEmployeesForPayroll()
+        {
+            try
+            {
+                var employees = await _dbContext.Employees
+                    .Where(x => x.Status == true)
+                    .Select(e => new
+                    {
+                        e.Id,
+                        e.Name,
+                        e.Salary,
+                        DepartmentId = e.Department.Id,
+                        DepartmentName = e.Department.Title,
+                        DesignationName = e.Designation.Title
+                    })
+                    .ToListAsync();
+
+                return Json(new { status = "success", data = employees });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
+
         [HttpPost]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> GeneratePayroll([Required] int month, [Required] int year)
@@ -953,7 +981,10 @@ namespace Saffrat.Controllers
                             PayrollType = item.PayslipType,
                             Salary = item.Salary,
                             NetSalary = 0,
-                            PaymentStatus = "Unpaid"
+                            PaymentStatus = "Unpaid",
+                            AdvanceAmountPaid = 0,
+                            TotalAmountPaid = 0,
+                            RemainingBalance = 0
                         };
                         _dbContext.Payrolls.Add(payroll);
                         await _dbContext.SaveChangesAsync();
@@ -1001,6 +1032,7 @@ namespace Saffrat.Controllers
                             _dbContext.PayrollDetails.Add(payrollDetail);
                         }
                         payroll.NetSalary = netsalary;
+                        payroll.RemainingBalance = netsalary;
                         _dbContext.Payrolls.Update(payroll);
                         _dbContext.SaveChanges();
                     }
@@ -1028,6 +1060,146 @@ namespace Saffrat.Controllers
                     status = "error",
                     message = "Enter required fields."
                 });
+            }
+        }
+
+        // Generate payroll with custom salary amounts per employee
+        [HttpPost]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> GenerateCustomPayroll([Required] int month, [Required] int year, [FromBody] List<PayrollCustomData> customData)
+        {
+            if (customData == null || customData.Count == 0)
+            {
+                return Json(new { status = "error", message = "No payroll data provided." });
+            }
+
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var current = CurrentDateTime();
+            using var transaction = _dbContext.Database.BeginTransaction();
+            try
+            {
+                foreach (var data in customData)
+                {
+                    var employee = await _dbContext.Employees
+                        .Include(x => x.EmployeeEarnings)
+                        .Include(x => x.EmployeeDeductions)
+                        .FirstOrDefaultAsync(x => x.Id == data.EmployeeId);
+
+                    if (employee == null) continue;
+
+                    // Remove existing payroll for this month/year if any
+                    var existing = _dbContext.Payrolls.FirstOrDefault(x => 
+                        x.EmployeeId == data.EmployeeId && 
+                        x.Month == month && 
+                        x.Year == year);
+
+                    if (existing != null)
+                    {
+                        _dbContext.Payrolls.Remove(existing);
+                        var existingJournals = _dbContext.JournalEntries
+                            .Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id)
+                            .ToList();
+                        if (existingJournals.Any())
+                        {
+                            _dbContext.JournalEntries.RemoveRange(existingJournals);
+                        }
+                        await _dbContext.SaveChangesAsync();
+                    }
+
+                    // Create payroll with custom salary amount
+                    var payroll = new Payroll()
+                    {
+                        EmployeeId = data.EmployeeId,
+                        Month = month,
+                        Year = year,
+                        GeneratedBy = userName,
+                        GeneratedAt = current,
+                        PayrollType = employee.PayslipType,
+                        Salary = data.CustomSalary,  // Use custom salary instead of default
+                        NetSalary = 0,
+                        PaymentStatus = "Unpaid",
+                        AdvanceAmountPaid = 0,
+                        TotalAmountPaid = data.InitialPayingAmount,  // Set initial paying amount if provided
+                        RemainingBalance = data.CustomSalary
+                    };
+                    _dbContext.Payrolls.Add(payroll);
+                    await _dbContext.SaveChangesAsync();
+
+                    // Calculate Net Salary with earnings and deductions
+                    decimal netsalary = data.CustomSalary;
+
+                    foreach (var income in employee.EmployeeEarnings)
+                    {
+                        decimal earningAmount;
+                        if (income.IsPercentage)
+                        {
+                            earningAmount = (income.Amount * data.CustomSalary) / 100;
+                            netsalary += earningAmount;
+                        }
+                        else
+                        {
+                            earningAmount = income.Amount;
+                            netsalary += earningAmount;
+                        }
+
+                        var payrollDetail = new PayrollDetail()
+                        {
+                            Title = income.Title,
+                            PayrollId = payroll.Id,
+                            IsPercentage = income.IsPercentage,
+                            AmountType = "Earning",
+                            Amount = income.Amount
+                        };
+                        _dbContext.PayrollDetails.Add(payrollDetail);
+                    }
+
+                    foreach (var deduction in employee.EmployeeDeductions)
+                    {
+                        decimal deductionAmount;
+                        if (deduction.IsPercentage)
+                        {
+                            deductionAmount = (deduction.Amount * data.CustomSalary) / 100;
+                            netsalary -= deductionAmount;
+                        }
+                        else
+                        {
+                            deductionAmount = deduction.Amount;
+                            netsalary -= deductionAmount;
+                        }
+
+                        var payrollDetail = new PayrollDetail()
+                        {
+                            Title = deduction.Title,
+                            PayrollId = payroll.Id,
+                            IsPercentage = deduction.IsPercentage,
+                            AmountType = "Deduction",
+                            Amount = deduction.Amount
+                        };
+                        _dbContext.PayrollDetails.Add(payrollDetail);
+                    }
+
+                    payroll.NetSalary = netsalary;
+
+                    // Validate and set remaining balance
+                    if (data.InitialPayingAmount > netsalary)
+                    {
+                        await transaction.RollbackAsync();
+                        return Json(new { status = "error", message = $"Initial payment amount cannot exceed net salary of {netsalary:C}" });
+                    }
+
+                    payroll.RemainingBalance = netsalary - data.InitialPayingAmount;
+
+                    _dbContext.Payrolls.Update(payroll);
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+                return Json(new { status = "success", message = "Payroll generated successfully with custom amounts." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return Json(new { status = "error", message = $"Error: {ex.Message}" });
             }
         }
 
