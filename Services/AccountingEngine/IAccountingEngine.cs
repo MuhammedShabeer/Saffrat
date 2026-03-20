@@ -61,6 +61,11 @@ namespace Saffrat.Services.AccountingEngine
         /// Records a flexible/partial payroll payment.
         /// </summary>
         Task<JournalEntry> RecordFlexiblePayrollPaymentAsync(PayrollPayment payment, Payroll payroll);
+
+        /// <summary>
+        /// Reverses a Journal Entry and its Ledger Entries, adjusting account balances back.
+        /// </summary>
+        Task<bool> ReverseJournalEntryAsync(int journalEntryId);
     }
 
     // Report DTOs

@@ -78,6 +78,8 @@ namespace Saffrat.Models
         public decimal AmountPaid { get; set; }
         public string Status { get; set; }
         public int? JournalEntryId { get; set; }
+
+        public virtual Customer Customer { get; set; }
     }
     public partial class Bill
     {
@@ -90,5 +92,7 @@ namespace Saffrat.Models
         public decimal AmountPaid { get; set; }
         public string Status { get; set; }
         public int? JournalEntryId { get; set; }
+
+        public virtual Supplier Supplier { get; set; }
     }
 }

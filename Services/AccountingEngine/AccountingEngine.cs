@@ -398,5 +398,39 @@ namespace Saffrat.Services.AccountingEngine
 
             return journalEntry;
         }
+
+        /// <summary>
+        /// Reverses a Journal Entry and its Ledger Entries, adjusting account balances back.
+        /// </summary>
+        public async Task<bool> ReverseJournalEntryAsync(int journalEntryId)
+        {
+            var journalEntry = await _dbContext.Set<JournalEntry>()
+                .Include(j => j.LedgerEntries)
+                .FirstOrDefaultAsync(j => j.Id == journalEntryId);
+
+            if (journalEntry == null) return false;
+
+            // Undo the balance changes for each ledger entry
+            foreach (var le in journalEntry.LedgerEntries)
+            {
+                var acct = await _dbContext.Set<GLAccount>().FirstOrDefaultAsync(a => a.Id == le.GLAccountId);
+                if (acct != null)
+                {
+                    // If it's an Asset or Expense, balance = Debits - Credits
+                    // To reverse: if we added (Debit - Credit), we now subtract (Debit - Credit)
+                    if (acct.Category == (int)AccountCategory.Asset || acct.Category == (int)AccountCategory.Expense)
+                        acct.CurrentBalance -= (le.Debit - le.Credit);
+                    else
+                        acct.CurrentBalance -= (le.Credit - le.Debit);
+                }
+            }
+
+            // Remove entries from database
+            _dbContext.Set<LedgerEntry>().RemoveRange(journalEntry.LedgerEntries);
+            _dbContext.Set<JournalEntry>().Remove(journalEntry);
+
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
     }
 }

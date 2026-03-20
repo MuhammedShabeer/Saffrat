@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.Helpers;
 using Saffrat.Models;
 using Saffrat.Services;
+using Saffrat.Services.AccountingEngine;
+using Saffrat.Models.AccountingEngine;
 using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
 
@@ -13,15 +15,17 @@ namespace Saffrat.Controllers
     {
         private readonly ILogger<HRMController> _logger;
         private readonly RestaurantDBContext _dbContext;
+        private readonly IAccountingEngine _accountingEngine;
 
 
         public HRMController(ILogger<HRMController> logger, RestaurantDBContext dbContext,
-            ILanguageService languageService, ILocalizationService localizationService)
+            ILanguageService languageService, ILocalizationService localizationService,
+            IAccountingEngine accountingEngine)
         : base(languageService, localizationService)
         {
             _logger = logger;
             _dbContext = dbContext;
-
+            _accountingEngine = accountingEngine;
         }
 
         /*
@@ -917,18 +921,23 @@ namespace Saffrat.Controllers
         // Get employees for customizable payroll generation
         [HttpGet]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> GetEmployeesForPayroll()
+        public async Task<IActionResult> GetEmployeesForPayroll(int month, int year)
         {
             try
             {
+                // Get IDs of employees who already have payroll for this month/year
+                var generatedEmployeeIds = await _dbContext.Payrolls
+                    .Where(p => p.Month == month && p.Year == year)
+                    .Select(p => (int?)p.EmployeeId)
+                    .ToListAsync();
+
                 var employees = await _dbContext.Employees
-                    .Where(x => x.Status == true)
+                    .Where(x => x.Status == true && !generatedEmployeeIds.Contains(x.Id))
                     .Select(e => new
                     {
                         e.Id,
                         e.Name,
                         e.Salary,
-                        DepartmentId = e.Department.Id,
                         DepartmentName = e.Department.Title,
                         DesignationName = e.Designation.Title
                     })
@@ -963,12 +972,13 @@ namespace Saffrat.Controllers
                         var existing = _dbContext.Payrolls.Where(x => x.EmployeeId == item.Id && x.Month == month && x.Year == year).FirstOrDefault();
                         if (existing != null)
                         {
-                            _dbContext.Payrolls.Remove(existing);
                             var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id).ToList();
-                            if (existingJournals.Any())
+                            foreach (var journal in existingJournals)
                             {
-                                _dbContext.JournalEntries.RemoveRange(existingJournals);
+                                await _accountingEngine.ReverseJournalEntryAsync(journal.Id);
                             }
+                            _dbContext.Payrolls.Remove(existing);
+                            await _dbContext.SaveChangesAsync();
                         }
 
                         var payroll = new Payroll()
@@ -1095,14 +1105,14 @@ namespace Saffrat.Controllers
 
                     if (existing != null)
                     {
-                        _dbContext.Payrolls.Remove(existing);
                         var existingJournals = _dbContext.JournalEntries
                             .Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id)
                             .ToList();
-                        if (existingJournals.Any())
+                        foreach (var journal in existingJournals)
                         {
-                            _dbContext.JournalEntries.RemoveRange(existingJournals);
+                            await _accountingEngine.ReverseJournalEntryAsync(journal.Id);
                         }
+                        _dbContext.Payrolls.Remove(existing);
                         await _dbContext.SaveChangesAsync();
                     }
 
@@ -1189,6 +1199,87 @@ namespace Saffrat.Controllers
 
                     payroll.RemainingBalance = netsalary - data.InitialPayingAmount;
 
+                    // Update payment status based on initial payment amount
+                    if (data.InitialPayingAmount > 0)
+                    {
+                        if (data.InitialPayingAmount >= netsalary)
+                        {
+                            payroll.PaymentStatus = "Paid";
+                        }
+                        else
+                        {
+                            payroll.PaymentStatus = "PartiallyPaid";
+                        }
+
+                        // NEW: Create Journal Entry for Initial Payment
+                        int salaryAccountId = 0;
+                        var salaryAccount = await _dbContext.GLAccounts.FirstOrDefaultAsync(x => x.AccountName == "Salaries" || (x.Category == 4 && x.Type == 15));
+                        if (salaryAccount != null)
+                        {
+                            salaryAccountId = salaryAccount.Id;
+                        }
+                        else
+                        {
+                            var newExpAccount = new GLAccount
+                            {
+                                AccountCode = "5000",
+                                AccountName = "Salaries",
+                                Category = 4,
+                                Type = 15,
+                                CurrentBalance = 0,
+                                IsActive = true
+                            };
+                            _dbContext.GLAccounts.Add(newExpAccount);
+                            await _dbContext.SaveChangesAsync();
+                            salaryAccountId = newExpAccount.Id;
+                        }
+
+                        var initialPaymentJournal = new JournalEntry
+                        {
+                            ReferenceNumber = "PAYROLL-" + payroll.Id,
+                            Description = $"Initial Salary Payment - {payroll.Month}/{payroll.Year}",
+                            EntryDate = CurrentDateTime(),
+                            IsPosted = false,
+                            SourceDocumentType = "payroll",
+                            SourceDocumentId = payroll.Id,
+                            CreatedAt = CurrentDateTime(),
+                            LedgerEntries = new List<LedgerEntry>()
+                        };
+
+                        initialPaymentJournal.LedgerEntries.Add(new LedgerEntry
+                        {
+                            GLAccountId = salaryAccountId,
+                            Description = "Initial Salary Payment",
+                            Debit = data.InitialPayingAmount,
+                            Credit = 0
+                        });
+
+                        initialPaymentJournal.LedgerEntries.Add(new LedgerEntry
+                        {
+                            GLAccountId = Convert.ToInt32(GetSetting.PayrollAccount),
+                            Description = "Initial Salary Payment",
+                            Debit = 0,
+                            Credit = data.InitialPayingAmount
+                        });
+
+                        await _accountingEngine.PostJournalEntryAsync(initialPaymentJournal);
+
+                        // NEW: Create PayrollPayment record for history
+                        var payment = new PayrollPayment
+                        {
+                            PayrollId = payroll.Id,
+                            Amount = data.InitialPayingAmount,
+                            PaymentMethod = "Cash", // Default for initial payment
+                            PaymentDate = CurrentDateTime(),
+                            Notes = "Initial payment during generation",
+                            JournalEntryId = initialPaymentJournal.Id,
+                            CreatedAt = CurrentDateTime()
+                        };
+                        _dbContext.PayrollPayments.Add(payment);
+                        
+                        payroll.TotalAmountPaid = data.InitialPayingAmount;
+                    }
+
                     _dbContext.Payrolls.Update(payroll);
                     await _dbContext.SaveChangesAsync();
                 }
@@ -1209,18 +1300,29 @@ namespace Saffrat.Controllers
         {
             try
             {
-                var payroll = _dbContext.Payrolls.FirstOrDefault(x => x.Id.Equals(Id));
+                var payroll = await _dbContext.Payrolls.FirstOrDefaultAsync(x => x.Id == Id);
                 if (payroll != null)
                 {
-                    payroll.PaymentStatus = "Paid";
-                    _dbContext.Payrolls.Update(payroll);
-                    await _dbContext.SaveChangesAsync();
-                    // Double-Entry Accounting Engine: Log Payroll Payment
+                    if (payroll.PaymentStatus == "Paid")
+                    {
+                        return Json(new { status = "error", message = "Payroll already paid." });
+                    }
+
+                    decimal amountToPay = payroll.RemainingBalance;
+                    if (amountToPay <= 0)
+                    {
+                        payroll.PaymentStatus = "Paid";
+                        _dbContext.Payrolls.Update(payroll);
+                        await _dbContext.SaveChangesAsync();
+                        return Json(new { status = "success", message = "Payroll marked as paid (Zero balance)." });
+                    }
+
+                    // Double-Entry Accounting
                     int salaryAccountId = 0;
-                    var salaryAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Salaries" || (x.Category == 4 && x.Type == 15));
+                    var salaryAccount = await _dbContext.GLAccounts.FirstOrDefaultAsync(x => x.AccountName == "Salaries" || (x.Category == 4 && x.Type == 15));
                     if (salaryAccount != null)
                     {
-                        salaryAccountId = Convert.ToInt32(salaryAccount.Id);
+                        salaryAccountId = salaryAccount.Id;
                     }
                     else
                     {
@@ -1238,61 +1340,66 @@ namespace Saffrat.Controllers
                         salaryAccountId = newExpAccount.Id;
                     }
 
-                    JournalEntry payrollJournal = new JournalEntry
+                    var payrollJournal = new JournalEntry
                     {
                         ReferenceNumber = "PAYROLL-" + payroll.Id,
-                        Description = "Salary Payment",
+                        Description = $"Salary Payment - {payroll.Month}/{payroll.Year}",
                         EntryDate = CurrentDateTime(),
-                        IsPosted = true,
+                        IsPosted = false, // Will be set to true by PostJournalEntryAsync
                         SourceDocumentType = "payroll",
                         SourceDocumentId = payroll.Id,
-                        CreatedAt = CurrentDateTime()
+                        CreatedAt = CurrentDateTime(),
+                        LedgerEntries = new List<LedgerEntry>()
                     };
-                    _dbContext.JournalEntries.Add(payrollJournal);
-                    await _dbContext.SaveChangesAsync();
 
-                    LedgerEntry debitSalary = new LedgerEntry
+                    payrollJournal.LedgerEntries.Add(new LedgerEntry
                     {
-                        JournalEntryId = payrollJournal.Id,
                         GLAccountId = salaryAccountId,
                         Description = "Salary Payment",
-                        Debit = payroll.NetSalary,
+                        Debit = amountToPay,
                         Credit = 0
-                    };
+                    });
 
-                    LedgerEntry creditAsset = new LedgerEntry
+                    payrollJournal.LedgerEntries.Add(new LedgerEntry
                     {
-                        JournalEntryId = payrollJournal.Id,
                         GLAccountId = Convert.ToInt32(GetSetting.PayrollAccount),
                         Description = "Salary Payment",
                         Debit = 0,
-                        Credit = payroll.NetSalary
+                        Credit = amountToPay
+                    });
+
+                    // Use accounting engine to post and update balances
+                    await _accountingEngine.PostJournalEntryAsync(payrollJournal);
+
+                    // NEW: Create PayrollPayment record for history
+                    var payment = new PayrollPayment
+                    {
+                        PayrollId = payroll.Id,
+                        Amount = amountToPay,
+                        PaymentMethod = "Cash", // Default for marking fully paid
+                        PaymentDate = CurrentDateTime(),
+                        Notes = "Marked as fully paid from list",
+                        JournalEntryId = payrollJournal.Id,
+                        CreatedAt = CurrentDateTime()
                     };
-                    _dbContext.LedgerEntries.AddRange(debitSalary, creditAsset);
+                    _dbContext.PayrollPayments.Add(payment);
+
+                    payroll.TotalAmountPaid += amountToPay;
+                    payroll.RemainingBalance = 0;
+                    payroll.PaymentStatus = "Paid";
+                    _dbContext.Payrolls.Update(payroll);
                     await _dbContext.SaveChangesAsync();
 
-                    return Json(new
-                    {
-                        status = "success",
-                        message = "success"
-                    });
+                    return Json(new { status = "success", message = "Salary paid successfully." });
                 }
                 else
                 {
-                    return Json(new
-                    {
-                        status = "error",
-                        message = "Payroll not exist."
-                    });
+                    return Json(new { status = "error", message = "Payroll not exist." });
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return Json(new
-                {
-                    status = "error",
-                    message = "Something went wrong."
-                });
+                return Json(new { status = "error", message = ex.Message });
             }
         }
 
@@ -1346,25 +1453,28 @@ namespace Saffrat.Controllers
 
             if (existing != null)
             {
+                using var transaction = _dbContext.Database.BeginTransaction();
                 try
                 {
+                    // Find and reverse associated journals
+                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id).ToList();
+                    foreach (var journal in existingJournals)
+                    {
+                        await _accountingEngine.ReverseJournalEntryAsync(journal.Id);
+                    }
+
                     _dbContext.Payrolls.Remove(existing);
                     await _dbContext.SaveChangesAsync();
-
-                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id).ToList();
-                    if (existingJournals.Any())
-                    {
-                        _dbContext.JournalEntries.RemoveRange(existingJournals);
-                        await _dbContext.SaveChangesAsync();
-                    }
+                    await transaction.CommitAsync();
 
                     results.Add("status", "success");
                     results.Add("message", "success");
                 }
-                catch
+                catch (Exception ex)
                 {
+                    await transaction.RollbackAsync();
                     results.Add("status", "error");
-                    results.Add("message", "Error while deleting payroll.");
+                    results.Add("message", "Error while deleting payroll: " + ex.Message);
                 }
             }
             else

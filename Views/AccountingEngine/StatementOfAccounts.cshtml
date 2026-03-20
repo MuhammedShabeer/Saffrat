@@ -144,7 +144,7 @@
                             @foreach (var row in Model.Transactions)
                             {
                                 <tr class="cursor-pointer" onclick="viewLines(@row.JournalEntryId)">
-                                    <td class="ps-4">@row.Date.ToString("yyyy-MM-dd")</td>
+                                    <td class="ps-4">@row.Date.ToString("yyyy-MM-dd HH:mm")</td>
                                     <td><strong>@row.Reference</strong></td>
                                     <td>@row.Description</td>
                                     <td class="text-end text-success">@(row.Debit > 0 ? GetCurrency(row.Debit) : "-")</td>

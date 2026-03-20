@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Saffrat.Models.Payroll>
+@model IEnumerable<Saffrat.Models.Payroll>
 
 @using Saffrat.Resources
 @using System.Globalization
@@ -159,6 +159,35 @@
             background-color: #dc3545;
             color: white;
         }
+
+        /* Custom Payroll Generation Modal Styles */
+        .bg-light-primary {
+            background-color: #f0f7ff !important;
+        }
+
+        .border-start-lg {
+            border-left-width: 5px !important;
+        }
+
+        .border-start-primary {
+            border-left-color: #007bff !important;
+        }
+
+        .employee-select-checkbox {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+        #employeeListContainer .card {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+        }
+
+        #employeeListContainer .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+        }
     </style>
 }
 <div class="page-header">
@@ -305,7 +334,9 @@
                                         <strong>@(item.TotalAmountPaid > 0 ? item.TotalAmountPaid.ToString("0.00") : "0.00")</strong>
                                     </td>
                                     <td>
-                                        <span class="text-danger">@(item.RemainingBalance > 0 ? item.RemainingBalance.ToString("0.00") : item.NetSalary.ToString("0.00"))</span>
+                                        <span class="text-danger">
+                                            @((item.NetSalary - item.TotalAmountPaid).ToString("0.00"))
+                                        </span>
                                     </td>
                                     <td>@item.GeneratedAt</td>
                                     <td>
@@ -313,7 +344,8 @@
                                         <div class="dropdown-menu">
                                             @if (item.PaymentStatus != "Paid")
                                             {
-                                                <a class="dropdown-item btn" onclick="OpenPaymentModal(@item.Id, '@item.Employee.Name', @item.NetSalary, @(item.RemainingBalance > 0 ? item.RemainingBalance : item.NetSalary), '@item.PaymentStatus');"><i class="fas fa-money-bill me-2"></i>@Localize("Record Payment")</a>
+                                                decimal remToPay = item.NetSalary - item.TotalAmountPaid;
+                                                <a class="dropdown-item btn" onclick="OpenPaymentModal(@item.Id, '@item.Employee.Name', @item.NetSalary, @remToPay, '@item.PaymentStatus');"><i class="fas fa-money-bill me-2"></i>@Localize("Record Payment")</a>
                                             }
                                             <a class="dropdown-item btn" onclick="ViewPaymentHistory(@item.Id);"><i class="fas fa-history me-2"></i>@Localize("Payment History")</a>
                                             <a class="dropdown-item btn" onclick="OpenInvoiceModal(@item.Id);"><i class="fas fa-print me-2"></i>@Localize("View Payslip")</a>
@@ -719,6 +751,15 @@
         function ToggleCustomSalaryMode(checkbox) {
             const customSection = document.getElementById('customSalarySection');
             if (checkbox.checked) {
+                const month = $('#genMonth').val();
+                const year = $('#genYear').val();
+                
+                if (!month || !year) {
+                    checkbox.checked = false;
+                    errorMessage('@Localize("Please select month and year first.")');
+                    return;
+                }
+                
                 customSection.style.display = 'block';
                 LoadEmployeesForCustomPayroll();
             } else {
@@ -728,62 +769,135 @@
 
         // Load employees for custom salary configuration
         function LoadEmployeesForCustomPayroll() {
+            const month = $('#genMonth').val();
+            const year = $('#genYear').val();
+            
+            if (!month || !year || !document.getElementById('useCustomSalary').checked) return;
+
+            const container = document.getElementById('employeeListContainer');
+            container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div></div>';
+
             jQuery.ajax({
-                url: "/HRM/GetEmployeesForPayroll",
+                url: `/HRM/GetEmployeesForPayroll?month=${month}&year=${year}`,
                 method: "GET",
                 dataType: "json",
                 success: function (data) {
                     if (data.status == "success") {
-                        const container = document.getElementById('employeeListContainer');
                         let html = '';
+                        
+                        // Add Select All header
+                        if (data.data.length > 0) {
+                            html += `
+                                <div class="card mb-3 bg-white border-primary shadow-sm">
+                                    <div class="card-body p-2 px-3">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="selectAllEmployees" onchange="ToggleSelectAllEmployees(this)">
+                                                    <label class="form-check-label fw-bold" for="selectAllEmployees">@Localize("Select All Employees")</label>
+                                                </div>
+                                            </div>
+                                            <div class="col text-end border-start">
+                                                <span class="badge bg-light text-dark me-2">@Localize("Total Found"): <span id="totalFoundCount">${data.data.length}</span></span>
+                                                <span class="badge bg-primary text-white">@Localize("Selected"): <span id="selectedCount">0</span></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
 
                         data.data.forEach(function (emp, index) {
                             html += `
-                                <div class="card mb-2 shadow-sm">
+                                <div class="card mb-2 shadow-sm border-start-lg border-start-primary">
                                     <div class="card-body p-3">
                                         <div class="row align-items-center">
-                                            <div class="col-md-4">
-                                                <small class="text-muted">@Localize("Employee")</small>
-                                                <div class="fw-bold">${emp.name}</div>
-                                                <small class="text-muted">${emp.departmentName} - ${emp.designationName}</small>
+                                            <div class="col-auto pe-0">
+                                                <div class="form-check">
+                                                    <input class="form-check-input employee-select-checkbox" type="checkbox" 
+                                                           data-emp-id="${emp.id}" 
+                                                           onchange="UpdateSelectedCount()">
+                                                </div>
                                             </div>
                                             <div class="col-md-3">
-                                                <small class="text-muted">@Localize("Default Salary")</small>
-                                                <div class="fw-bold">${GetCurrency(getNumber(emp.salary))}</div>
+                                                <div class="fw-bold text-primary">${emp.name}</div>
+                                                <small class="text-muted d-block">${emp.departmentName} - ${emp.designationName}</small>
                                             </div>
-                                            <div class="col-md-5">
-                                                <div class="row">
-                                                    <div class="col-md-6">
+                                            <div class="col-md-2 text-center border-start border-end">
+                                                <small class="text-muted d-block">@Localize("Default Salary")</small>
+                                                <div class="fw-bold text-dark">${GetCurrency(getNumber(emp.salary.toFixed(2)))}</div>
+                                            </div>
+                                            <div class="col-md-6 ps-4">
+                                                <div class="row g-2">
+                                                    <div class="col-6">
                                                         <label class="form-label small fw-bold mb-1">@Localize("Custom Salary")</label>
-                                                        <input type="number" class="form-control form-control-sm custom-salary-input" 
-                                                               data-emp-id="${emp.id}" 
-                                                               value="${emp.salary}" 
-                                                               step="0.01" min="0.01" required>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light"><i class="fas fa-coins fa-xs"></i></span>
+                                                            <input type="number" class="form-control custom-salary-input" 
+                                                                   data-emp-id="${emp.id}" 
+                                                                   value="${emp.salary.toFixed(2)}" 
+                                                                   step="0.01" min="0.01" required oninput="UpdateSelectedCount()">
+                                                        </div>
                                                     </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label small fw-bold mb-1">@Localize("Initial Payment") <span class="text-muted">(Optional)</span></label>
-                                                        <input type="number" class="form-control form-control-sm initial-payment-input" 
-                                                               data-emp-id="${emp.id}" 
-                                                               value="0" 
-                                                               step="0.01" min="0">
+                                                    <div class="col-6">
+                                                        <label class="form-label small fw-bold mb-1">@Localize("Initial Payment")</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light"><i class="fas fa-wallet fa-xs"></i></span>
+                                                            <input type="number" class="form-control initial-payment-input" 
+                                                                   data-emp-id="${emp.id}" 
+                                                                   value="0.00" 
+                                                                   step="0.01" min="0" oninput="UpdateSelectedCount()">
+                                                        </div>
                                                     </div>
                                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             `;
                         });
 
-                        container.innerHTML = html || '<div class="alert alert-info">@Localize("No active employees found.")</div>';
+                        container.innerHTML = html || `<div class="alert alert-warning text-center">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                @Localize("No employees without payroll found for this period.")
+                            </div>`;
+                        
+                        UpdateSelectedCount();
                     } else {
-                        alert('Error: ' + data.message);
+                        errorMessage(data.message);
                     }
                 },
                 error: function () {
-                    alert('Failed to load employees.');
+                    errorMessage('@Localize("Failed to load employees.")');
                 }
             });
+        }
+
+        function ToggleSelectAllEmployees(checkbox) {
+            $('.employee-select-checkbox').prop('checked', checkbox.checked);
+            UpdateSelectedCount();
+        }
+
+        function UpdateSelectedCount() {
+            const count = $('.employee-select-checkbox:checked').length;
+            $('#selectedCount').text(count);
+            
+            // Highlight cards of selected employees
+            $('.employee-select-checkbox').each(function() {
+                const card = $(this).closest('.card');
+                if (this.checked) {
+                    card.addClass('border-primary bg-light-primary');
+                } else {
+                    card.removeClass('border-primary bg-light-primary');
+                }
+            });
+            
+            // Update Select All checkbox state
+            const total = $('.employee-select-checkbox').length;
+            if (total > 0) {
+                $('#selectAllEmployees').prop('checked', count === total);
+                $('#selectAllEmployees').prop('indeterminate', count > 0 && count < total);
+            }
         }
 
         function OpenInvoiceModal(id) {
@@ -1052,13 +1166,16 @@
 
         // Submit custom payroll with individual salary amounts
         function SubmitCustomPayroll(month, year) {
-            const customSalaryInputs = document.querySelectorAll('.custom-salary-input');
+            const selectedCheckboxes = document.querySelectorAll('.employee-select-checkbox:checked');
             const customData = [];
 
-            customSalaryInputs.forEach(function (input) {
-                const empId = parseInt(input.getAttribute('data-emp-id'));
-                const customSalary = parseFloat(input.value);
-                const initialPayment = parseFloat(document.querySelector(`.initial-payment-input[data-emp-id="${empId}"]`).value) || 0;
+            selectedCheckboxes.forEach(function (checkbox) {
+                const empId = parseInt(checkbox.getAttribute('data-emp-id'));
+                const customSalaryInput = document.querySelector(`.custom-salary-input[data-emp-id="${empId}"]`);
+                const initialPaymentInput = document.querySelector(`.initial-payment-input[data-emp-id="${empId}"]`);
+                
+                const customSalary = parseFloat(customSalaryInput.value);
+                const initialPayment = parseFloat(initialPaymentInput.value) || 0;
 
                 if (customSalary > 0) {
                     customData.push({
@@ -1070,7 +1187,7 @@
             });
 
             if (customData.length === 0) {
-                alert('@Localize("Please enter at least one employee salary.")');
+                errorMessage('@Localize("Please select at least one employee and enter a salary.")');
                 return;
             }
 
@@ -1086,8 +1203,36 @@
                 dataType: "json",
                 success: function (data) {
                     if (data.status == "success") {
-                        setCookie("successMessage", '@Localize("Payroll generated successfully with custom amounts.")');
-                        window.location.reload(true);
+                        // Auto-accrue payrolls with initial payments
+                        const hasInitialPayments = Array.from(document.querySelectorAll('.initial-payment-input'))
+                            .some(input => parseFloat(input.value) > 0);
+
+                        if (hasInitialPayments) {
+                            // Fetch the newly created payrolls and accrue them
+                            setTimeout(() => {
+                                fetch('/AccountingEngine/GetPayrollsList')
+                                    .then(r => r.json())
+                                    .then(result => {
+                                        if (result.status === 'success' && result.data && result.data.length > 0) {
+                                            // Accrue only the latest payrolls that don't have JournalEntryId
+                                            const latestPayrolls = result.data.filter(p => !p.journalEntryId).slice(0, 5);
+                                            Promise.all(latestPayrolls.map(p => 
+                                                fetch(`/AccountingEngine/AccruePayroll?payrollId=${p.id}`, { method: 'POST' })
+                                            )).then(() => {
+                                                setCookie("successMessage", '@Localize("Payroll generated and accrued successfully.")');
+                                                window.location.reload(true);
+                                            });
+                                        }
+                                    }).catch(e => {
+                                        console.error('Auto-accrue failed:', e);
+                                        setCookie("successMessage", '@Localize("Payroll generated. Please accrue manually if needed.")');
+                                        window.location.reload(true);
+                                    });
+                            }, 500);
+                        } else {
+                            setCookie("successMessage", '@Localize("Payroll generated successfully with custom amounts.")');
+                            window.location.reload(true);
+                        }
                     }
                     else {
                         errorMessage(data.message);
@@ -1110,15 +1255,19 @@
             let partialCount = 0;
             let unpaidCount = 0;
 
-            dt.rows().every(function () {
-                let row = this.data();
-                let netSalary = parseFloat(row[4]) || 0;
-                let paidAmount = parseFloat(row[7]) || 0;
+            dt.rows({ search: 'applied' }).every(function () {
+                let row = this.node();
+                if (!row) return;
+
+                // Extract numbers from row data - using getLocaleNumber for actual numeric values
+                let netSalary = getLocaleNumber($(row).find('td:nth-child(5)').text());
+                let paidAmount = getLocaleNumber($(row).find('td:nth-child(8)').text());
+                
                 totalPayroll += netSalary;
                 totalPaid += paidAmount;
 
-                let status = row[6] || '';
-                if (status.includes('Partial')) {
+                let status = $(row).find('td:nth-child(7) .badge').text().trim() || '';
+                if (status.includes('Partially Paid')) {
                     partialCount++;
                 } else if (status.includes('Unpaid')) {
                     unpaidCount++;
@@ -1157,12 +1306,14 @@
                     if (data.status == "success") {
                         var res = data.data;
 
-                        // Update statistics
-                        $('#histNetSalary').text(GetCurrency(res.netSalary));
-                        $('#histPaidAmount').text(GetCurrency(res.totalPaid));
-                        $('#histRemaining').text(GetCurrency(res.remaining));
+                        // Update statistics - calculate accurate remaining balance if DB is out of sync
+                        $('#histNetSalary').text(GetCurrency(res.netSalary || 0));
+                        $('#histPaidAmount').text(GetCurrency(res.totalAmountPaid || 0));
+                        
+                        let remaining = (res.netSalary || 0) - (res.totalAmountPaid || 0);
+                        $('#histRemaining').text(GetCurrency(remaining.toFixed(2)));
 
-                        let percentage = res.netSalary > 0 ? ((res.totalPaid / res.netSalary) * 100).toFixed(0) : 0;
+                        let percentage = res.netSalary > 0 ? ((res.totalAmountPaid / res.netSalary) * 100).toFixed(0) : 0;
                         $('#histPercentage').text(percentage + '%');
 
                         // Clear and populate table
@@ -1300,11 +1451,24 @@
             });
         }
 
-        // Initialize payment stats on page load
+        // Initialize
         $(document).ready(function () {
+            // Month/Year change listeners for custom payroll
+            $('#genMonth, #genYear').on('change', function() {
+                if ($('#useCustomSalary').is(':checked')) {
+                    LoadEmployeesForCustomPayroll();
+                }
+            });
+
+            // Initial calculation
             setTimeout(function () {
                 calculatePaymentStats();
             }, 1000);
+
+            // Update stats whenever table is filtered or paged
+            dt.on('draw.dt', function () {
+                calculatePaymentStats();
+            });
         });
     </script>
 }

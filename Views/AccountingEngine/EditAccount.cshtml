@@ -1,0 +1,83 @@
+@model Saffrat.Models.GLAccount
+@using Saffrat.Models.AccountingEngine
+@using Saffrat.Resources
+@inherits LocService<TModel>
+@{
+    ViewData["Title"] = Localize("Edit GL Account");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("Edit GL Account")</h4>
+                </div>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <a asp-action="ChartOfAccounts" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> @Localize("Back")</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row pt-3">
+    <div class="col-md-8 mx-auto">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form asp-action="EditAccount" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="AccountCode" class="form-label text-muted fw-bold">@Localize("Account Code")</label>
+                        <input asp-for="AccountCode" class="form-control" placeholder="@Localize("E.g. 1000, 5100")" required />
+                        <span asp-validation-for="AccountCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="AccountName" class="form-label text-muted fw-bold">@Localize("Account Name")</label>
+                        <input asp-for="AccountName" class="form-control" placeholder="@Localize("E.g. Food Sales, Office Expense")"
+                            required />
+                        <span asp-validation-for="AccountName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label text-muted fw-bold">@Localize("Description (Optional)")</label>
+                        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Category" class="form-label text-muted fw-bold">@Localize("Category")</label>
+                            <select asp-for="Category" class="form-select"
+                                asp-items="Html.GetEnumSelectList<AccountCategory>()" required>
+                            </select>
+                            <span asp-validation-for="Category" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Type" class="form-label text-muted fw-bold">@Localize("Sub-Type")</label>
+                            <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<AccountType>()"
+                                required>
+                            </select>
+                            <span asp-validation-for="Type" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="IsActive" id="isActiveCheck">
+                        <label class="form-check-label fw-bold" for="isActiveCheck">@Localize("Active")</label>
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button type="submit" class="btn btn-primary px-4 fw-bold"><i class="fa fa-save"></i> @Localize("Update Account")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,5 +1,6 @@
 @model IEnumerable<Saffrat.Models.GLAccount>
 @using Saffrat.Resources
+@using Saffrat.Models.AccountingEngine
 @inherits LocService<TModel>
 
 @{
@@ -55,8 +56,8 @@
                                     <tr>
                                         <td><strong>@acc.AccountCode</strong></td>
                                         <td>@acc.AccountName</td>
-                                        <td><span class="badge bg-secondary">@acc.Category</span></td>
-                                        <td>@acc.Type</td>
+                                        <td><span class="badge bg-secondary">@((AccountCategory)acc.Category)</span></td>
+                                        <td>@((AccountType)acc.Type)</td>
                                         <td class="@(acc.CurrentBalance < 0 ? "text-danger" : "text-success") fw-bold">
                                             @GetCurrency(acc.CurrentBalance)
                                         </td>
@@ -71,8 +72,8 @@
                                             }
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-info text-white"><i class="fa fa-edit"></i>
-                                                @Localize("Edit")</button>
+                                            <a asp-action="EditAccount" asp-route-id="@acc.Id" class="btn btn-sm btn-info text-white"><i class="fa fa-edit"></i> @Localize("Edit")</a>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteAccount(@acc.Id, '@acc.AccountName')"><i class="fa fa-trash"></i> @Localize("Delete")</button>
                                         </td>
                                     </tr>
                                 }
@@ -92,9 +93,43 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(document).ready(function () {
             $('#datatable').DataTable();
         });
+
+        function deleteAccount(id, name) {
+            Swal.fire({
+                title: '@Localize("Are you sure?")',
+                text: '@Localize("You are about to delete account:") ' + name,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: '@Localize("Yes, delete it!")'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('@Url.Action("DeleteAccount")', { id: id }, function (res) {
+                        if (res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '@Localize("Deleted!")',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '@Localize("Cannot Delete")',
+                                text: res.message
+                            });
+                        }
+                    });
+                }
+            });
+        }
     </script>
 }

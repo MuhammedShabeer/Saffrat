@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.Helpers;
 using Saffrat.Models;
 using Saffrat.Services;
+using Saffrat.Services.AccountingEngine;
 using System.Security.Claims;
 
 namespace Saffrat.Controllers
@@ -12,15 +13,17 @@ namespace Saffrat.Controllers
     {
         private readonly ILogger<PurchaseController> _logger;
         private readonly RestaurantDBContext _dbContext;
+        private readonly IAccountingEngine _accountingEngine;
 
 
         public PurchaseController(ILogger<PurchaseController> logger, RestaurantDBContext dbContext,
-            ILanguageService languageService, ILocalizationService localizationService)
+            ILanguageService languageService, ILocalizationService localizationService,
+            IAccountingEngine accountingEngine)
         : base(languageService, localizationService)
         {
             _logger = logger;
             _dbContext = dbContext;
-
+            _accountingEngine = accountingEngine;
         }
 
         /*
@@ -182,33 +185,31 @@ namespace Saffrat.Controllers
                                 ReferenceNumber = "PUR-" + purchase.Id,
                                 Description = "Inventory Purchase " + purchase.InvoiceNo,
                                 EntryDate = CurrentDateTime(),
-                                IsPosted = true,
+                                IsPosted = false,
                                 SourceDocumentType = "purchase",
                                 SourceDocumentId = purchase.Id,
-                                CreatedAt = CurrentDateTime()
+                                CreatedAt = CurrentDateTime(),
+                                LedgerEntries = new List<LedgerEntry>()
                             };
-                            _dbContext.JournalEntries.Add(purchaseJournal);
-                            await _dbContext.SaveChangesAsync();
 
-                            LedgerEntry debitPurchase = new LedgerEntry
+                            purchaseJournal.LedgerEntries.Add(new LedgerEntry
                             {
-                                JournalEntryId = purchaseJournal.Id,
                                 GLAccountId = purchasesAccountId,
                                 Description = purchase.Description,
                                 Debit = purchase.TotalAmount,
                                 Credit = 0
-                            };
+                            });
 
-                            LedgerEntry creditAsset = new LedgerEntry
+                            purchaseJournal.LedgerEntries.Add(new LedgerEntry
                             {
-                                JournalEntryId = purchaseJournal.Id,
                                 GLAccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
                                 Description = purchase.Description,
                                 Debit = 0,
                                 Credit = purchase.TotalAmount
-                            };
-                            _dbContext.LedgerEntries.AddRange(debitPurchase, creditAsset);
-                            await _dbContext.SaveChangesAsync();
+                            });
+
+                            // Use Accounting Engine to post and update balances
+                            await _accountingEngine.PostJournalEntryAsync(purchaseJournal);
 
                             response.Add("status", "success");
                             response.Add("message", "success");
@@ -314,12 +315,11 @@ namespace Saffrat.Controllers
                                 purchasesAccountId = newPurAccount.Id;
                             }
 
-                            // Clean up existing journal entries for this purchase
+                            // Clean up existing journal entries and update balances
                             var oldJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "purchase" && x.SourceDocumentId == purchase.Id).ToList();
-                            if (oldJournals.Any())
+                            foreach (var oldJournal in oldJournals)
                             {
-                                _dbContext.JournalEntries.RemoveRange(oldJournals);
-                                await _dbContext.SaveChangesAsync();
+                                await _accountingEngine.ReverseJournalEntryAsync(oldJournal.Id);
                             }
 
                             JournalEntry purchaseJournal = new JournalEntry
@@ -327,33 +327,30 @@ namespace Saffrat.Controllers
                                 ReferenceNumber = "PUR-" + purchase.Id,
                                 Description = "Inventory Purchase " + purchase.InvoiceNo,
                                 EntryDate = CurrentDateTime(),
-                                IsPosted = true,
+                                IsPosted = false,
                                 SourceDocumentType = "purchase",
                                 SourceDocumentId = purchase.Id,
-                                CreatedAt = CurrentDateTime()
+                                CreatedAt = CurrentDateTime(),
+                                LedgerEntries = new List<LedgerEntry>()
                             };
-                            _dbContext.JournalEntries.Add(purchaseJournal);
-                            await _dbContext.SaveChangesAsync();
 
-                            LedgerEntry debitPurchase = new LedgerEntry
+                            purchaseJournal.LedgerEntries.Add(new LedgerEntry
                             {
-                                JournalEntryId = purchaseJournal.Id,
                                 GLAccountId = purchasesAccountId,
                                 Description = purchase.Description,
                                 Debit = purchase.TotalAmount,
                                 Credit = 0
-                            };
+                            });
 
-                            LedgerEntry creditAsset = new LedgerEntry
+                            purchaseJournal.LedgerEntries.Add(new LedgerEntry
                             {
-                                JournalEntryId = purchaseJournal.Id,
                                 GLAccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
                                 Description = purchase.Description,
                                 Debit = 0,
                                 Credit = purchase.TotalAmount
-                            };
-                            _dbContext.LedgerEntries.AddRange(debitPurchase, creditAsset);
-                            await _dbContext.SaveChangesAsync();
+                            });
+
+                            await _accountingEngine.PostJournalEntryAsync(purchaseJournal);
 
                             response.Add("status", "success");
                             response.Add("message", "success");
@@ -401,16 +398,15 @@ namespace Saffrat.Controllers
                         _dbContext.IngredientItems.Update(ingredientItem);
                     }
 
+                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "purchase" && x.SourceDocumentId == existing.Id).ToList();
+                    foreach (var journal in existingJournals)
+                    {
+                        await _accountingEngine.ReverseJournalEntryAsync(journal.Id);
+                    }
+
                     _dbContext.Purchases.Remove(existing);
                     await _dbContext.SaveChangesAsync();
                     await transaction.CommitAsync();
-
-                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "purchase" && x.SourceDocumentId == existing.Id).ToList();
-                    if (existingJournals.Any())
-                    {
-                        _dbContext.JournalEntries.RemoveRange(existingJournals);
-                        await _dbContext.SaveChangesAsync();
-                    }
 
                     response.Add("status", "success");
                     response.Add("message", "success");

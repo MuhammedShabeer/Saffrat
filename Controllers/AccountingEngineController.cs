@@ -37,7 +37,6 @@ namespace Saffrat.Controllers
             var startDate = start ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var endDate = end ?? DateTime.Today;
 
-            // 1. Use a HashSet of strings to store matching reference patterns (e.g., "PUR-5")
             var matchingReferenceNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var query = _dbContext.Set<JournalEntry>()
@@ -45,7 +44,6 @@ namespace Saffrat.Controllers
                 .ThenInclude(l => l.GLAccount)
                 .AsQueryable();
 
-            // Standard Filters
             query = query.Where(j => j.EntryDate >= startDate && j.EntryDate <= endDate);
 
             if (accountId.HasValue && accountId > 0)
@@ -53,12 +51,11 @@ namespace Saffrat.Controllers
                 query = query.Where(j => j.LedgerEntries.Any(l => l.GLAccountId == accountId));
             }
 
-            // 2. Complex Search Logic using Reference Number patterns
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.ToLower().Trim();
 
-                // Search Purchases by Invoice, Description, Supplier, or Ingredients
+                // Search Purchases
                 var purchaseIds = await _dbContext.Purchases
                     .Include(p => p.Supplier)
                     .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
@@ -75,16 +72,47 @@ namespace Saffrat.Controllers
                     if (id.HasValue) matchingReferenceNumbers.Add($"PUR-{id.Value}");
                 }
 
-                // Search Payroll by Employee Name
+                // Search Payroll Accrual
                 var payrollIds = await _dbContext.Payrolls
                     .Include(p => p.Employee)
                     .Where(p => p.Employee != null && p.Employee.Name.ToLower().Contains(s))
                     .Select(p => p.Id)
                     .ToListAsync();
-
                 foreach (var id in payrollIds) matchingReferenceNumbers.Add($"PAYROLL-{id}");
 
-                // Search Orders by Note or Food Item Name
+                // Search Payroll Payments
+                var payrollPaymentIds = await _dbContext.PayrollPayments
+                    .Include(p => p.Payroll).ThenInclude(pr => pr.Employee)
+                    .Where(p => p.Payroll.Employee != null && p.Payroll.Employee.Name.ToLower().Contains(s))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+                foreach (var id in payrollPaymentIds) matchingReferenceNumbers.Add($"PAYROL-PAY-{id}");
+
+                // Search Invoices
+                var invoiceIds = await (from i in _dbContext.Invoices
+                                        join c in _dbContext.Customers on i.CustomerId equals c.Id
+                                        where (i.InvoiceNumber != null && i.InvoiceNumber.ToLower().Contains(s)) ||
+                                              (c.CustomerName != null && c.CustomerName.ToLower().Contains(s))
+                                        select new { i.Id, i.InvoiceNumber }).ToListAsync();
+                foreach (var inv in invoiceIds) 
+                {
+                    matchingReferenceNumbers.Add($"INV-{inv.InvoiceNumber}");
+                    matchingReferenceNumbers.Add($"PAY-{inv.InvoiceNumber}");
+                }
+
+                // Search Bills
+                var billIds = await (from b in _dbContext.Bills
+                                     join spp in _dbContext.Suppliers on b.SupplierId equals spp.Id
+                                     where (b.BillNumber != null && b.BillNumber.ToLower().Contains(s)) ||
+                                           (spp.SupplierName != null && spp.SupplierName.ToLower().Contains(s))
+                                     select new { b.Id, b.BillNumber }).ToListAsync();
+                foreach (var bill in billIds)
+                {
+                    matchingReferenceNumbers.Add($"BILL-{bill.BillNumber}");
+                    matchingReferenceNumbers.Add($"PMT-{bill.BillNumber}");
+                }
+
+                // Search Orders
                 var orderIds = await _dbContext.Orders
                     .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
                     .Where(o =>
@@ -92,10 +120,8 @@ namespace Saffrat.Controllers
                         o.OrderDetails.Any(d => d.Item != null && d.Item.ItemName.ToLower().Contains(s)))
                     .Select(o => o.Id)
                     .ToListAsync();
-
                 foreach (var id in orderIds) matchingReferenceNumbers.Add($"SALE-{id}");
 
-                // 3. APPLY the filter to the main Journal query using ReferenceNumber
                 query = query.Where(j =>
                     (j.Description != null && j.Description.ToLower().Contains(s)) ||
                     (j.ReferenceNumber != null && (
@@ -567,18 +593,10 @@ namespace Saffrat.Controllers
 
                 _dbContext.Payrolls.Update(payroll);
 
-                // Delete payment and its journal entry
+                // Delete payment and its journal entry using the service to maintain balance integrity
                 if (payment.JournalEntryId.HasValue)
                 {
-                    var journalEntry = await _dbContext.JournalEntries
-                        .Include(j => j.LedgerEntries)
-                        .FirstOrDefaultAsync(j => j.Id == payment.JournalEntryId.Value);
-
-                    if (journalEntry != null)
-                    {
-                        _dbContext.LedgerEntries.RemoveRange(journalEntry.LedgerEntries);
-                        _dbContext.JournalEntries.Remove(journalEntry);
-                    }
+                    await _accountingEngine.ReverseJournalEntryAsync(payment.JournalEntryId.Value);
                 }
 
                 _dbContext.PayrollPayments.Remove(payment);
@@ -612,6 +630,54 @@ namespace Saffrat.Controllers
                 return RedirectToAction(nameof(ChartOfAccounts));
             }
             return View(account);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditAccount(int id)
+        {
+            var account = await _dbContext.Set<GLAccount>().FindAsync(id);
+            if (account == null) return NotFound();
+            return View(account);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EditAccount(GLAccount account)
+        {
+            if (ModelState.IsValid)
+            {
+                var existing = await _dbContext.Set<GLAccount>().FindAsync(account.Id);
+                if (existing == null) return NotFound();
+
+                // Update properties
+                existing.AccountName = account.AccountName;
+                existing.AccountCode = account.AccountCode;
+                existing.Category = account.Category;
+                existing.Type = account.Type;
+                existing.Description = account.Description;
+                existing.IsActive = account.IsActive;
+
+                await _dbContext.SaveChangesAsync();
+                return RedirectToAction(nameof(ChartOfAccounts));
+            }
+            return View(account);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteAccount(int id)
+        {
+            var account = await _dbContext.Set<GLAccount>().FindAsync(id);
+            if (account == null) return Json(new { success = false, message = "Account not found." });
+
+            // VALIDATION: Check if any LedgerEntries exist for this account
+            bool hasTransactions = await _dbContext.Set<LedgerEntry>().AnyAsync(l => l.GLAccountId == id);
+            if (hasTransactions)
+            {
+                return Json(new { success = false, message = "Cannot delete account because it has transaction history (ledger entries)." });
+            }
+
+            _dbContext.Set<GLAccount>().Remove(account);
+            await _dbContext.SaveChangesAsync();
+            return Json(new { success = true });
         }
 
         [HttpGet]
@@ -660,7 +726,7 @@ namespace Saffrat.Controllers
             {
                 entry.ReferenceNumber,
                 entry.Description,
-                EntryDate = entry.EntryDate.ToString("yyyy-MM-dd"),
+                EntryDate = entry.EntryDate.ToString("yyyy-MM-dd HH:mm"),
                 SourceDocumentType = entry.SourceDocumentType,
                 SourceDocumentId = entry.SourceDocumentId,
                 Lines = entry.LedgerEntries.Select(l => new
@@ -720,7 +786,7 @@ namespace Saffrat.Controllers
                             {
                                 SupplierName = purchase.Supplier?.SupplierName,
                                 purchase.InvoiceNo,
-                                PurchaseDate = purchase.PurchaseDate.ToString("yyyy-MM-dd"),
+                                PurchaseDate = purchase.PurchaseDate.ToString("yyyy-MM-dd HH:mm"),
                                 purchase.TotalAmount,
                                 purchase.PaidAmount,
                                 purchase.DueAmount,
@@ -776,7 +842,7 @@ namespace Saffrat.Controllers
                                 adjustment.Type,
                                 adjustment.Quantity,
                                 adjustment.Reason,
-                                Date = adjustment.EntryDate.ToString("yyyy-MM-dd")
+                                Date = adjustment.EntryDate.ToString("yyyy-MM-dd HH:mm")
                             }
                         });
 
@@ -795,7 +861,7 @@ namespace Saffrat.Controllers
                                 cash.Type,
                                 cash.Amount,
                                 cash.Description,
-                                Date = cash.EntryDate.ToString("yyyy-MM-dd")
+                                Date = cash.EntryDate.ToString("yyyy-MM-dd HH:mm")
                             }
                         });
 
@@ -814,7 +880,7 @@ namespace Saffrat.Controllers
                                 pTrans.Type,
                                 pTrans.Amount,
                                 Note = pTrans.Note,
-                                Date = pTrans.EntryDate.ToString("yyyy-MM-dd")
+                                Date = pTrans.EntryDate.ToString("yyyy-MM-dd HH:mm")
                             }
                         });
 
@@ -843,12 +909,15 @@ namespace Saffrat.Controllers
             HashSet<int> matchingPayrollIds = new HashSet<int>();
             HashSet<int> matchingOrderIds = new HashSet<int>();
 
+            HashSet<int> matchingInvoiceIds = new HashSet<int>();
+            HashSet<int> matchingBillIds = new HashSet<int>();
+
             // 1. PRE-GATHER ALL MATCHING IDs (Execute these queries only once)
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.ToLower().Trim();
-
-                // Search Purchases by Invoice, Supplier, or Ingredients (like "Onions")
+                
+                // Search Purchases
                 var purchases = await _dbContext.Purchases
                     .Include(p => p.Supplier)
                     .Include(p => p.PurchaseDetails).ThenInclude(d => d.IngredientItem)
@@ -860,14 +929,14 @@ namespace Saffrat.Controllers
                     .Select(p => p.Id).ToListAsync();
                 foreach (var id in purchases) if (id.HasValue) matchingPurchaseIds.Add(id.Value);
 
-                // Search Payroll (Matches names like "MD Nur Rasul")
+                // Search Payroll
                 var payrolls = await _dbContext.Payrolls
                     .Include(p => p.Employee)
                     .Where(p => p.Employee != null && p.Employee.Name.ToLower().Contains(s))
                     .Select(p => p.Id).ToListAsync();
                 foreach (var id in payrolls) matchingPayrollIds.Add(id);
 
-                // Search POS Orders (Matches Notes or Food Item names)
+                // Search Orders
                 var orders = await _dbContext.Orders
                     .Include(o => o.OrderDetails).ThenInclude(d => d.Item)
                     .Where(o =>
@@ -875,6 +944,22 @@ namespace Saffrat.Controllers
                         o.OrderDetails.Any(d => d.Item != null && d.Item.ItemName.ToLower().Contains(s)))
                     .Select(o => o.Id).ToListAsync();
                 foreach (var id in orders) matchingOrderIds.Add(id);
+
+                // Search Invoices
+                var invoiceIds = await (from i in _dbContext.Invoices
+                                        join c in _dbContext.Customers on i.CustomerId equals c.Id
+                                        where (i.InvoiceNumber != null && i.InvoiceNumber.ToLower().Contains(s)) ||
+                                              (c.CustomerName != null && c.CustomerName.ToLower().Contains(s))
+                                        select i.Id).ToListAsync();
+                foreach (var id in invoiceIds) matchingInvoiceIds.Add(id);
+
+                // Search Bills
+                var billIds = await (from b in _dbContext.Bills
+                                     join spp in _dbContext.Suppliers on b.SupplierId equals spp.Id
+                                     where (b.BillNumber != null && b.BillNumber.ToLower().Contains(s)) ||
+                                           (spp.SupplierName != null && spp.SupplierName.ToLower().Contains(s))
+                                     select b.Id).ToListAsync();
+                foreach (var id in billIds) matchingBillIds.Add(id);
             }
 
             // 2. FETCH ALL RELEVANT LEDGER DATA
@@ -908,7 +993,7 @@ namespace Saffrat.Controllers
                         var row = MapToRow(trans);
 
                         // 3. APPLY FILTER IN MEMORY (Instant performance)
-                        if (!IsRowMatch(row, search, matchingPurchaseIds, matchingPayrollIds, matchingOrderIds)) continue;
+                        if (!IsRowMatch(row, search, matchingPurchaseIds, matchingPayrollIds, matchingOrderIds, matchingInvoiceIds, matchingBillIds)) continue;
 
                         runningBal += isDebitAccount ? (trans.Debit - trans.Credit) : (trans.Credit - trans.Debit);
                         row.RunningBalance = runningBal;
@@ -927,7 +1012,7 @@ namespace Saffrat.Controllers
                 foreach (var trans in transactions)
                 {
                     var row = MapToRow(trans);
-                    if (!IsRowMatch(row, search, matchingPurchaseIds, matchingPayrollIds, matchingOrderIds)) continue;
+                    if (!IsRowMatch(row, search, matchingPurchaseIds, matchingPayrollIds, matchingOrderIds, matchingInvoiceIds, matchingBillIds)) continue;
                     model.Transactions.Add(row);
                 }
             }
@@ -950,7 +1035,7 @@ namespace Saffrat.Controllers
         };
 
         // Helper: Perform fast in-memory search
-        private bool IsRowMatch(StatementOfAccountRow row, string search, HashSet<int> pIds, HashSet<int> payIds, HashSet<int> oIds)
+        private bool IsRowMatch(StatementOfAccountRow row, string search, HashSet<int> pIds, HashSet<int> payIds, HashSet<int> oIds, HashSet<int> iIds, HashSet<int> bIds)
         {
             if (string.IsNullOrWhiteSpace(search)) return true;
             var s = search.ToLower().Trim();
@@ -959,10 +1044,14 @@ namespace Saffrat.Controllers
                                (row.Reference?.ToLower().Contains(s) ?? false) ||
                                (row.AccountName?.ToLower().Contains(s) ?? false);
 
-            // Matches using the pre-collected IDs from sub-entities (Ingredients, Employee Names, etc.)
+            // Matches using the pre-collected IDs from sub-entities (Ingredients, Employee Names, Invoices, Bills, etc.)
             bool sourceMatch = (row.SourceDocumentType == "Purchase" && pIds.Contains(row.SourceDocumentId ?? 0)) ||
                                (row.SourceDocumentType == "Payroll" && payIds.Contains(row.SourceDocumentId ?? 0)) ||
-                               (row.SourceDocumentType == "POS Order" && oIds.Contains(row.SourceDocumentId ?? 0));
+                               (row.SourceDocumentType == "POS Order" && oIds.Contains(row.SourceDocumentId ?? 0)) ||
+                               (row.SourceDocumentType == "Invoice" && iIds.Contains(row.SourceDocumentId ?? 0)) ||
+                               (row.SourceDocumentType == "InvoicePayment" && iIds.Contains(row.SourceDocumentId ?? 0)) ||
+                               (row.SourceDocumentType == "Bill" && bIds.Contains(row.SourceDocumentId ?? 0)) ||
+                               (row.SourceDocumentType == "BillPayment" && bIds.Contains(row.SourceDocumentId ?? 0));
 
             return directMatch || sourceMatch;
         }
