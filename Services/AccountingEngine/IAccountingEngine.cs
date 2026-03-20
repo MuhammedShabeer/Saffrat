@@ -45,12 +45,12 @@ namespace Saffrat.Services.AccountingEngine
         /// <summary>
         /// Handles the translation of a payment receipt against an Invoice into a pending Journal Entry.
         /// </summary>
-        Task<JournalEntry> RecordInvoicePaymentAsync(Invoice invoice);
+        Task<JournalEntry> RecordInvoicePaymentAsync(Invoice invoice, int? glAccountId = null);
 
         /// <summary>
         /// Handles the translation of a payment sent against a Bill into a pending Journal Entry.
         /// </summary>
-        Task<JournalEntry> RecordBillPaymentAsync(Bill bill);
+        Task<JournalEntry> RecordBillPaymentAsync(Bill bill, int? glAccountId = null);
 
         /// <summary>
         /// Creates a draft payroll accrual journal entry when payroll is generated.
@@ -60,7 +60,7 @@ namespace Saffrat.Services.AccountingEngine
         /// <summary>
         /// Records a flexible/partial payroll payment.
         /// </summary>
-        Task<JournalEntry> RecordFlexiblePayrollPaymentAsync(PayrollPayment payment, Payroll payroll);
+        Task<JournalEntry> RecordFlexiblePayrollPaymentAsync(PayrollPayment payment, Payroll payroll, int? glAccountId = null);
 
         /// <summary>
         /// Reverses a Journal Entry and its Ledger Entries, adjusting account balances back.

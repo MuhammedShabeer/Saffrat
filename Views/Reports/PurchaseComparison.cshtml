@@ -4,7 +4,7 @@
 @inherits LocService<TModel>
 
 @{
-    ViewData["Title"] = @Localize("Purchase Comparison Report");
+    ViewData["Title"] = @Localize("Purchase History Report");
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
@@ -14,12 +14,12 @@
             <div class="col-auto">
                 <div class="page-header-title">
                     <h4>
-                        @Localize("Purchase Comparison Report")
+                        <i class="fa fa-history me-2 text-primary"></i> @Localize("Purchase History Report")
                     </h4>
                 </div>
                 <ul class="breadcrumb">
                     <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
-                    <li class="breadcrumb-item">@Localize("Purchase Comparison Report")</li>
+                    <li class="breadcrumb-item">@Localize("Purchase History Report")</li>
                 </ul>
             </div>
         </div>
@@ -28,92 +28,110 @@
 
 <div class="row">
     <div class="col-12">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm border-0 rounded overflow-hidden">
             <div class="card-body">
-                <form asp-action="PurchaseComparison" asp-controller="Reports" method="get" class="needs-validation" novalidate="">
-                    <div class="row g-3">
-                        <div class="col-md-6 border-end">
-                            <h6 class="text-primary mb-3">@Localize("Period A (Current)")</h6>
-                            <div class="row">
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold">@Localize("From")</label>
-                                    <input type="date" name="startA" value="@ViewBag.startA" class="form-control" required />
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold">@Localize("To")</label>
-                                    <input type="date" name="endA" value="@ViewBag.endA" class="form-control" required />
-                                </div>
+                <form asp-action="PurchaseComparison" asp-controller="Reports" method="get" class="mb-4">
+                    <div class="row align-items-end g-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold text-uppercase text-muted">@Localize("Search Ingredients")</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="fa fa-search text-muted"></i></span>
+                                <input type="text" name="search" value="@Model.Search" class="form-control border-start-0" placeholder="@Localize("Ingredient name...")" />
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6 class="text-secondary mb-3">@Localize("Period B (Comparison)")</h6>
-                            <div class="row">
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold">@Localize("From")</label>
-                                    <input type="date" name="startB" value="@ViewBag.startB" class="form-control" required />
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold">@Localize("To")</label>
-                                    <input type="date" name="endB" value="@ViewBag.endB" class="form-control" required />
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-12 mt-4 text-center">
-                            <button class="btn btn-primary px-5" type="submit"><i class="fas fa-sync-alt me-2"></i> @Localize("Run Comparison")</button>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary px-4 w-100" type="submit">@Localize("Filter")</button>
                         </div>
                     </div>
                 </form>
 
-                <hr class="my-4" />
-
-                <div class="table-responsive mt-3">
-                    <table class="table table-bordered table-hover align-middle" id="exportTable">
-                        <thead class="bg-light text-center">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="exportTable">
+                        <thead class="bg-light border-top border-bottom">
                             <tr>
-                                <th rowspan="2" class="align-middle">@Localize("Ingredient Name")</th>
-                                <th colspan="3" class="bg-primary text-white">@Localize("Period A")</th>
-                                <th colspan="3" class="bg-secondary text-white">@Localize("Period B")</th>
-                                <th colspan="3" class="bg-info text-white">@Localize("Comparison (A vs B)")</th>
-                            </tr>
-                            <tr class="small fw-bold">
-                                <th>@Localize("Qty")</th>
-                                <th>@Localize("Avg Price")</th>
-                                <th>@Localize("Total")</th>
-                                <th>@Localize("Qty")</th>
-                                <th>@Localize("Avg Price")</th>
-                                <th>@Localize("Total")</th>
-                                <th>@Localize("Qty Δ")</th>
-                                <th>@Localize("Price Δ")</th>
-                                <th>@Localize("Total Δ")</th>
+                                <th class="ps-3">@Localize("Ingredient Name")</th>
+                                <th class="text-center">@Localize("Unit")</th>
+                                <th class="text-center">@Localize("Latest Purchase")</th>
+                                <th>@Localize("Latest Vendor")</th>
+                                <th class="text-end pe-3">@Localize("Latest Price")</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var item in Model.Items.OrderByDescending(x => Math.Abs(x.TotalDiff)))
+                            @foreach (var item in Model.Items.OrderByDescending(x => x.LatestDate))
                             {
-                                <tr>
-                                    <td>
-                                        <strong>@item.IngredientName</strong>
-                                        <br/><small class="text-muted">@item.Unit</small>
+                                <tr class="main-row">
+                                    <td class="ps-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa fa-plus-circle text-primary toggle-details me-3 cursor-pointer" style="font-size: 1.2rem;" title="@Localize("View last 5 purchases")"></i>
+                                            <span class="fw-bold h6 mb-0 text-dark">@item.IngredientName</span>
+                                        </div>
+                                        
+                                        <!-- Hidden data for drill-down -->
+                                        <div class="details-content d-none">
+                                            <div class="p-4 bg-white border rounded shadow-sm my-3 mx-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h6 class="fw-bold mb-0 text-primary"><i class="fa fa-list-ul me-2"></i>@Localize("Recent Purchase Records for") @item.IngredientName</h6>
+                                                    <span class="badge bg-light text-dark border small">@Localize("Last 5 Entries")</span>
+                                                </div>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead class="bg-light small">
+                                                            <tr>
+                                                                <th class="ps-2">@Localize("Date")</th>
+                                                                <th>@Localize("Vendor")</th>
+                                                                <th class="text-end">@Localize("Qty")</th>
+                                                                <th class="text-end">@Localize("Price")</th>
+                                                                <th class="text-end pe-2">@Localize("Total")</th>
+                                                                <th class="text-center notexport">Action</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @if (item.LastPurchases.Any())
+                                                            {
+                                                                @foreach (var lp in item.LastPurchases)
+                                                                {
+                                                                    <tr class="small align-middle">
+                                                                        <td class="ps-2">@lp.Date.ToString("yyyy-MM-dd")</td>
+                                                                        <td class="text-nowrap">@lp.VendorName</td>
+                                                                        <td class="text-end">@lp.Qty.ToString("N2")</td>
+                                                                        <td class="text-end fw-bold">@GetCurrency(lp.Price)</td>
+                                                                        <td class="text-end pe-2">@GetCurrency(lp.Total)</td>
+                                                                        <td class="text-center">
+                                                                             <button class="btn btn-link btn-sm p-0" title="View details"><i class="fa fa-external-link-alt small"></i></button>
+                                                                        </td>
+                                                                    </tr>
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <tr>
+                                                                    <td colspan="6" class="text-center py-4 text-muted small">
+                                                                        <i class="fa fa-info-circle me-1"></i> @Localize("No historical purchases found for this ingredient.")
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="text-center">@item.QtyA.ToString("N2")</td>
-                                    <td class="text-end">@GetCurrency(item.AvgPriceA)</td>
-                                    <td class="text-end fw-bold">@GetCurrency(item.TotalA)</td>
-                                    
-                                    <td class="text-center">@item.QtyB.ToString("N2")</td>
-                                    <td class="text-end">@GetCurrency(item.AvgPriceB)</td>
-                                    <td class="text-end">@GetCurrency(item.TotalB)</td>
-
-                                    <td class="text-center @(item.QtyDiff > 0 ? "text-danger" : "text-success")">
-                                        @(item.QtyDiff > 0 ? "+" : "")@item.QtyDiff.ToString("N2")
-                                        <div class="small">(@(item.QtyDiffPercent >= 0 ? "+" : "")@item.QtyDiffPercent.ToString("N1")%)</div>
+                                    <td class="text-center"><span class="badge bg-light text-secondary border">@item.Unit</span></td>
+                                    <td class="text-center text-muted">
+                                        @(item.LatestDate?.ToString("yyyy-MM-dd") ?? "-")
                                     </td>
-                                    <td class="text-center @(item.PriceDiff > 0 ? "text-danger" : "text-success")">
-                                        @(item.PriceDiff > 0 ? "+" : "")@item.PriceDiff.ToString("N2")
-                                        <div class="small">(@(item.PriceDiffPercent >= 0 ? "+" : "")@item.PriceDiffPercent.ToString("N1")%)</div>
+                                    <td class="text-nowrap">
+                                        <span class="text-dark">@item.LatestVendor</span>
                                     </td>
-                                    <td class="text-center @(item.TotalDiff > 0 ? "text-danger" : "text-success") font-weight-bold">
-                                        @(item.TotalDiff > 0 ? "+" : "")@GetCurrency(item.TotalDiff)
-                                        <div class="small">(@(item.TotalDiffPercent >= 0 ? "+" : "")@item.TotalDiffPercent.ToString("N1")%)</div>
+                                    <td class="text-end pe-3">
+                                        @if (item.LatestPrice > 0)
+                                        {
+                                            <span class="fw-bold text-success h6 mb-0">@GetCurrency(item.LatestPrice)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -125,6 +143,14 @@
     </div>
 </div>
 
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .toggle-details:hover { transform: scale(1.2); transition: 0.2s; }
+    .main-row.shown { background-color: rgba(0, 123, 255, 0.03) !important; border-left: 3px solid #007bff; }
+    #exportTable tbody tr:hover { background-color: rgba(0, 0, 0, 0.01); }
+    .table thead th { border-top: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: #555; }
+</style>
+
 @section scripts{
     <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/dataTables.buttons.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
@@ -134,13 +160,13 @@
     <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.print.min.js"></script>
 
     <script>
-        var fileName = '@Localize("Purchase Comparison Report")';
+        var fileName = '@Localize("Purchase History Report")';
 
         $("#report-menu").addClass("active");
         $("#purchaseComparison-menu").addClass("active");
 
         $(document).ready(function () {
-            $('#exportTable').DataTable({
+            var table = $('#exportTable').DataTable({
                 dom: 'Bfrtip',
                 'language': {
                     "processing": '@Localize("Processing...")',
@@ -157,7 +183,7 @@
                     }
                 },
                 "ordering": true,
-                "order": [[9, "desc"]], // Default sort by total diff
+                "order": [[2, "desc"]], // Default sort by Latest Purchase Date
                 buttons: [
                     {
                         extend: 'excel',
@@ -170,7 +196,7 @@
                     },
                     {
                         extend: 'pdf',
-                        orientation: 'landscape',
+                        orientation: 'portrait',
                         pageSize: 'A4',
                         title: fileName,
                         text: '<i title="pdf" class="fa fa-file-pdf"></i>',
@@ -189,6 +215,25 @@
                         }
                     }
                 ]
+            });
+
+            // Handle drill-down toggle
+            $('#exportTable tbody').on('click', '.toggle-details', function () {
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+                var content = tr.find('.details-content').html();
+
+                if (row.child.isShown()) {
+                    row.child.hide();
+                    tr.removeClass('shown');
+                    $(this).removeClass('fa-minus-circle').addClass('fa-plus-circle');
+                    $(this).removeClass('text-danger').addClass('text-primary');
+                } else {
+                    row.child(content).show();
+                    tr.addClass('shown');
+                    $(this).removeClass('fa-plus-circle').addClass('fa-minus-circle');
+                    $(this).removeClass('text-primary').addClass('text-danger');
+                }
             });
         });
     </script>

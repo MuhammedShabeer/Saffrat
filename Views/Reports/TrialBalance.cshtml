@@ -85,7 +85,7 @@
                     </div>
 
                     <div class="table-responsive mt-3">
-                        <table class="table table-bordered table-striped" style="width:100%">
+                        <table class="table table-bordered table-striped" style="width:100%" id="exportTable">
                             <thead class="bg-primary text-white">
                                 <tr>
                                     <th>@Localize("Particulars")</th>
@@ -102,7 +102,13 @@
                                     @foreach (var account in group)
                                     {
                                         <tr>
-                                            <td class="ps-4">@account.AccountName</td>
+                                            <td class="ps-4">
+                                                <a href="javascript:void(0)" class="text-primary fw-bold show-account-details" 
+                                                   data-id="@account.AccountId" 
+                                                   data-name="@account.AccountName">
+                                                    @account.AccountName
+                                                </a>
+                                            </td>
                                             <td class="text-end">@account.TotalDebit.ToString("0.00")</td>
                                             <td class="text-end">@account.TotalCredit.ToString("0.00")</td>
                                         </tr>
@@ -129,3 +135,116 @@
 
     </div>
 </div>
+
+<!-- Modal for detailed statement -->
+<div class="modal fade" id="statementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered shadow">
+        <div class="modal-content border-0" id="statementModalContent">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-2">@Localize("Loading detailed statement...")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .show-account-details:hover { text-decoration: underline !important; color: #0056b3 !important; }
+    #exportTable tbody tr:hover { background-color: rgba(0, 123, 255, 0.05); }
+</style>
+
+@section scripts{
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.html5.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.print.min.js"></script>
+
+    <script>
+        var fileName = '@Localize("Trial Balance") - @ViewBag.start to @ViewBag.end';
+
+        $("#report-menu").addClass("active");
+        $("#trialBalanceReport-menu").addClass("active");
+
+        $(document).ready(function () {
+            $('#exportTable').DataTable({
+                dom: 'B',
+                'language': {
+                    "processing": '@Localize("Processing...")',
+                    "loadingRecords": "@Localize("Loading...")",
+                    'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                    "zeroRecords": "@Localize("No Result Found")",
+                    "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                    "infoEmpty": '',
+                    "infoFiltered": '',
+                    "search": '@Localize("Search")',
+                    'paginate': {
+                        'previous': '<i class="fa fa-chevron-left"></i>',
+                        'next': '<i class="fa fa-chevron-right"></i>'
+                    }
+                },
+                "ordering": false,
+                "paging": false,
+                buttons: [
+                    {
+                        extend: 'excel',
+                        title: fileName,
+                        text: '<i title="excel" class="fa fa-file-excel"></i>',
+                        className: 'btn btn-outline-success',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    },
+                    {
+                        extend: 'pdf',
+                        title: fileName,
+                        text: '<i title="pdf" class="fa fa-file-pdf"></i>',
+                        className: 'btn btn-outline-danger',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        },
+                        customize: function (doc) {
+                            if (doc.content[1] && doc.content[1].table) {
+                                doc.content[1].table.widths = Array(doc.content[1].table.body[0].length + 1).join('*').split('');
+                            }
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        title: fileName,
+                        text: '<i title="print" class="fa fa-print"></i>',
+                        className: 'btn btn-outline-info',
+                        exportOptions: {
+                            columns: ':not(.notexport)'
+                        }
+                    }
+                ]
+            });
+
+            // Handle Detail Popup
+            $('.show-account-details').on('click', function() {
+                var accountId = $(this).data('id');
+                var start = '@ViewBag.start';
+                var end = '@ViewBag.end';
+                
+                $('#statementModalContent').html('<div class="modal-body text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="mt-2">@Localize("Loading detailed statement...")</div></div>');
+                $('#statementModal').modal('show');
+
+                $.ajax({
+                    url: '@Url.Action("GetAccountStatement", "Reports")',
+                    type: 'GET',
+                    data: { accountId: accountId, start: start, end: end },
+                    success: function(response) {
+                        $('#statementModalContent').html(response);
+                    },
+                    error: function() {
+                        $('#statementModalContent').html('<div class="modal-body text-center py-5 text-danger"><i class="fa fa-exclamation-triangle fa-3x mb-3"></i><br/>@Localize("Error loading detailed statement. Please try again.")</div>');
+                    }
+                });
+            });
+        });
+    </script>
+}

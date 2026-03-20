@@ -1,0 +1,135 @@
+@using Saffrat.Resources
+@inherits LocService<dynamic>
+
+@{
+    ViewData["Title"] = Localize("Add Bank Entry");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-md-12">
+                <div class="page-header-title">
+                    <h5 class="m-b-10">@Localize("Add Bank Entry")</h5>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                    <li class="breadcrumb-item"><a href="#!">@Localize("Accounting")</a></li>
+                    <li class="breadcrumb-item"><a asp-action="BankTransactions">@Localize("Bank Transactions")</a></li>
+                    <li class="breadcrumb-item">@Localize("Add")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h5>@Localize("New Bank Transaction")</h5>
+            </div>
+            <div class="card-body">
+                <form id="bankEntryForm" class="needs-validation" novalidate>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">@Localize("Transaction Date") <code>*</code></label>
+                            <input type="date" name="entryDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">@Localize("Reference Number")</label>
+                            <input type="text" name="referenceNumber" class="form-control" placeholder="Optional">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">@Localize("Bank / Cash Account") <code>*</code></label>
+                            <select name="bankAccountId" id="bankAccountId" class="form-control selectpicker" data-live-search="true" required>
+                                <option value="">@Localize("Select Account")</option>
+                                @foreach (var acc in ViewBag.BankAccounts)
+                                {
+                                    <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">@Localize("Transaction Type") <code>*</code></label>
+                            <select name="transactionType" id="transactionType" class="form-control selectpicker" required>
+                                <option value="Inflow">@Localize("Inflow (Deposit / Receipt)")</option>
+                                <option value="Outflow">@Localize("Outflow (Withdrawal / Payment)")</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">@Localize("Offset Account (Category)") <code>*</code></label>
+                            <select name="offsetAccountId" id="offsetAccountId" class="form-control selectpicker" data-live-search="true" required>
+                                <option value="">@Localize("Select Category (Revenue / Expense / Others)")</option>
+                                @foreach (var acc in ViewBag.AllAccounts)
+                                {
+                                    <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">@Localize("Amount") <code>*</code></label>
+                            <input type="number" name="amount" class="form-control" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">@Localize("Description")</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group text-right">
+                        <button type="submit" class="btn btn-primary" id="btnSubmit">
+                            <i class="feather icon-check"></i> @Localize("Save Transaction")
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function () {
+            $('#bankEntryForm').on('submit', function (e) {
+                e.preventDefault();
+                if (this.checkValidity()) {
+                    var $btn = $('#btnSubmit');
+                    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+                    var formData = $(this).serialize();
+
+                    $.ajax({
+                        url: '/AccountingEngine/SaveBankEntry',
+                        type: 'POST',
+                        data: formData,
+                        success: function (res) {
+                            if (res.status === 'success') {
+                                successMessage('@Localize("Transaction saved successfully!")');
+                                setTimeout(function () {
+                                    window.location.href = '/AccountingEngine/BankTransactions';
+                                }, 1500);
+                            } else {
+                                errorMessage(res.message);
+                                $btn.prop('disabled', false).html('<i class="feather icon-check"></i> @Localize("Save Transaction")');
+                            }
+                        },
+                        error: function () {
+                            errorMessage('Something went wrong!');
+                            $btn.prop('disabled', false).html('<i class="feather icon-check"></i> @Localize("Save Transaction")');
+                        }
+                    });
+                }
+                $(this).addClass('was-validated');
+            });
+        });
+    </script>
+}

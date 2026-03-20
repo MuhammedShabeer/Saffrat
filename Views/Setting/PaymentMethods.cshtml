@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Saffrat.Models.PaymentMethod>
+@model IEnumerable<Saffrat.Models.PaymentMethod>
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -42,6 +42,7 @@
                             <tr>
                                 <th>@Localize("#")</th>
                                 <th>@Localize("Title")</th>
+                                <th>@Localize("Linked Account")</th>
                                 <th>@Localize("Updated At")</th>
                                 <th>@Localize("Updated By")</th>
                                 <th>@Localize("Action")</th>
@@ -54,6 +55,20 @@
                                 <tr id="@id">
                                     <td>@item.Id</td>
                                     <td>@item.Title</td>
+                                    <td>
+                                        @{
+                                            var accounts = ViewBag.Accounts as List<Saffrat.Models.GLAccount>;
+                                            var linkedAcc = accounts?.FirstOrDefault(a => a.Id == item.GLAccountId);
+                                            if (linkedAcc != null)
+                                            {
+                                                <span class="badge bg-info text-dark">@linkedAcc.AccountCode - @linkedAcc.AccountName</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">@Localize("Not Linked")</span>
+                                            }
+                                        }
+                                    </td>
                                     <td>@item.UpdatedAt</td>
                                     <td><span>&#64</span>@item.UpdatedBy</td>
                                     <td>
@@ -87,11 +102,27 @@
                 <form id="frm" class="needs-validation" novalidate="">
                     <div class="modal-body">
                         <input type="hidden" name="Id" value="" />
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="control-label">@Localize("Title") <code>*</code></label>
-                            <input name="Title" class="form-control" required />
+                            <input name="Title" class="form-control" placeholder="@Localize("E.g. HDFC Bank, Cash")" required />
                             <div class="invalid-feedback">
                                 @Localize("Please enter title.")
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="control-label">@Localize("Link to GL Account")</label>
+                            <select name="GLAccountId" class="form-control selectpicker" data-live-search="true">
+                                <option value="">@Localize("-- Select Bank/Cash Account --")</option>
+                                @if (ViewBag.Accounts != null)
+                                {
+                                    foreach (var acc in (List<Saffrat.Models.GLAccount>)ViewBag.Accounts)
+                                    {
+                                        <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                    }
+                                }
+                            </select>
+                            <div class="text-muted small mt-1">
+                                <i class="fa fa-info-circle"></i> @Localize("Transactions using this method will be recorded in the selected account.")
                             </div>
                         </div>
                     </div>
@@ -207,6 +238,7 @@
                             $("#submit").text('@Localize("Update")');
                             $("#frm input[name='Id']").val(result.id);
                             $("#frm input[name='Title']").val(result.title);
+                            $("#frm select[name='GLAccountId']").val(result.glAccountId ?? "").selectpicker('refresh');
                             $("#mainModal").modal('show');
                         }
                         else {
@@ -230,6 +262,7 @@
                 $("#submit").text('@Localize("Save")');
                 $("#frm input[name='Id']").val('');
                 $("#frm input[name='Title']").val('');
+                $("#frm select[name='GLAccountId']").val('').selectpicker('refresh');
                 $("#mainModal").modal('show');
             }
         }

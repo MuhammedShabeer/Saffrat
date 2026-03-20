@@ -180,36 +180,44 @@ namespace Saffrat.Controllers
                                 purchasesAccountId = newPurAccount.Id;
                             }
 
-                            JournalEntry purchaseJournal = new JournalEntry
-                            {
-                                ReferenceNumber = "PUR-" + purchase.Id,
-                                Description = "Inventory Purchase " + purchase.InvoiceNo,
-                                EntryDate = CurrentDateTime(),
-                                IsPosted = false,
-                                SourceDocumentType = "purchase",
-                                SourceDocumentId = purchase.Id,
-                                CreatedAt = CurrentDateTime(),
-                                LedgerEntries = new List<LedgerEntry>()
-                            };
+                             // Resolve Bank Account from Payment Method
+                             int bankAccId = Convert.ToInt32(GetSetting.PurchaseAccount);
+                             var pMethod = _dbContext.PaymentMethods.FirstOrDefault(pm => pm.Title == purchase.PaymentType);
+                             if (pMethod != null && pMethod.GLAccountId.HasValue)
+                             {
+                                 bankAccId = pMethod.GLAccountId.Value;
+                             }
 
-                            purchaseJournal.LedgerEntries.Add(new LedgerEntry
-                            {
-                                GLAccountId = purchasesAccountId,
-                                Description = purchase.Description,
-                                Debit = purchase.TotalAmount,
-                                Credit = 0
-                            });
+                             JournalEntry purchaseJournal = new JournalEntry
+                             {
+                                 ReferenceNumber = "PUR-" + purchase.Id,
+                                 Description = "Inventory Purchase " + purchase.InvoiceNo,
+                                 EntryDate = CurrentDateTime(),
+                                 IsPosted = false,
+                                 SourceDocumentType = "purchase",
+                                 SourceDocumentId = purchase.Id,
+                                 CreatedAt = CurrentDateTime(),
+                                 LedgerEntries = new List<LedgerEntry>()
+                             };
 
-                            purchaseJournal.LedgerEntries.Add(new LedgerEntry
-                            {
-                                GLAccountId = Convert.ToInt32(GetSetting.PurchaseAccount),
-                                Description = purchase.Description,
-                                Debit = 0,
-                                Credit = purchase.TotalAmount
-                            });
+                             purchaseJournal.LedgerEntries.Add(new LedgerEntry
+                             {
+                                 GLAccountId = purchasesAccountId,
+                                 Description = purchase.Description,
+                                 Debit = purchase.TotalAmount,
+                                 Credit = 0
+                             });
 
-                            // Use Accounting Engine to post and update balances
-                            await _accountingEngine.PostJournalEntryAsync(purchaseJournal);
+                             purchaseJournal.LedgerEntries.Add(new LedgerEntry
+                             {
+                                 GLAccountId = bankAccId,
+                                 Description = purchase.Description,
+                                 Debit = 0,
+                                 Credit = purchase.TotalAmount
+                             });
+
+                             // Use Accounting Engine to post and update balances
+                             await _accountingEngine.PostJournalEntryAsync(purchaseJournal);
 
                             response.Add("status", "success");
                             response.Add("message", "success");

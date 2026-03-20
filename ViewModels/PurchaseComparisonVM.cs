@@ -5,11 +5,8 @@ namespace Saffrat.ViewModels
 {
     public class PurchaseComparisonVM
     {
-        public DateTime StartA { get; set; }
-        public DateTime EndA { get; set; }
-        public DateTime StartB { get; set; }
-        public DateTime EndB { get; set; }
         public List<PurchaseComparisonItem> Items { get; set; } = new List<PurchaseComparisonItem>();
+        public string Search { get; set; }
     }
 
     public class PurchaseComparisonItem
@@ -18,24 +15,21 @@ namespace Saffrat.ViewModels
         public string IngredientName { get; set; }
         public string Unit { get; set; }
 
-        // Period A
-        public decimal QtyA { get; set; }
-        public decimal AvgPriceA { get; set; }
-        public decimal TotalA { get; set; }
+        // Latest Purchase Info (Derived from LastPurchases[0])
+        public DateTime? LatestDate => LastPurchases.Count > 0 ? LastPurchases[0].Date : (DateTime?)null;
+        public string LatestVendor => LastPurchases.Count > 0 ? LastPurchases[0].VendorName : "N/A";
+        public decimal LatestPrice => LastPurchases.Count > 0 ? LastPurchases[0].Price : 0;
 
-        // Period B
-        public decimal QtyB { get; set; }
-        public decimal AvgPriceB { get; set; }
-        public decimal TotalB { get; set; }
+        // Drill-down: Last 5 purchases
+        public List<LastPurchaseInfo> LastPurchases { get; set; } = new List<LastPurchaseInfo>();
+    }
 
-        // Comparison
-        public decimal QtyDiff => QtyA - QtyB;
-        public decimal QtyDiffPercent => QtyB == 0 ? 0 : (QtyDiff / QtyB) * 100;
-        
-        public decimal PriceDiff => AvgPriceA - AvgPriceB;
-        public decimal PriceDiffPercent => AvgPriceB == 0 ? 0 : (PriceDiff / AvgPriceB) * 100;
-        
-        public decimal TotalDiff => TotalA - TotalB;
-        public decimal TotalDiffPercent => TotalB == 0 ? 0 : (TotalDiff / TotalB) * 100;
+    public class LastPurchaseInfo
+    {
+        public DateTime Date { get; set; }
+        public string VendorName { get; set; }
+        public decimal Qty { get; set; }
+        public decimal Price { get; set; }
+        public decimal Total { get; set; }
     }
 }

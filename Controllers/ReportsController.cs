@@ -36,8 +36,68 @@ namespace Saffrat.Controllers
             ViewBag.start = from.ToString("yyyy-MM-dd");
             ViewBag.end = to.ToString("yyyy-MM-dd");
 
-
             return View(periods);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> GetAccountStatement(int accountId, DateTime start, DateTime end)
+        {
+            var account = await _dbContext.GLAccounts.FirstOrDefaultAsync(a => a.Id == accountId);
+            if (account == null) return NotFound();
+
+            var ledgerQuery = _dbContext.LedgerEntries
+                .Include(l => l.JournalEntry)
+                .Include(l => l.GLAccount)
+                .Where(l => l.JournalEntry.IsPosted && l.GLAccountId == accountId);
+
+            // Opening Balance Calculation
+            var openingEntries = await ledgerQuery
+                .Where(l => l.JournalEntry.EntryDate < start)
+                .Select(l => new { l.Debit, l.Credit }).ToListAsync();
+
+            bool isDebitAccount = account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense;
+            decimal openingBalance = isDebitAccount
+                ? openingEntries.Sum(e => e.Debit - e.Credit)
+                : openingEntries.Sum(e => e.Credit - e.Debit);
+
+            // Fetch Transactions within the period
+            var transactions = await ledgerQuery
+                .Where(l => l.JournalEntry.EntryDate >= start && l.JournalEntry.EntryDate <= end)
+                .OrderBy(l => l.JournalEntry.EntryDate).ThenBy(l => l.JournalEntryId).ToListAsync();
+
+            var model = new StatementOfAccountsVM
+            {
+                SelectedAccountId = accountId,
+                StartDate = start,
+                EndDate = end,
+                OpeningBalance = openingBalance
+            };
+
+            decimal runningBal = openingBalance;
+            foreach (var trans in transactions)
+            {
+                runningBal += isDebitAccount ? (trans.Debit - trans.Credit) : (trans.Credit - trans.Debit);
+                model.Transactions.Add(new StatementOfAccountRow
+                {
+                    JournalEntryId = trans.JournalEntryId,
+                    Date = trans.JournalEntry.EntryDate,
+                    Reference = trans.JournalEntry.ReferenceNumber,
+                    Description = trans.Description ?? trans.JournalEntry.Description,
+                    AccountName = trans.GLAccount?.AccountName,
+                    Debit = trans.Debit,
+                    Credit = trans.Credit,
+                    RunningBalance = runningBal,
+                    SourceDocumentType = trans.JournalEntry.SourceDocumentType,
+                    SourceDocumentId = trans.JournalEntry.SourceDocumentId
+                });
+            }
+            model.ClosingBalance = runningBal;
+
+            ViewBag.AccountName = account.AccountName;
+            ViewBag.AccountCode = account.AccountCode;
+
+            return PartialView("_AccountStatementPopup", model);
         }
 
         // Sale Report Daily, Monthly, Yearly
@@ -431,83 +491,149 @@ namespace Saffrat.Controllers
 
         [HttpGet]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> PurchaseComparison(DateTime? startA, DateTime? endA, DateTime? startB, DateTime? endB)
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> PurchaseComparison(string search)
         {
-            DateTime sA = StartOfDay(startA);
-            DateTime eA = EndOfDay(endA);
-            DateTime sB = startB ?? sA.AddMonths(-1);
-            DateTime eB = endB ?? eA.AddMonths(-1);
+            var query = _dbContext.PurchaseDetails
+                .Include(x => x.Purchase)
+                    .ThenInclude(p => p.Supplier)
+                .Include(x => x.IngredientItem)
+                .AsQueryable();
 
-            if (startA == null) 
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                sA = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                eA = DateTime.Today;
-                sB = sA.AddMonths(-1);
-                eB = sB.AddMonths(1).AddDays(-1);
+                var s = search.ToLower();
+                query = query.Where(x => x.IngredientItem.ItemName.ToLower().Contains(s));
             }
 
-            var purchaseDetails = await _dbContext.PurchaseDetails
-                .Include(x => x.Purchase)
-                .Include(x => x.IngredientItem)
+            var purchaseDetails = await query.ToListAsync();
+
+            var ingredients = await _dbContext.IngredientItems
                 .ToListAsync();
 
-            var dataA = purchaseDetails
-                .Where(x => x.Purchase.PurchaseDate >= sA && x.Purchase.PurchaseDate <= eA)
-                .GroupBy(x => x.IngredientItemId)
-                .Select(g => new
-                {
-                    IngredientId = g.Key,
-                    Qty = g.Sum(x => x.Quantity),
-                    Total = g.Sum(x => x.Total),
-                    Ingredient = g.First().IngredientItem
-                }).ToList();
-
-            var dataB = purchaseDetails
-                .Where(x => x.Purchase.PurchaseDate >= sB && x.Purchase.PurchaseDate <= eB)
-                .GroupBy(x => x.IngredientItemId)
-                .Select(g => new
-                {
-                    IngredientId = g.Key,
-                    Qty = g.Sum(x => x.Quantity),
-                    Total = g.Sum(x => x.Total)
-                }).ToList();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.ToLower();
+                ingredients = ingredients.Where(x => x.ItemName.ToLower().Contains(s)).ToList();
+            }
 
             var viewModel = new PurchaseComparisonVM
             {
-                StartA = sA,
-                EndA = eA,
-                StartB = sB,
-                EndB = eB
+                Search = search
             };
 
-            var allIngredientIds = dataA.Select(x => x.IngredientId).Union(dataB.Select(x => x.IngredientId)).Distinct();
-
-            foreach (var id in allIngredientIds)
+            foreach (var ingredient in ingredients)
             {
-                var a = dataA.FirstOrDefault(x => x.IngredientId == id);
-                var b = dataB.FirstOrDefault(x => x.IngredientId == id);
-                var ingredient = a?.Ingredient ?? _dbContext.IngredientItems.Find(id);
+                var last5 = purchaseDetails
+                    .Where(x => x.IngredientItemId == ingredient.Id)
+                    .OrderByDescending(x => x.Purchase.PurchaseDate)
+                    .Take(5)
+                    .Select(x => new LastPurchaseInfo
+                    {
+                        Date = x.Purchase.PurchaseDate,
+                        VendorName = x.Purchase.Supplier?.SupplierName ?? "N/A",
+                        Qty = x.Quantity,
+                        Price = x.PurchasePrice,
+                        Total = x.Total
+                    }).ToList();
 
                 viewModel.Items.Add(new PurchaseComparisonItem
                 {
-                    IngredientId = id,
-                    IngredientName = ingredient?.ItemName ?? "Unknown",
-                    Unit = ingredient?.Unit ?? "",
-                    QtyA = a?.Qty ?? 0,
-                    TotalA = a?.Total ?? 0,
-                    AvgPriceA = (a?.Qty ?? 0) == 0 ? 0 : (a.Total / a.Qty),
-                    QtyB = b?.Qty ?? 0,
-                    TotalB = b?.Total ?? 0,
-                    AvgPriceB = (b?.Qty ?? 0) == 0 ? 0 : (b.Total / b.Qty)
+                    IngredientId = (int)ingredient.Id,
+                    IngredientName = ingredient.ItemName,
+                    Unit = ingredient.Unit,
+                    LastPurchases = last5
                 });
             }
 
-            ViewBag.startA = sA.ToString("yyyy-MM-dd");
-            ViewBag.endA = eA.ToString("yyyy-MM-dd");
-            ViewBag.startB = sB.ToString("yyyy-MM-dd");
-            ViewBag.endB = eB.ToString("yyyy-MM-dd");
-
             return View(viewModel);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> CashBook(DateTime? date)
+        {
+            var reportDate = date ?? DateTime.Today;
+            var from = StartOfDay(reportDate);
+            var to = EndOfDay(reportDate);
+
+            // Cash accounts: Type == 0 (CashAndBank) and name contains "Cash"
+            var cashAccounts = await _dbContext.GLAccounts
+                .Where(x => x.IsActive && x.Type == 0 && (x.AccountName.Contains("Cash") || x.AccountCode.Contains("CASH")))
+                .ToListAsync();
+
+            var accountIds = cashAccounts.Select(x => x.Id).ToList();
+
+            var viewModel = await GenerateBankBookVM(reportDate, accountIds, "Cash Book", string.Join(", ", cashAccounts.Select(x => x.AccountName)));
+
+            ViewBag.date = reportDate.ToString("yyyy-MM-dd");
+            return View(viewModel);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> DayBook(DateTime? date)
+        {
+            var reportDate = date ?? DateTime.Today;
+            var from = StartOfDay(reportDate);
+            var to = EndOfDay(reportDate);
+
+            // Day Book: Type == 0 (CashAndBank) or Type == 5 (Credit Card)
+            var dayBookAccounts = await _dbContext.GLAccounts
+                .Where(x => x.IsActive && (x.Type == 0 || x.Type == 5))
+                .ToListAsync();
+
+            var accountIds = dayBookAccounts.Select(x => x.Id).ToList();
+
+            var viewModel = await GenerateBankBookVM(reportDate, accountIds, "Day Book", string.Join(", ", dayBookAccounts.Select(x => x.AccountName)));
+
+            ViewBag.date = reportDate.ToString("yyyy-MM-dd");
+            return View(viewModel);
+        }
+
+        private async Task<BankBookVM> GenerateBankBookVM(DateTime reportDate, List<int> accountIds, string type, string accountNames)
+        {
+            var startOfToday = StartOfDay(reportDate);
+            var endOfToday = EndOfDay(reportDate);
+
+            // Opening Balance: All history before today
+            var openingEntries = await _dbContext.LedgerEntries
+                .Include(l => l.JournalEntry)
+                .Where(l => accountIds.Contains(l.GLAccountId) && l.JournalEntry.EntryDate < startOfToday)
+                .ToListAsync();
+
+            decimal openingBalance = openingEntries.Sum(l => l.Debit - l.Credit);
+
+            // Today's Transactions
+            var todayEntries = await _dbContext.LedgerEntries
+                .Include(l => l.JournalEntry)
+                .Include(l => l.GLAccount)
+                .Where(l => accountIds.Contains(l.GLAccountId) && l.JournalEntry.EntryDate >= startOfToday && l.JournalEntry.EntryDate <= endOfToday)
+                .OrderBy(l => l.JournalEntry.CreatedAt)
+                .ToListAsync();
+
+            var transactions = todayEntries.Select(e => new BankBookEntry
+            {
+                Date = e.JournalEntry.EntryDate,
+                Reference = e.JournalEntry.ReferenceNumber,
+                AccountName = e.GLAccount.AccountName,
+                Description = e.Description,
+                Inflow = e.Debit,
+                Outflow = e.Credit,
+                SourceDocumentType = e.JournalEntry.SourceDocumentType,
+                SourceDocumentId = e.JournalEntry.SourceDocumentId
+            }).ToList();
+
+            return new BankBookVM
+            {
+                Date = reportDate,
+                OpeningBalance = openingBalance,
+                Transactions = transactions,
+                ClosingBalance = openingBalance + transactions.Sum(t => t.Inflow - t.Outflow),
+                ReportType = type,
+                AccountNames = accountNames
+            };
         }
 
         private Dictionary<int, string> GetEmployees()

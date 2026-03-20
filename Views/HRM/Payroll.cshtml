@@ -420,6 +420,22 @@
                             </div>
                         </div>
 
+                        <!-- Bank Selection for Initial Payment -->
+                        <div id="initialPaymentBankSection" style="display: none;" class="mb-3">
+                            <label class="form-label fw-bold">@Localize("Bank/Cash Account") <code>*</code></label>
+                            <select name="glAccountId" id="genBankId" class="form-select selectpicker" data-live-search="true">
+                                <option value="">@Localize("Select Bank/Cash Account")</option>
+                                @if (ViewBag.bankAccounts != null)
+                                {
+                                    foreach (var acc in ViewBag.bankAccounts)
+                                    {
+                                        <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                    }
+                                }
+                            </select>
+                            <small class="text-muted">@Localize("Account to deduct initial payments from.")</small>
+                        </div>
+
                         <!-- Toggle for Custom Salary Mode -->
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="useCustomSalary" onchange="ToggleCustomSalaryMode(this)">
@@ -615,6 +631,23 @@
                         </div>
 
                         <div class="form-group mb-3">
+                            <label class="control-label">@Localize("Bank/Cash Account") <code>*</code></label>
+                            <select id="paymentBankId" name="glAccountId" class="form-control selectpicker" data-live-search="true" required>
+                                <option value="">@Localize("Select Bank/Cash Account")</option>
+                                @if (ViewBag.bankAccounts != null)
+                                {
+                                    foreach (var acc in ViewBag.bankAccounts)
+                                    {
+                                        <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                    }
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                @Localize("Please select bank/cash account.")
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
                             <label class="control-label">@Localize("Payment Method") <code>*</code></label>
                             <select id="paymentMethod" name="paymentMethod" class="form-control selectpicker" required>
                                 <option value="">@Localize("Select Payment Method")</option>
@@ -750,6 +783,7 @@
         // Toggle custom salary entry mode
         function ToggleCustomSalaryMode(checkbox) {
             const customSection = document.getElementById('customSalarySection');
+            const bankSection = document.getElementById('initialPaymentBankSection');
             if (checkbox.checked) {
                 const month = $('#genMonth').val();
                 const year = $('#genYear').val();
@@ -761,9 +795,11 @@
                 }
                 
                 customSection.style.display = 'block';
+                bankSection.style.display = 'block';
                 LoadEmployeesForCustomPayroll();
             } else {
                 customSection.style.display = 'none';
+                bankSection.style.display = 'none';
             }
         }
 
@@ -1003,23 +1039,48 @@
         })
 
         function PayInvoice(id) {
-            $.alert({
+            let bankOptions = '';
+            @if (ViewBag.bankAccounts != null)
+            {
+                foreach (var acc in ViewBag.bankAccounts)
+                {
+                    @:bankOptions += '<option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>';
+                }
+            }
+
+            $.confirm({
                 title: '@Localize("Pay Salary")',
-                content: '@Localize("Are you sure want to pay salary?")',
+                content: '' +
+                '<form action="" class="formName">' +
+                '<div class="form-group">' +
+                '<label>@Localize("Select Bank/Cash Account")</label>' +
+                '<select class="bankId form-control" required>' +
+                '<option value="">@Localize("Select Bank")</option>' +
+                bankOptions +
+                '</select>' +
+                '</div>' +
+                '</form>',
                 rtl: isRTL(),
                 theme: 'modern',
                 buttons: {
-                    confirm: {
+                    formSubmit: {
                         text: '<i class="fa fa-check"></i> @Localize("Pay Now")',
-                        btnClass: 'btn btn-primary',
-                        action: function (btn) {
+                        btnClass: 'btn-primary',
+                        action: function () {
+                            var bankId = this.$content.find('.bankId').val();
+                            if(!bankId){
+                                $.alert('@Localize("Please select a bank account.")');
+                                return false;
+                            }
+                            
                             var self = this;
                             self.showLoading(true);
                             $.ajax({
                                 url: "/HRM/PaySalary",
                                 type: 'PUT',
                                 data: {
-                                    Id: id
+                                    Id: id,
+                                    glAccountId: bankId
                                 },
                                 error: function (data) {
                                     if (data.status == 401) {
@@ -1031,6 +1092,7 @@
                                     else {
                                         console.log(JSON.stringify(data));
                                     }
+                                    self.close();
                                 },
                                 success: function (data) {
                                     if (data.status == "success") {
@@ -1039,11 +1101,8 @@
                                     }
                                     else {
                                         errorMessage(data.message);
+                                        self.close();
                                     }
-                                },
-                                complete: function () {
-
-                                    self.close();
                                 }
                             });
                             return false;
@@ -1166,6 +1225,7 @@
 
         // Submit custom payroll with individual salary amounts
         function SubmitCustomPayroll(month, year) {
+            const glAccountId = $('#genBankId').val();
             const selectedCheckboxes = document.querySelectorAll('.employee-select-checkbox:checked');
             const customData = [];
 
@@ -1191,10 +1251,16 @@
                 return;
             }
 
+            const hasInitialPayments = customData.some(d => d.initialPayingAmount > 0);
+            if (hasInitialPayments && !glAccountId) {
+                errorMessage('@Localize("Please select a bank/cash account for initial payments.")');
+                return;
+            }
+
             $("#frmgenerate button[type='submit']").addClass("disabled btn-progress");
 
             $.ajax({
-                url: `/HRM/GenerateCustomPayroll?month=${month}&year=${year}`,
+                url: `/HRM/GenerateCustomPayroll?month=${month}&year=${year}&glAccountId=${glAccountId || ''}`,
                 type: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1364,12 +1430,14 @@
 
                 $("#frmPayment .submit").addClass("disabled btn-progress");
 
+                var glAccountId = $('#paymentBankId').val();
                 $.ajax({
                     url: "/AccountingEngine/PayPartialSalary",
                     type: 'POST',
                     data: {
                         payrollId: payrollId,
                         amount: amount,
+                        glAccountId: glAccountId,
                         paymentMethod: method,
                         notes: notes
                     },

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.Helpers;
@@ -1050,6 +1050,7 @@ namespace Saffrat.Controllers
         public async Task<IActionResult> PaymentMethods()
         {
             var payment = await _dbContext.PaymentMethods.ToListAsync();
+            ViewBag.Accounts = await _dbContext.GLAccounts.Where(x => x.Type == 0 || x.Type == 5).ToListAsync(); // CashAndBank or CreditCard
             return View(payment);
         }
 
@@ -1071,6 +1072,23 @@ namespace Saffrat.Controllers
 
                 try
                 {
+                    if (payment.Id > 0)
+                    {
+                        var existing = await _dbContext.PaymentMethods.FindAsync(payment.Id);
+                        if (existing != null)
+                        {
+                            existing.Title = payment.Title;
+                            existing.GLAccountId = payment.GLAccountId;
+                            existing.UpdatedBy = userName;
+                            existing.UpdatedAt = CurrentDateTime();
+                            _dbContext.PaymentMethods.Update(existing);
+                        }
+                    }
+                    else
+                    {
+                        _dbContext.PaymentMethods.Add(payment);
+                    }
+
                     await _dbContext.SaveChangesAsync();
 
                     response.Add("status", "success");
@@ -1078,7 +1096,7 @@ namespace Saffrat.Controllers
                 }
                 catch
                 {
-                    response.Add("status", "success");
+                    response.Add("status", "error");
                     response.Add("message", "Error while saving payment method.");
                 }
             }

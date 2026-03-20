@@ -30,9 +30,22 @@ namespace Saffrat.Services.AccountingEngine
                 .Where(o => o.CreatedAt >= startOfDay && o.CreatedAt <= endOfDay)
                 .ToListAsync();
 
+            if (!dailyOrders.Any()) return null;
+
             var totalSales = dailyOrders.Sum(o => o.SubTotal);
             var totalTaxes = dailyOrders.Sum(o => o.TaxTotal);
-            var totalCashIn = dailyOrders.Sum(o => o.Total);
+            
+            // Group payments by GL Account
+            var paymentMethods = await _dbContext.PaymentMethods.ToListAsync();
+            var paymentsByAccount = dailyOrders
+                .GroupBy(o => o.PaymentMethod)
+                .Select(g => new
+                {
+                    MethodTitle = g.Key,
+                    Amount = g.Sum(o => o.Total),
+                    GLAccountId = paymentMethods.FirstOrDefault(pm => pm.Title == g.Key)?.GLAccountId
+                })
+                .ToList();
 
             decimal totalCOGS = dailyOrders.Sum(o => o.Total) * 0.30m; // Example 30% COGS
 
@@ -51,22 +64,31 @@ namespace Saffrat.Services.AccountingEngine
             // In production, GLAccount IDs are dynamically queried based on Type mappings 
             // from the AppSettings or explicit GLAccount Type configurations.
             // Assuming dynamic mapping fallback here:
-            int cashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
             int salesAccId = await GetOrCreateGLAccountAsync("Food Sales", AccountType.Sales, AccountCategory.Revenue);
             int taxAccId = await GetOrCreateGLAccountAsync("Sales Tax", AccountType.OtherCurrentLiability, AccountCategory.Liability);
             int cogsAccId = await GetOrCreateGLAccountAsync("Cost of Goods Sold", AccountType.CostOfGoodsSold, AccountCategory.Expense);
             int invAccId = await GetOrCreateGLAccountAsync("Inventory", AccountType.Inventory, AccountCategory.Asset);
+            int defaultCashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
 
-            // Ledger Line 1: Debit Cash (Asset)
-            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Register Cash", Debit = totalCashIn, Credit = 0, GLAccountId = cashAccId });
-            // Ledger Line 2: Credit Sales (Revenue)
+            // Debits: Cash/Bank accounts
+            foreach (var pay in paymentsByAccount)
+            {
+                int targetAccId = pay.GLAccountId ?? defaultCashAccId;
+                journalEntry.LedgerEntries.Add(new LedgerEntry 
+                { 
+                    Description = $"Daily Register {pay.MethodTitle}", 
+                    Debit = pay.Amount, 
+                    Credit = 0, 
+                    GLAccountId = targetAccId 
+                });
+            }
+
+            // Credits: Revenue and Tax
             journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Food Sales", Debit = 0, Credit = totalSales, GLAccountId = salesAccId });
-            // Ledger Line 3: Credit Tax (Liability)
             journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Tax Collected", Debit = 0, Credit = totalTaxes, GLAccountId = taxAccId });
 
-            // Ledger Line 4: Debit COGS (Expense)
+            // COGS Adjustment
             journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Food Cost", Debit = totalCOGS, Credit = 0, GLAccountId = cogsAccId });
-            // Ledger Line 5: Credit Inventory (Asset)
             journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Inventory Depletion", Debit = 0, Credit = totalCOGS, GLAccountId = invAccId });
 
             // Post if valid
@@ -247,7 +269,7 @@ namespace Saffrat.Services.AccountingEngine
             return journalEntry;
         }
 
-        public async Task<JournalEntry> RecordInvoicePaymentAsync(Invoice invoice)
+        public async Task<JournalEntry> RecordInvoicePaymentAsync(Invoice invoice, int? glAccountId = null)
         {
             var journalEntry = new JournalEntry
             {
@@ -261,7 +283,7 @@ namespace Saffrat.Services.AccountingEngine
                 LedgerEntries = new List<LedgerEntry>()
             };
 
-            int cashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
+            int cashAccId = glAccountId ?? await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
             int arAccId = await GetOrCreateGLAccountAsync("Accounts Receivable", AccountType.AccountsReceivable, AccountCategory.Asset);
 
             // Debit Cash (Asset Increase)
@@ -272,7 +294,7 @@ namespace Saffrat.Services.AccountingEngine
             return journalEntry;
         }
 
-        public async Task<JournalEntry> RecordBillPaymentAsync(Bill bill)
+        public async Task<JournalEntry> RecordBillPaymentAsync(Bill bill, int? glAccountId = null)
         {
             var journalEntry = new JournalEntry
             {
@@ -287,7 +309,7 @@ namespace Saffrat.Services.AccountingEngine
             };
 
             int apAccId = await GetOrCreateGLAccountAsync("Accounts Payable", AccountType.AccountsPayable, AccountCategory.Liability);
-            int cashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
+            int cashAccId = glAccountId ?? await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
 
             // Debit Accounts Payable (Liability Decrease)
             journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "AP Cleared", Debit = bill.TotalAmount, Credit = 0, GLAccountId = apAccId });
@@ -361,7 +383,7 @@ namespace Saffrat.Services.AccountingEngine
         /// <summary>
         /// Records a partial/flexible payroll payment
         /// </summary>
-        public async Task<JournalEntry> RecordFlexiblePayrollPaymentAsync(PayrollPayment payment, Payroll payroll)
+        public async Task<JournalEntry> RecordFlexiblePayrollPaymentAsync(PayrollPayment payment, Payroll payroll, int? glAccountId = null)
         {
             var journalEntry = new JournalEntry
             {
@@ -375,7 +397,7 @@ namespace Saffrat.Services.AccountingEngine
                 LedgerEntries = new List<LedgerEntry>()
             };
 
-            int cashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
+            int cashAccId = glAccountId ?? await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
             int salariesPayableAccId = await GetOrCreateGLAccountAsync("Salaries Payable", AccountType.OtherCurrentLiability, AccountCategory.Liability);
 
             // Debit Cash & Bank (Asset Increase) - but it's a decrease in cash

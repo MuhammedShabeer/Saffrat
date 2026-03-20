@@ -23,6 +23,87 @@ namespace Saffrat.Controllers
             _accountingEngine = accountingEngine;
         }
 
+        [HttpPost]
+        public async Task<IActionResult> SaveBankEntry(DateTime entryDate, string referenceNumber, int bankAccountId, string transactionType, int offsetAccountId, decimal amount, string description)
+        {
+            try
+            {
+                var bankAccount = await _dbContext.GLAccounts.FindAsync(bankAccountId);
+                var offsetAccount = await _dbContext.GLAccounts.FindAsync(offsetAccountId);
+
+                if (bankAccount == null || offsetAccount == null)
+                    return Json(new { status = "error", message = "Invalid account selected." });
+
+                var journal = new JournalEntry
+                {
+                    EntryDate = entryDate,
+                    ReferenceNumber = "BANK-" + (string.IsNullOrEmpty(referenceNumber) ? DateTime.Now.Ticks.ToString().Substring(10) : referenceNumber),
+                    Description = description ?? $"Manual Bank {transactionType}",
+                    SourceDocumentType = "BankEntry",
+                    SourceDocumentId = 0,
+                    CreatedAt = DateTime.Now
+                };
+
+                // Journal Entry Rules:
+                // Inflow: Bank Account DEBIT (+), Offset Account CREDIT (-)
+                // Outflow: Bank Account CREDIT (-), Offset Account DEBIT (+)
+
+                decimal bankDebit = transactionType == "Inflow" ? amount : 0;
+                decimal bankCredit = transactionType == "Outflow" ? amount : 0;
+                decimal offsetDebit = transactionType == "Outflow" ? amount : 0;
+                decimal offsetCredit = transactionType == "Inflow" ? amount : 0;
+
+                journal.LedgerEntries.Add(new LedgerEntry
+                {
+                    GLAccountId = bankAccountId,
+                    Description = journal.Description,
+                    Debit = bankDebit,
+                    Credit = bankCredit
+                });
+
+                journal.LedgerEntries.Add(new LedgerEntry
+                {
+                    GLAccountId = offsetAccountId,
+                    Description = journal.Description,
+                    Debit = offsetDebit,
+                    Credit = offsetCredit
+                });
+
+                await _accountingEngine.PostJournalEntryAsync(journal);
+
+                return Json(new { status = "success", message = "Transaction saved successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> AddBankEntry()
+        {
+            ViewBag.BankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.Type == 0 || x.Type == 5)).ToListAsync(); // CashAndBank or CreditCard
+            ViewBag.AllAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive).OrderBy(x => x.AccountCode).ToListAsync();
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> BankTransactions()
+        {
+            var bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.Type == 0 || x.Type == 5)).Select(x => x.Id).ToListAsync(); // CashAndBank or CreditCard
+            
+            var journals = await _dbContext.JournalEntries
+                .Where(j => j.LedgerEntries.Any(e => bankAccounts.Contains(e.GLAccountId)))
+                .Include(j => j.LedgerEntries)
+                .ThenInclude(e => e.GLAccount)
+                .OrderByDescending(j => j.EntryDate)
+                .ThenByDescending(j => j.Id)
+                .Take(200)
+                .ToListAsync();
+
+            return View(journals);
+        }
+
         [HttpGet]
         public async Task<IActionResult> ChartOfAccounts()
         {
@@ -437,7 +518,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> PayPartialSalary(int payrollId, decimal amount, string paymentMethod = "Cash", string notes = "")
+        public async Task<IActionResult> PayPartialSalary(int payrollId, decimal amount, int? glAccountId, string paymentMethod = "Cash", string notes = "")
         {
             try
             {
@@ -475,7 +556,7 @@ namespace Saffrat.Controllers
                 await _dbContext.SaveChangesAsync();
 
                 // Create journal entry for the payment
-                var paymentEntry = await _accountingEngine.RecordFlexiblePayrollPaymentAsync(payment, payroll);
+                var paymentEntry = await _accountingEngine.RecordFlexiblePayrollPaymentAsync(payment, payroll, glAccountId);
                 await _accountingEngine.PostJournalEntryAsync(paymentEntry);
 
                 // Update payment with journal entry reference

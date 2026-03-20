@@ -902,6 +902,7 @@ namespace Saffrat.Controllers
                     .ThenInclude(x => x.Designation).ToListAsync();
                 ViewBag.month = month;
                 ViewBag.year = year;
+                ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.Type == 1 || x.Type == 2)).ToListAsync(); // CashAndBank or CreditCard
                 return View(payroll);
             }
             else
@@ -914,6 +915,7 @@ namespace Saffrat.Controllers
                     .ThenInclude(x => x.Designation).ToListAsync();
                 ViewBag.month = current.Month;
                 ViewBag.year = current.Year;
+                ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.Type == 1 || x.Type == 2)).ToListAsync(); // CashAndBank or CreditCard
                 return View(payroll);
             }
         }
@@ -1076,7 +1078,7 @@ namespace Saffrat.Controllers
         // Generate payroll with custom salary amounts per employee
         [HttpPost]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> GenerateCustomPayroll([Required] int month, [Required] int year, [FromBody] List<PayrollCustomData> customData)
+        public async Task<IActionResult> GenerateCustomPayroll([Required] int month, [Required] int year, [Required] int? glAccountId, [FromBody] List<PayrollCustomData> customData)
         {
             if (customData == null || customData.Count == 0)
             {
@@ -1256,7 +1258,7 @@ namespace Saffrat.Controllers
 
                         initialPaymentJournal.LedgerEntries.Add(new LedgerEntry
                         {
-                            GLAccountId = Convert.ToInt32(GetSetting.PayrollAccount),
+                            GLAccountId = glAccountId ?? Convert.ToInt32(GetSetting.PayrollAccount),
                             Description = "Initial Salary Payment",
                             Debit = 0,
                             Credit = data.InitialPayingAmount
@@ -1269,7 +1271,7 @@ namespace Saffrat.Controllers
                         {
                             PayrollId = payroll.Id,
                             Amount = data.InitialPayingAmount,
-                            PaymentMethod = "Cash", // Default for initial payment
+                            PaymentMethod = (await _dbContext.GLAccounts.FindAsync(glAccountId))?.AccountName ?? "Cash",
                             PaymentDate = CurrentDateTime(),
                             Notes = "Initial payment during generation",
                             JournalEntryId = initialPaymentJournal.Id,
@@ -1296,7 +1298,7 @@ namespace Saffrat.Controllers
 
         [HttpPut]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> PaySalary(int? Id)
+        public async Task<IActionResult> PaySalary(int? Id, int? glAccountId)
         {
             try
             {
@@ -1362,7 +1364,7 @@ namespace Saffrat.Controllers
 
                     payrollJournal.LedgerEntries.Add(new LedgerEntry
                     {
-                        GLAccountId = Convert.ToInt32(GetSetting.PayrollAccount),
+                        GLAccountId = glAccountId ?? Convert.ToInt32(GetSetting.PayrollAccount),
                         Description = "Salary Payment",
                         Debit = 0,
                         Credit = amountToPay
@@ -1376,7 +1378,7 @@ namespace Saffrat.Controllers
                     {
                         PayrollId = payroll.Id,
                         Amount = amountToPay,
-                        PaymentMethod = "Cash", // Default for marking fully paid
+                        PaymentMethod = (await _dbContext.GLAccounts.FindAsync(glAccountId))?.AccountName ?? "Cash",
                         PaymentDate = CurrentDateTime(),
                         Notes = "Marked as fully paid from list",
                         JournalEntryId = payrollJournal.Id,
