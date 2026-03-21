@@ -1,10 +1,9 @@
 @model Saffrat.ViewModels.PurchaseComparisonVM
-
 @using Saffrat.Resources
 @inherits LocService<TModel>
 
 @{
-    ViewData["Title"] = @Localize("Purchase History Report");
+    ViewData["Title"] = @Localize("Purchase Comparison");
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
@@ -14,12 +13,12 @@
             <div class="col-auto">
                 <div class="page-header-title">
                     <h4>
-                        <i class="fa fa-history me-2 text-primary"></i> @Localize("Purchase History Report")
+                        <i class="fa fa-history me-2 text-primary"></i> @Localize("Purchase Comparison")
                     </h4>
                 </div>
                 <ul class="breadcrumb">
                     <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
-                    <li class="breadcrumb-item">@Localize("Purchase History Report")</li>
+                    <li class="breadcrumb-item">@Localize("Purchase Comparison")</li>
                 </ul>
             </div>
         </div>

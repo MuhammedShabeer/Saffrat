@@ -96,6 +96,7 @@ namespace Saffrat.Controllers
 
             ViewBag.AccountName = account.AccountName;
             ViewBag.AccountCode = account.AccountCode;
+            ViewBag.IsDebitAccount = isDebitAccount;
 
             return PartialView("_AccountStatementPopup", model);
         }

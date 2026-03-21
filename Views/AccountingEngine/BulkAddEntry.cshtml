@@ -1,0 +1,222 @@
+@model Saffrat.ViewModels.BulkEntryVM
+@using Saffrat.Resources
+@inherits LocService<Saffrat.ViewModels.BulkEntryVM>
+
+@{
+    ViewData["Title"] = Localize($"Bulk Add {Model.SourceType} Entries");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var backAction = Model.SourceType == "Cash" ? "CashTransactions" : "BankTransactions";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-md-12">
+                <div class="page-header-title">
+                    <h5 class="m-b-10"><i class="fas fa-layer-group me-2 text-primary"></i> @ViewData["Title"]</h5>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                    <li class="breadcrumb-item"><a href="#!">@Localize("Accounting")</a></li>
+                    <li class="breadcrumb-item"><a asp-action="@backAction">@Localize($"{Model.SourceType} Transactions")</a></li>
+                    <li class="breadcrumb-item">@Localize("Bulk Add")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-primary fw-bold">@Localize("Bulk Entry Spreadsheet")</h5>
+                <small class="text-muted">@Localize("Add multiple transactions and save them all at once.")</small>
+            </div>
+            <div class="card-body p-0">
+                <form id="bulkEntryForm">
+                    <input type="hidden" id="sourceType" value="@Model.SourceType" />
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0 align-middle" id="bulkTable">
+                            <thead class="bg-light small fw-bold text-center">
+                                <tr>
+                                    <th style="width: 150px;">@Localize("Date")</th>
+                                    <th>@Localize($"{Model.SourceType} Account")</th>
+                                    <th style="width: 120px;">@Localize("Type")</th>
+                                    <th>@Localize("Offset Account")</th>
+                                    <th style="width: 150px;">@Localize("Amount")</th>
+                                    <th>@Localize("Description")</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Entries.Count; i++)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="date" class="form-control form-control-sm entry-date" value="@Model.Entries[i].EntryDate.ToString("yyyy-MM-dd")" required />
+                                        </td>
+                                        <td>
+                                            <select class="form-control form-control-sm select2 entry-bank-account" required>
+                                                <option value="">-- @Localize("Select") --</option>
+                                                @foreach (var acc in Model.BankAccounts)
+                                                {
+                                                    <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select class="form-control form-control-sm entry-type" required>
+                                                <option value="Inflow">@Localize("Inflow")</option>
+                                                <option value="Outflow" selected>@Localize("Outflow")</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select class="form-control form-control-sm select2 entry-offset-account" required>
+                                                <option value="">-- @Localize("Select") --</option>
+                                                @foreach (var acc in Model.OffsetAccounts)
+                                                {
+                                                    <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm text-end entry-amount" step="0.01" min="0" placeholder="0.00" />
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm entry-description" placeholder="@Localize("Optional description")" />
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-link btn-sm text-danger remove-row"><i class="fa fa-times"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <button type="button" id="btnAddRow" class="btn btn-outline-secondary btn-sm"><i class="fa fa-plus me-1"></i> @Localize("Add More Rows")</button>
+                <div>
+                    <a asp-action="@backAction" class="btn btn-link text-muted me-2">@Localize("Cancel")</a>
+                    <button type="button" id="btnSaveBulk" class="btn btn-primary px-5"><i class="fa fa-save me-2"></i> @Localize("Save All Transactions")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <style>
+        .select2-container--default .select2-selection--single { height: 31px; border: 1px solid #ced4da; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 31px; font-size: 0.875rem; }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 31px; }
+        .table-sm td, .table-sm th { padding: 0.3rem; }
+    </style>
+
+    <script>
+        $(document).ready(function () {
+            initSelect2();
+
+            function initSelect2() {
+                $('.select2').each(function() {
+                    if (!$(this).hasClass("select2-hidden-accessible")) {
+                        $(this).select2({ width: '100%', dropdownParent: $(this).parent() });
+                    }
+                });
+            }
+
+            $('#btnAddRow').on('click', function () {
+                var newRow = $('#bulkTable tbody tr:first').clone();
+                newRow.find('input').val('');
+                newRow.find('input[type="date"]').val('@DateTime.Today.ToString("yyyy-MM-dd")');
+                newRow.find('select').val('');
+                newRow.find('.select2-container').remove();
+                newRow.find('.select2').removeClass('select2-hidden-accessible').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
+                $('#bulkTable tbody').append(newRow);
+                initSelect2();
+            });
+
+            $(document).on('click', '.remove-row', function () {
+                if ($('#bulkTable tbody tr').length > 1) {
+                    $(this).closest('tr').remove();
+                } else {
+                    $(this).closest('tr').find('input').val('');
+                    $(this).closest('tr').find('select').val('');
+                }
+            });
+
+            $('#btnSaveBulk').on('click', function () {
+                var entries = [];
+                var isValid = true;
+                
+                $('#bulkTable tbody tr').each(function () {
+                    var amount = parseFloat($(this).find('.entry-amount').val());
+                    if (!isNaN(amount) && amount > 0) {
+                        var bankId = $(this).find('.entry-bank-account').val();
+                        var offsetId = $(this).find('.entry-offset-account').val();
+                        
+                        if (!bankId || !offsetId) {
+                            isValid = false;
+                            $(this).addClass('table-danger');
+                        } else {
+                            $(this).removeClass('table-danger');
+                            entries.push({
+                                entryDate: $(this).find('.entry-date').val(),
+                                bankAccountId: parseInt(bankId),
+                                transactionType: $(this).find('.entry-type').val(),
+                                offsetAccountId: parseInt(offsetId),
+                                amount: amount,
+                                description: $(this).find('.entry-description').val()
+                            });
+                        }
+                    }
+                });
+
+                if (!isValid) {
+                    errorMessage('@Localize("Please select both accounts for rows with amounts.")');
+                    return;
+                }
+
+                if (entries.length === 0) {
+                    errorMessage('@Localize("No valid transactions to save. Please enter amounts.")');
+                    return;
+                }
+
+                var $btn = $(this);
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+                var data = {
+                    sourceType: $('#sourceType').val(),
+                    entries: entries
+                };
+
+                $.ajax({
+                    url: '/AccountingEngine/SaveBulkEntries',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function (res) {
+                        if (res.status === 'success') {
+                            successMessage(res.message);
+                            setTimeout(function () {
+                                window.location.href = '/AccountingEngine/' + '@backAction';
+                            }, 1500);
+                        } else {
+                            errorMessage(res.message);
+                            $btn.prop('disabled', false).html('<i class="fa fa-save me-2"></i> @Localize("Save All Transactions")');
+                        }
+                    },
+                    error: function () {
+                        errorMessage('Something went wrong!');
+                        $btn.prop('disabled', false).html('<i class="fa fa-save me-2"></i> @Localize("Save All Transactions")');
+                    }
+                });
+            });
+        });
+    </script>
+}

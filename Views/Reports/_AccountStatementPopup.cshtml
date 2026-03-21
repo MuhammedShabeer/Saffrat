@@ -2,6 +2,16 @@
 @using Saffrat.Resources
 @inherits LocService<TModel>
 
+@{
+    bool isDebitAccount = ViewBag.IsDebitAccount ?? false;
+    string GetBalanceLabel(decimal bal)
+    {
+        if (bal == 0) return "";
+        if (isDebitAccount) return bal > 0 ? "DR" : "CR";
+        return bal > 0 ? "CR" : "DR";
+    }
+}
+
 <div class="modal-header bg-primary text-white py-3">
     <h5 class="modal-title fw-bold">
         <i class="fa fa-file-invoice me-2"></i>
@@ -17,7 +27,7 @@
         </div>
         <div class="text-end">
             <span class="text-muted small text-uppercase fw-bold">@Localize("Opening Balance")</span>
-            <div class="fw-bold fs-6 text-primary">@GetCurrency(Math.Abs(Model.OpeningBalance)) @(Model.OpeningBalance < 0 ? "DR" : "CR")</div>
+            <div class="fw-bold fs-6 text-primary">@GetCurrency(Math.Abs(Model.OpeningBalance)) @GetBalanceLabel(Model.OpeningBalance)</div>
         </div>
     </div>
 
@@ -44,7 +54,7 @@
                             <td class="text-wrap" style="max-width: 250px;">@row.Description</td>
                             <td class="text-end text-success">@(row.Debit > 0 ? GetCurrency(row.Debit) : "-")</td>
                             <td class="text-end text-danger">@(row.Credit > 0 ? GetCurrency(row.Credit) : "-")</td>
-                            <td class="text-end pe-3 fw-bold">@GetCurrency(Math.Abs(row.RunningBalance)) @(row.RunningBalance < 0 ? "DR" : "CR")</td>
+                            <td class="text-end pe-3 fw-bold">@GetCurrency(Math.Abs(row.RunningBalance)) @GetBalanceLabel(row.RunningBalance)</td>
                         </tr>
                     }
                 }
@@ -61,7 +71,7 @@
 <div class="modal-footer bg-light py-3 border-top d-flex justify-content-between">
     <div class="text-start">
         <span class="text-muted small text-uppercase fw-bold d-block">@Localize("Closing Balance")</span>
-        <span class="h5 fw-bold text-primary mb-0">@GetCurrency(Math.Abs(Model.ClosingBalance)) @(Model.ClosingBalance < 0 ? "DR" : "CR")</span>
+        <span class="h5 fw-bold text-primary mb-0">@GetCurrency(Math.Abs(Model.ClosingBalance)) @GetBalanceLabel(Model.ClosingBalance)</span>
     </div>
     <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">@Localize("Close")</button>
 </div>

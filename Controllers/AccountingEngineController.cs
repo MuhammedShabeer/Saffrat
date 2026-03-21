@@ -26,6 +26,17 @@ namespace Saffrat.Controllers
         [HttpPost]
         public async Task<IActionResult> SaveBankEntry(DateTime entryDate, string referenceNumber, int bankAccountId, string transactionType, int offsetAccountId, decimal amount, string description)
         {
+            return await SaveEntryInternal("Bank", entryDate, referenceNumber, bankAccountId, transactionType, offsetAccountId, amount, description);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveCashEntry(DateTime entryDate, string referenceNumber, int bankAccountId, string transactionType, int offsetAccountId, decimal amount, string description)
+        {
+            return await SaveEntryInternal("Cash", entryDate, referenceNumber, bankAccountId, transactionType, offsetAccountId, amount, description);
+        }
+
+        private async Task<IActionResult> SaveEntryInternal(string sourceType, DateTime entryDate, string referenceNumber, int bankAccountId, string transactionType, int offsetAccountId, decimal amount, string description)
+        {
             try
             {
                 var bankAccount = await _dbContext.GLAccounts.FindAsync(bankAccountId);
@@ -34,43 +45,26 @@ namespace Saffrat.Controllers
                 if (bankAccount == null || offsetAccount == null)
                     return Json(new { status = "error", message = "Invalid account selected." });
 
+                var prefix = sourceType == "Cash" ? "CASH-" : "BANK-";
                 var journal = new JournalEntry
                 {
                     EntryDate = entryDate,
-                    ReferenceNumber = "BANK-" + (string.IsNullOrEmpty(referenceNumber) ? DateTime.Now.Ticks.ToString().Substring(10) : referenceNumber),
-                    Description = description ?? $"Manual Bank {transactionType}",
-                    SourceDocumentType = "BankEntry",
+                    ReferenceNumber = prefix + (string.IsNullOrEmpty(referenceNumber) ? DateTime.Now.Ticks.ToString().Substring(10) : referenceNumber),
+                    Description = description ?? $"Manual {sourceType} {transactionType}",
+                    SourceDocumentType = sourceType + "Entry",
                     SourceDocumentId = 0,
                     CreatedAt = DateTime.Now
                 };
-
-                // Journal Entry Rules:
-                // Inflow: Bank Account DEBIT (+), Offset Account CREDIT (-)
-                // Outflow: Bank Account CREDIT (-), Offset Account DEBIT (+)
 
                 decimal bankDebit = transactionType == "Inflow" ? amount : 0;
                 decimal bankCredit = transactionType == "Outflow" ? amount : 0;
                 decimal offsetDebit = transactionType == "Outflow" ? amount : 0;
                 decimal offsetCredit = transactionType == "Inflow" ? amount : 0;
 
-                journal.LedgerEntries.Add(new LedgerEntry
-                {
-                    GLAccountId = bankAccountId,
-                    Description = journal.Description,
-                    Debit = bankDebit,
-                    Credit = bankCredit
-                });
-
-                journal.LedgerEntries.Add(new LedgerEntry
-                {
-                    GLAccountId = offsetAccountId,
-                    Description = journal.Description,
-                    Debit = offsetDebit,
-                    Credit = offsetCredit
-                });
+                journal.LedgerEntries.Add(new LedgerEntry { GLAccountId = bankAccountId, Description = journal.Description, Debit = bankDebit, Credit = bankCredit });
+                journal.LedgerEntries.Add(new LedgerEntry { GLAccountId = offsetAccountId, Description = journal.Description, Debit = offsetDebit, Credit = offsetCredit });
 
                 await _accountingEngine.PostJournalEntryAsync(journal);
-
                 return Json(new { status = "success", message = "Transaction saved successfully." });
             }
             catch (Exception ex)
@@ -82,7 +76,15 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> AddBankEntry()
         {
-            ViewBag.BankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.Type == 0 || x.Type == 5)).ToListAsync(); // CashAndBank or CreditCard
+            ViewBag.BankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && ((x.Type == 0 && !x.AccountName.Contains("Cash") && !x.AccountCode.Contains("CASH")) || x.Type == 5)).ToListAsync();
+            ViewBag.AllAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive).OrderBy(x => x.AccountCode).ToListAsync();
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> AddCashEntry()
+        {
+            ViewBag.BankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && x.Type == 0 && (x.AccountName.Contains("Cash") || x.AccountCode.Contains("CASH"))).ToListAsync();
             ViewBag.AllAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive).OrderBy(x => x.AccountCode).ToListAsync();
             return View();
         }
@@ -90,18 +92,95 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> BankTransactions()
         {
-            var bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.Type == 0 || x.Type == 5)).Select(x => x.Id).ToListAsync(); // CashAndBank or CreditCard
-            
+            var bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && ((x.Type == 0 && !x.AccountName.Contains("Cash") && !x.AccountCode.Contains("CASH")) || x.Type == 5)).Select(x => x.Id).ToListAsync();
             var journals = await _dbContext.JournalEntries
                 .Where(j => j.LedgerEntries.Any(e => bankAccounts.Contains(e.GLAccountId)))
-                .Include(j => j.LedgerEntries)
-                .ThenInclude(e => e.GLAccount)
-                .OrderByDescending(j => j.EntryDate)
-                .ThenByDescending(j => j.Id)
-                .Take(200)
-                .ToListAsync();
-
+                .Include(j => j.LedgerEntries).ThenInclude(e => e.GLAccount)
+                .OrderByDescending(j => j.EntryDate).ThenByDescending(j => j.Id)
+                .Take(200).ToListAsync();
             return View(journals);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CashTransactions()
+        {
+            var cashAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && x.Type == 0 && (x.AccountName.Contains("Cash") || x.AccountCode.Contains("CASH"))).Select(x => x.Id).ToListAsync();
+            var journals = await _dbContext.JournalEntries
+                .Where(j => j.LedgerEntries.Any(e => cashAccounts.Contains(e.GLAccountId)))
+                .Include(j => j.LedgerEntries).ThenInclude(e => e.GLAccount)
+                .OrderByDescending(j => j.EntryDate).ThenByDescending(j => j.Id)
+                .Take(200).ToListAsync();
+            return View(journals);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> BulkAddBankEntry()
+        {
+            return await BulkAddEntryInternal("Bank");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> BulkAddCashEntry()
+        {
+            return await BulkAddEntryInternal("Cash");
+        }
+
+        private async Task<IActionResult> BulkAddEntryInternal(string sourceType)
+        {
+            var bankAccounts = sourceType == "Cash" 
+                ? await _dbContext.GLAccounts.Where(x => x.IsActive && x.Type == 0 && (x.AccountName.Contains("Cash") || x.AccountCode.Contains("CASH"))).ToListAsync()
+                : await _dbContext.GLAccounts.Where(x => x.IsActive && ((x.Type == 0 && !x.AccountName.Contains("Cash") && !x.AccountCode.Contains("CASH")) || x.Type == 5)).ToListAsync();
+            
+            var offsetAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive).OrderBy(x => x.AccountCode).ToListAsync();
+
+            var model = new BulkEntryVM { SourceType = sourceType, BankAccounts = bankAccounts, OffsetAccounts = offsetAccounts };
+            for (int i = 0; i < 5; i++) model.Entries.Add(new BulkEntryRow());
+
+            return View("BulkAddEntry", model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveBulkEntries([FromBody] BulkEntryVM model)
+        {
+            try
+            {
+                if (model.Entries == null || !model.Entries.Any())
+                    return Json(new { status = "error", message = "No entries to save." });
+
+                int savedCount = 0;
+                foreach (var entry in model.Entries)
+                {
+                    if (entry.Amount <= 0 || entry.BankAccountId == 0 || entry.OffsetAccountId == 0) continue;
+
+                    var prefix = model.SourceType == "Cash" ? "CASH-" : "BANK-";
+                    var journal = new JournalEntry
+                    {
+                        EntryDate = entry.EntryDate,
+                        ReferenceNumber = prefix + (string.IsNullOrEmpty(entry.ReferenceNumber) ? DateTime.Now.Ticks.ToString().Substring(10) : entry.ReferenceNumber),
+                        Description = entry.Description ?? $"Bulk {model.SourceType} {entry.TransactionType}",
+                        SourceDocumentType = model.SourceType + "Entry",
+                        SourceDocumentId = 0,
+                        CreatedAt = DateTime.Now
+                    };
+
+                    decimal bankDebit = entry.TransactionType == "Inflow" ? entry.Amount : 0;
+                    decimal bankCredit = entry.TransactionType == "Outflow" ? entry.Amount : 0;
+                    decimal offsetDebit = entry.TransactionType == "Outflow" ? entry.Amount : 0;
+                    decimal offsetCredit = entry.TransactionType == "Inflow" ? entry.Amount : 0;
+
+                    journal.LedgerEntries.Add(new LedgerEntry { GLAccountId = entry.BankAccountId, Description = journal.Description, Debit = bankDebit, Credit = bankCredit });
+                    journal.LedgerEntries.Add(new LedgerEntry { GLAccountId = entry.OffsetAccountId, Description = journal.Description, Debit = offsetDebit, Credit = offsetCredit });
+
+                    await _accountingEngine.PostJournalEntryAsync(journal);
+                    savedCount++;
+                }
+
+                return Json(new { status = "success", message = $"{savedCount} transactions saved successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
         }
 
         [HttpGet]
@@ -927,24 +1006,6 @@ namespace Saffrat.Controllers
                             }
                         });
 
-                    case "cashledger":
-                        var cash = await _dbContext.CashLedgers
-                            .Include(c => c.GLAccount)
-                            .FirstOrDefaultAsync(c => c.Id == id);
-                        if (cash == null) return Json(new { status = "error", message = "Cash entry not found" });
-                        return Json(new
-                        {
-                            status = "success",
-                            type = "Cash Transaction",
-                            data = new
-                            {
-                                offsetAccount = cash.GLAccount?.AccountName,
-                                cash.Type,
-                                cash.Amount,
-                                cash.Description,
-                                Date = cash.EntryDate.ToString("yyyy-MM-dd HH:mm")
-                            }
-                        });
 
                     case "partnertransaction":
                         var pTrans = await _dbContext.PartnerTransactions

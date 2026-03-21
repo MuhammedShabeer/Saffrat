@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -74,7 +74,6 @@ namespace Saffrat.Models
         public virtual DbSet<Invoice> Invoices { get; set; }
         public virtual DbSet<Bill> Bills { get; set; }
 
-        public virtual DbSet<CashLedger> CashLedgers { get; set; }
         public virtual DbSet<StockAdjustment> StockAdjustments { get; set; }
         public virtual DbSet<Partner> Partners { get; set; }
         public virtual DbSet<PartnerTransaction> PartnerTransactions { get; set; }
@@ -1062,25 +1061,6 @@ namespace Saffrat.Models
                     .HasMaxLength(150);
             });
 
-            modelBuilder.Entity<CashLedger>(entity =>
-            {
-                entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.CreatedAt).HasColumnType("datetime");
-                entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
-                entity.Property(e => e.EntryDate).HasColumnType("datetime");
-                entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
-                entity.Property(e => e.CreatedBy).HasMaxLength(150);
-
-                entity.HasOne(d => d.GLAccount)
-                    .WithMany()
-                    .HasForeignKey(d => d.GLAccountId)
-                    .HasConstraintName("FK_CashLedgers_GLAccounts");
-
-                entity.HasOne(d => d.JournalEntry)
-                    .WithMany()
-                    .HasForeignKey(d => d.JournalEntryId)
-                    .HasConstraintName("FK_CashLedgers_JournalEntries");
-            });
 
             modelBuilder.Entity<StockAdjustment>(entity =>
             {

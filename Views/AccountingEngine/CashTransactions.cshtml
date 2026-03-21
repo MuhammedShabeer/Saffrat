@@ -1,0 +1,104 @@
+@model IEnumerable<Saffrat.Models.JournalEntry>
+@using Saffrat.Resources
+@inherits LocService<IEnumerable<Saffrat.Models.JournalEntry>>
+
+@{
+    ViewData["Title"] = Localize("Cash Transactions");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h5 class="m-b-10"><i class="fas fa-money-bill-wave me-2 text-primary"></i> @Localize("Cash Transactions")</h5>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                    <li class="breadcrumb-item"><a href="#!">@Localize("Accounting")</a></li>
+                    <li class="breadcrumb-item">@Localize("Cash Transactions")</li>
+                </ul>
+            </div>
+            <div class="col">
+                <div class="float-end">
+                    <a asp-action="BulkAddCashEntry" class="btn btn-outline-primary me-2"><i class="fa fa-layer-group"></i> @Localize("Bulk Add")</a>
+                    <a asp-action="AddCashEntry" class="btn btn-primary"><i class="fa fa-plus"></i> @Localize("Add Cash Entry")</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="cash-table" class="table table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Reference")</th>
+                                <th>@Localize("Account")</th>
+                                <th class="text-center">@Localize("Type")</th>
+                                <th>@Localize("Description")</th>
+                                <th class="text-end">@Localize("Debit")</th>
+                                <th class="text-end">@Localize("Credit")</th>
+                                <th class="text-center">@Localize("Action")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var journal in Model)
+                            {
+                                // Show the entry relating to Cash account (Asset category or designated by identification logic)
+                                foreach (var entry in journal.LedgerEntries.Where(e => (e.GLAccount.AccountName.Contains("Cash") || e.GLAccount.AccountCode.Contains("CASH"))))
+                                {
+                                    <tr>
+                                        <td>@journal.EntryDate.ToString("yyyy-MM-dd")</td>
+                                        <td class="fw-bold text-primary">@journal.ReferenceNumber</td>
+                                        <td>@entry.GLAccount.AccountName</td>
+                                        <td class="text-center">
+                                            @if (entry.Debit > 0)
+                                            {
+                                                <span class="badge bg-light-success text-success border">@Localize("Inflow")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light-danger text-danger border">@Localize("Outflow")</span>
+                                            }
+                                        </td>
+                                        <td class="text-wrap" style="max-width: 200px;">@entry.Description</td>
+                                        <td class="text-end">@(entry.Debit > 0 ? entry.Debit.ToString("N2") : "-")</td>
+                                        <td class="text-end">@(entry.Credit > 0 ? entry.Credit.ToString("N2") : "-")</td>
+                                        <td class="text-center">
+                                            <a href="/AccountingEngine/JournalEntries?search=@journal.ReferenceNumber" class="btn btn-link btn-sm" title="View Journal">
+                                                <i class="feather icon-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function () {
+            $('#cash-table').DataTable({
+                "order": [[0, "desc"]],
+                "pageLength": 25,
+                "language": {
+                    "search": "",
+                    "searchPlaceholder": "@Localize("Search transitions...")"
+                }
+            });
+            $('.dataTables_filter input').addClass('form-control form-control-sm border-0 bg-light px-3 rounded-pill').css('width', '250px');
+        });
+    </script>
+}
