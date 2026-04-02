@@ -100,7 +100,7 @@ To maintain accurate balance sheets, physical inventory must match system record
 ---
 
 ## 7. Accounting & Financial Data Entry
-This module is the "General Ledger" of your business. It follows Standard Accounting Practices (SAP) and uses automated background accounting to ensure accuracy.
+This module acts as the "General Ledger" of your business. It is powered by the **Accounting Engine**, a robust double-entry financial processor that intercepts system actions (POS, Payroll, Purchasing) and automatically posts balanced journals in the background, ensuring strict compliance with Standard Accounting Practices (SAP).
 
 ### 7.1 Chart of Accounts (COA)
 Found under **Accounting -> Chart of Accounts**. The COA is categorized for ease of reporting:
@@ -143,6 +143,8 @@ Designed for transparent capital management for business owners.
 - **Attendance**: Staff must clock in/out via the dashboard or specific employee tablets.
 - **Leave Requests / Scheduling**: Track vacations and authorized leaves.
 - **Payroll Generation**: At the end of the month, use **HRM -> Payroll** to generate slips. The system automatically calculates Net Salary based on base pay, earnings, deductions, and bonuses. 
+- **Split Salary Pay (Partial Payments)**: The system supports partial salary payouts (Split Pay). If an employee requires an advance or the business processes salaries in installments, management can issue partial payments against a generated payroll slip. 
+  - *Integration with Accounting Engine*: When a split payment is made, the **Accounting Engine** dynamically debits the specific amount paid from the "Salary Payable" liability account and credits "Cash/Bank", accurately maintaining the remaining outstanding balance owed to the employee automatically.
 
 ---
 
