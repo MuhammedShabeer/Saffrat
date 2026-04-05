@@ -902,7 +902,7 @@ namespace Saffrat.Controllers
                     .ThenInclude(x => x.Designation).ToListAsync();
                 ViewBag.month = month;
                 ViewBag.year = year;
-                ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.Type == 1 || x.Type == 2)).ToListAsync(); // CashAndBank or CreditCard
+                ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.IsCash || x.IsBank)).ToListAsync();
                 return View(payroll);
             }
             else
@@ -915,7 +915,7 @@ namespace Saffrat.Controllers
                     .ThenInclude(x => x.Designation).ToListAsync();
                 ViewBag.month = current.Month;
                 ViewBag.year = current.Year;
-                ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.Type == 1 || x.Type == 2)).ToListAsync(); // CashAndBank or CreditCard
+                ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.IsCash || x.IsBank)).ToListAsync();
                 return View(payroll);
             }
         }
@@ -1215,7 +1215,7 @@ namespace Saffrat.Controllers
 
                         // NEW: Create Journal Entry for Initial Payment
                         int salaryAccountId = 0;
-                        var salaryAccount = await _dbContext.GLAccounts.FirstOrDefaultAsync(x => x.AccountName == "Salaries" || (x.Category == 4 && x.Type == 15));
+                        var salaryAccount = await _dbContext.GLAccounts.FirstOrDefaultAsync(x => x.AccountName == "Salaries" || (x.Category == (int)AccountCategory.Expense && x.Type == (int)AccountType.Labor));
                         if (salaryAccount != null)
                         {
                             salaryAccountId = salaryAccount.Id;
@@ -1226,8 +1226,8 @@ namespace Saffrat.Controllers
                             {
                                 AccountCode = "5000",
                                 AccountName = "Salaries",
-                                Category = 4,
-                                Type = 15,
+                                Category = (int)AccountCategory.Expense,
+                                Type = (int)AccountType.Labor,
                                 CurrentBalance = 0,
                                 IsActive = true
                             };
@@ -1332,8 +1332,8 @@ namespace Saffrat.Controllers
                         {
                             AccountCode = "5000",
                             AccountName = "Salaries",
-                            Category = 4, // Expense
-                            Type = 15,    // Payroll/Remuneration
+                            Category = (int)AccountCategory.Expense, // Expense
+                            Type = (int)AccountType.Labor,    // Payroll/Remuneration
                             CurrentBalance = 0,
                             IsActive = true
                         };

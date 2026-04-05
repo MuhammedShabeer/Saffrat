@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.Helpers;
 using Saffrat.Models;
+using Saffrat.Models.AccountingEngine;
 using Saffrat.Services;
 using Saffrat.Services.AccountingEngine;
 using System.Security.Claims;
@@ -159,7 +160,7 @@ namespace Saffrat.Controllers
 
                             // Double-Entry Accounting Engine: Log Purchase
                             int purchasesAccountId = 0;
-                            var purchasesAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Purchases" || x.Category == 4);
+                            var purchasesAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Purchases" || x.Category == (int)AccountCategory.Expense);
                             if (purchasesAccount != null)
                             {
                                 purchasesAccountId = Convert.ToInt32(purchasesAccount.Id);
@@ -170,8 +171,8 @@ namespace Saffrat.Controllers
                                 {
                                     AccountCode = "5000",
                                     AccountName = "Purchases",
-                                    Category = 4, // Expense
-                                    Type = 13,    // FoodCost (or generic Cost of Goods Sold)
+                                    Category = (int)AccountCategory.Expense, // Expense
+                                    Type = (int)AccountType.FoodCost,    // FoodCost (or generic Cost of Goods Sold)
                                     CurrentBalance = 0,
                                     IsActive = true
                                 };
@@ -302,7 +303,7 @@ namespace Saffrat.Controllers
 
                             // Double-Entry Accounting Engine: Log Update Purchase
                             int purchasesAccountId = 0;
-                            var purchasesAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Purchases" || x.Category == 4);
+                            var purchasesAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Purchases" || x.Category == (int)AccountCategory.Expense);
                             if (purchasesAccount != null)
                             {
                                 purchasesAccountId = Convert.ToInt32(purchasesAccount.Id);
@@ -313,8 +314,8 @@ namespace Saffrat.Controllers
                                 {
                                     AccountCode = "5000",
                                     AccountName = "Purchases",
-                                    Category = 4, // Expense
-                                    Type = 13,    // FoodCost
+                                    Category = (int)AccountCategory.Expense, // Expense
+                                    Type = (int)AccountType.FoodCost,    // FoodCost
                                     CurrentBalance = 0,
                                     IsActive = true
                                 };

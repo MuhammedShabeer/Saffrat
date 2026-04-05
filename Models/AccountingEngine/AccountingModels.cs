@@ -14,6 +14,13 @@ namespace Saffrat.Models.AccountingEngine
         Expense = 4
     }
 
+    public enum AccountSubType
+    {
+        None = 0,
+        Cash = 1,
+        Bank = 2
+    }
+
     public enum AccountType
     {
         // Assets
@@ -41,6 +48,9 @@ namespace Saffrat.Models
         public string Description { get; set; }
         public int Category { get; set; }
         public int Type { get; set; }
+        public int SubType { get; set; }
+        public bool IsCash { get; set; }
+        public bool IsBank { get; set; }
         public decimal CurrentBalance { get; set; }
         public bool IsActive { get; set; }
     }

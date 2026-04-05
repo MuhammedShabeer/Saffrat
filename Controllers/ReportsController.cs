@@ -225,8 +225,8 @@ namespace Saffrat.Controllers
             ViewBag.purchaseTotal = _dbContext.Purchases.Where(x => x.PurchaseDate >= from && x.PurchaseDate <= to).Sum(x => x.TotalAmount);
             ViewBag.purchaseTotal = _dbContext.Purchases.Where(x => x.PurchaseDate >= from && x.PurchaseDate <= to).Sum(x => x.TotalAmount);
             ViewBag.expenseTotal = _dbContext.LedgerEntries.Include(x => x.GLAccount).Include(x => x.JournalEntry)
-                .Where(x => (x.GLAccount.Category == 4 || x.GLAccount.Category == 5) && x.JournalEntry.EntryDate >= from && x.JournalEntry.EntryDate <= to)
-                .Sum(x => Math.Max(0, x.Debit - x.Credit)); // Sum only net debits as expenses
+                .Where(x => (x.GLAccount.Category == (int)AccountCategory.Expense) && x.JournalEntry.EntryDate >= from && x.JournalEntry.EntryDate <= to)
+                .Sum(x => Math.Max(0, (decimal)(x.Debit - x.Credit))); // Sum only net debits as expenses
 
             return View();
         }
@@ -559,9 +559,9 @@ namespace Saffrat.Controllers
             var from = StartOfDay(reportDate);
             var to = EndOfDay(reportDate);
 
-            // Cash accounts: Type == 0 (CashAndBank) and name contains "Cash"
+            // Cash accounts: identified by IsCash flag
             var cashAccounts = await _dbContext.GLAccounts
-                .Where(x => x.IsActive && x.Type == 0 && (x.AccountName.Contains("Cash") || x.AccountCode.Contains("CASH")))
+                .Where(x => x.IsActive && x.IsCash)
                 .ToListAsync();
 
             var accountIds = cashAccounts.Select(x => x.Id).ToList();
@@ -580,9 +580,9 @@ namespace Saffrat.Controllers
             var from = StartOfDay(reportDate);
             var to = EndOfDay(reportDate);
 
-            // Day Book: Type == 0 (CashAndBank) or Type == 5 (Credit Card)
+            // Day Book: Cash and Bank accounts
             var dayBookAccounts = await _dbContext.GLAccounts
-                .Where(x => x.IsActive && (x.Type == 0 || x.Type == 5))
+                .Where(x => x.IsActive && (x.IsCash || x.IsBank))
                 .ToListAsync();
 
             var accountIds = dayBookAccounts.Select(x => x.Id).ToList();

@@ -51,7 +51,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label asp-for="Category" class="form-label text-muted fw-bold">@Localize("Category")</label>
                             <select asp-for="Category" class="form-select"
                                 asp-items="Html.GetEnumSelectList<AccountCategory>()" required>
@@ -59,13 +59,35 @@
                             </select>
                             <span asp-validation-for="Category" class="text-danger"></span>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label asp-for="Type" class="form-label text-muted fw-bold">@Localize("Sub-Type")</label>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="Type" class="form-label text-muted fw-bold">@Localize("Account Type")</label>
                             <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<AccountType>()"
                                 required>
                                 <option value="">@Localize("-- Select Type --")</option>
                             </select>
                             <span asp-validation-for="Type" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="SubType" class="form-label text-muted fw-bold">@Localize("Payment Sub-Type")</label>
+                            <select asp-for="SubType" class="form-select" asp-items="Html.GetEnumSelectList<AccountSubType>()">
+                                <option value="">@Localize("-- Select Sub-Type --")</option>
+                            </select>
+                            <span asp-validation-for="SubType" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch m-t-10">
+                                <input class="form-check-input" type="checkbox" asp-for="IsCash">
+                                <label class="form-check-label fw-bold" asp-for="IsCash">@Localize("Is Cash Account?")</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch m-t-10">
+                                <input class="form-check-input" type="checkbox" asp-for="IsBank">
+                                <label class="form-check-label fw-bold" asp-for="IsBank">@Localize("Is Bank/Card Account?")</label>
+                            </div>
                         </div>
                     </div>
 

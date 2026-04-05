@@ -76,7 +76,7 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> AddBankEntry()
         {
-            ViewBag.BankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && ((x.Type == 0 && !x.AccountName.Contains("Cash") && !x.AccountCode.Contains("CASH")) || x.Type == 5)).ToListAsync();
+            ViewBag.BankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && x.IsBank).ToListAsync();
             ViewBag.AllAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive).OrderBy(x => x.AccountCode).ToListAsync();
             return View();
         }
@@ -84,7 +84,7 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> AddCashEntry()
         {
-            ViewBag.BankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && x.Type == 0 && (x.AccountName.Contains("Cash") || x.AccountCode.Contains("CASH"))).ToListAsync();
+            ViewBag.BankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && x.IsCash).ToListAsync();
             ViewBag.AllAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive).OrderBy(x => x.AccountCode).ToListAsync();
             return View();
         }
@@ -92,7 +92,7 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> BankTransactions()
         {
-            var bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && ((x.Type == 0 && !x.AccountName.Contains("Cash") && !x.AccountCode.Contains("CASH")) || x.Type == 5)).Select(x => x.Id).ToListAsync();
+            var bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && x.IsBank).Select(x => x.Id).ToListAsync();
             var journals = await _dbContext.JournalEntries
                 .Where(j => j.LedgerEntries.Any(e => bankAccounts.Contains(e.GLAccountId)))
                 .Include(j => j.LedgerEntries).ThenInclude(e => e.GLAccount)
@@ -104,7 +104,7 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> CashTransactions()
         {
-            var cashAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && x.Type == 0 && (x.AccountName.Contains("Cash") || x.AccountCode.Contains("CASH"))).Select(x => x.Id).ToListAsync();
+            var cashAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && x.IsCash).Select(x => x.Id).ToListAsync();
             var journals = await _dbContext.JournalEntries
                 .Where(j => j.LedgerEntries.Any(e => cashAccounts.Contains(e.GLAccountId)))
                 .Include(j => j.LedgerEntries).ThenInclude(e => e.GLAccount)
@@ -128,8 +128,8 @@ namespace Saffrat.Controllers
         private async Task<IActionResult> BulkAddEntryInternal(string sourceType)
         {
             var bankAccounts = sourceType == "Cash" 
-                ? await _dbContext.GLAccounts.Where(x => x.IsActive && x.Type == 0 && (x.AccountName.Contains("Cash") || x.AccountCode.Contains("CASH"))).ToListAsync()
-                : await _dbContext.GLAccounts.Where(x => x.IsActive && ((x.Type == 0 && !x.AccountName.Contains("Cash") && !x.AccountCode.Contains("CASH")) || x.Type == 5)).ToListAsync();
+                ? await _dbContext.GLAccounts.Where(x => x.IsActive && x.IsCash).ToListAsync()
+                : await _dbContext.GLAccounts.Where(x => x.IsActive && x.IsBank).ToListAsync();
             
             var offsetAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive).OrderBy(x => x.AccountCode).ToListAsync();
 
@@ -813,6 +813,10 @@ namespace Saffrat.Controllers
                 existing.AccountCode = account.AccountCode;
                 existing.Category = account.Category;
                 existing.Type = account.Type;
+                existing.SubType = account.SubType;
+                existing.IsCash = account.IsCash;
+                existing.IsBank = account.IsBank;
+                existing.Description = account.Description;
                 existing.Description = account.Description;
                 existing.IsActive = account.IsActive;
 

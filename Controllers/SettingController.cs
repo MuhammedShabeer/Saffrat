@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Globalization;
 using Saffrat.Services;
+using Saffrat.Models.AccountingEngine;
 
 namespace Saffrat.Controllers
 {
@@ -1050,7 +1051,7 @@ namespace Saffrat.Controllers
         public async Task<IActionResult> PaymentMethods()
         {
             var payment = await _dbContext.PaymentMethods.ToListAsync();
-            ViewBag.Accounts = await _dbContext.GLAccounts.Where(x => x.Type == 0 || x.Type == 5).ToListAsync(); // CashAndBank or CreditCard
+            ViewBag.Accounts = await _dbContext.GLAccounts.Where(x => x.IsCash || x.IsBank).ToListAsync();
             return View(payment);
         }
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.Hubs;
+using Saffrat.Models.AccountingEngine;
 using Saffrat.Models;
 using Saffrat.Services;
 using System.ComponentModel.DataAnnotations;
@@ -834,7 +835,7 @@ namespace Saffrat.Controllers
 
                         // Double-Entry Accounting Engine: Log Sale
                         int revenueAccountId = 0;
-                        var revenueAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Sales Account" || x.Category == 3);
+                        var revenueAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Sales Account" || x.Category == (int)AccountCategory.Revenue);
                         if (revenueAccount != null)
                         {
                             revenueAccountId = Convert.ToInt32(revenueAccount.Id);
@@ -845,8 +846,8 @@ namespace Saffrat.Controllers
                             {
                                 AccountCode = "4000",
                                 AccountName = "Sales Account",
-                                Category = 3, // Revenue
-                                Type = 10,    // Sales
+                                Category = (int)AccountCategory.Revenue, // Revenue
+                                Type = (int)AccountType.Sales,    // Sales
                                 CurrentBalance = 0,
                                 IsActive = true
                             };
