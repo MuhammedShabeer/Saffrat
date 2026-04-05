@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Saffrat.Models;
 using Saffrat.Services;
@@ -9,12 +9,14 @@ namespace Saffrat.Controllers
     {
         private readonly ILanguageService _languageService;
         private readonly ILocalizationService _localizationService;
+        protected readonly IDateTimeService _dateTimeService;
         private AppSetting _setting;
 
-        public BaseController(ILanguageService languageService, ILocalizationService localizationService)
+        public BaseController(ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
         {
             _languageService = languageService;
             _localizationService = localizationService;
+            _dateTimeService = dateTimeService;
         }
 
         public String Localize(string resourceKey, params object[] args)
@@ -84,26 +86,16 @@ namespace Saffrat.Controllers
 
         public DateTime EndOfDay(DateTime? d)
         {
-            DateTime date = CurrentDateTime();
-            if (d != null)
-                date = (DateTime)d;
-
-            return date.Date.AddDays(1).AddTicks(-1);
+            return _dateTimeService.EndOfDay(d);
         }
         public DateTime StartOfDay(DateTime? d)
         {
-            DateTime date = CurrentDateTime();
-            if (d != null)
-                date = (DateTime)d;
-            return date.Date;
+            return _dateTimeService.StartOfDay(d);
         }
 
         public DateTime CurrentDateTime()
         {
-            TimeZoneInfo timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(GetSetting.Timezone);
-            var utc = DateTime.UtcNow;
-            utc = DateTime.SpecifyKind(utc, DateTimeKind.Unspecified);
-            return TimeZoneInfo.ConvertTimeFromUtc(utc, timeZoneInfo);
+            return _dateTimeService.Now();
         }
 
         //Get Model First Error

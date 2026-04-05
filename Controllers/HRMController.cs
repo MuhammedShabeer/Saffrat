@@ -20,8 +20,8 @@ namespace Saffrat.Controllers
 
         public HRMController(ILogger<HRMController> logger, RestaurantDBContext dbContext,
             ILanguageService languageService, ILocalizationService localizationService,
-            IAccountingEngine accountingEngine)
-        : base(languageService, localizationService)
+            IAccountingEngine accountingEngine, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
             _logger = logger;
             _dbContext = dbContext;

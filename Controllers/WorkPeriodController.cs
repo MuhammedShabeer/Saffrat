@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Saffrat.Models;
 using System.ComponentModel.DataAnnotations;
@@ -19,8 +19,9 @@ namespace Saffrat.Controllers
             ILogger<WorkPeriodController> logger,
             RestaurantDBContext dbContext,
             ILanguageService languageService,
-            ILocalizationService localizationService)
-            : base(languageService, localizationService)
+            ILocalizationService localizationService,
+            IDateTimeService dateTimeService)
+            : base(languageService, localizationService, dateTimeService)
         {
             _logger = logger;
             _dbContext = dbContext;

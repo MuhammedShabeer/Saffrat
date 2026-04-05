@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.SqlServer.Management.Common;
@@ -17,8 +17,8 @@ namespace Saffrat.Controllers
 
         public UtilitiesController(ILogger<UtilitiesController> logger, RestaurantDBContext dbContext,
             IConfiguration configuration,
-            ILanguageService languageService, ILocalizationService localizationService)
-        : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
             _logger = logger;
             _configuration = configuration;

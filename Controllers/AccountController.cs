@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,8 +18,8 @@ namespace Saffrat.Controllers
         private readonly RestaurantDBContext _dbContext;
 
         public AccountController(ILogger<AccountController> logger, RestaurantDBContext dbContext,
-            ILanguageService languageService, ILocalizationService localizationService)
-        : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -80,7 +80,7 @@ namespace Saffrat.Controllers
                         AllowRefresh = true
                     });
 
-                    user.LastLogin = DateTime.Now;
+                    user.LastLogin = _dateTimeService.Now();
                     _dbContext.Update(user);
                     await _dbContext.SaveChangesAsync();
 

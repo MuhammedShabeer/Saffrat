@@ -20,8 +20,8 @@ namespace Saffrat.Controllers
         private readonly IAccountingEngine _accountingEngine;
 
         public PartnerDashboardController(RestaurantDBContext dbContext, IAccountingEngine accountingEngine,
-            ILanguageService languageService, ILocalizationService localizationService)
-            : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+            : base(languageService, localizationService, dateTimeService)
         {
             _dbContext = dbContext;
             _accountingEngine = accountingEngine;
@@ -59,7 +59,7 @@ namespace Saffrat.Controllers
                 // Create GL Account for Partner
                 var glAccount = new GLAccount
                 {
-                    AccountCode = $"300{partner.Id + 1}{DateTime.Now.Millisecond % 100}",
+                    AccountCode = $"300{partner.Id + 1}{CurrentDateTime().Millisecond % 100}",
                     AccountName = $"Equity: {partner.Name}",
                     Category = (int)AccountCategory.Equity,
                     Type = (int)AccountType.OwnerEquity,

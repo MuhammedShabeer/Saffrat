@@ -16,8 +16,8 @@ namespace Saffrat.Controllers
         private readonly IAccountingEngine _accountingEngine;
 
         public AccountingEngineController(RestaurantDBContext dbContext, IAccountingEngine accountingEngine,
-            ILanguageService languageService, ILocalizationService localizationService)
-        : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
             _dbContext = dbContext;
             _accountingEngine = accountingEngine;
@@ -49,11 +49,11 @@ namespace Saffrat.Controllers
                 var journal = new JournalEntry
                 {
                     EntryDate = entryDate,
-                    ReferenceNumber = prefix + (string.IsNullOrEmpty(referenceNumber) ? DateTime.Now.Ticks.ToString().Substring(10) : referenceNumber),
+                    ReferenceNumber = prefix + (string.IsNullOrEmpty(referenceNumber) ? CurrentDateTime().Ticks.ToString().Substring(10) : referenceNumber),
                     Description = description ?? $"Manual {sourceType} {transactionType}",
                     SourceDocumentType = sourceType + "Entry",
                     SourceDocumentId = 0,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = CurrentDateTime()
                 };
 
                 decimal bankDebit = transactionType == "Inflow" ? amount : 0;
@@ -156,11 +156,11 @@ namespace Saffrat.Controllers
                     var journal = new JournalEntry
                     {
                         EntryDate = entry.EntryDate,
-                        ReferenceNumber = prefix + (string.IsNullOrEmpty(entry.ReferenceNumber) ? DateTime.Now.Ticks.ToString().Substring(10) : entry.ReferenceNumber),
+                        ReferenceNumber = prefix + (string.IsNullOrEmpty(entry.ReferenceNumber) ? CurrentDateTime().Ticks.ToString().Substring(10) : entry.ReferenceNumber),
                         Description = entry.Description ?? $"Bulk {model.SourceType} {entry.TransactionType}",
                         SourceDocumentType = model.SourceType + "Entry",
                         SourceDocumentId = 0,
-                        CreatedAt = DateTime.Now
+                        CreatedAt = CurrentDateTime()
                     };
 
                     decimal bankDebit = entry.TransactionType == "Inflow" ? entry.Amount : 0;
@@ -194,8 +194,9 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> JournalEntries(DateTime? start, DateTime? end, int? accountId, string search)
         {
-            var startDate = start ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-            var endDate = end ?? DateTime.Today;
+            var now = CurrentDateTime();
+            var startDate = start ?? new DateTime(now.Year, now.Month, 1);
+            var endDate = end ?? now;
 
             var matchingReferenceNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -304,7 +305,7 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> BalanceSheet(DateTime? asOfDate)
         {
-            var date = asOfDate ?? DateTime.Today;
+            var date = asOfDate ?? CurrentDateTime();
             ViewBag.Date = date.ToString("yyyy-MM-dd");
             var report = await _accountingEngine.GenerateBalanceSheetAsync(date);
             return View(report);
@@ -313,8 +314,9 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> ProfitAndLoss(DateTime? start, DateTime? end)
         {
-            var startDate = start ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-            var endDate = end ?? DateTime.Today;
+            var now = CurrentDateTime();
+            var startDate = start ?? new DateTime(now.Year, now.Month, 1);
+            var endDate = end ?? now;
             ViewBag.Start = startDate.ToString("yyyy-MM-dd");
             ViewBag.End = endDate.ToString("yyyy-MM-dd");
 
@@ -358,7 +360,7 @@ namespace Saffrat.Controllers
         {
             try
             {
-                invoice.InvoiceNumber = $"INV-{DateTime.Now:yyyyMMddHHmmss}";
+                invoice.InvoiceNumber = $"INV-{_dateTimeService.Now():yyyyMMddHHmmss}";
                 invoice.Status = "Draft";
                 invoice.AmountPaid = 0;
 
@@ -445,7 +447,7 @@ namespace Saffrat.Controllers
         {
             try
             {
-                newBill.BillNumber = $"BILL-{DateTime.Now:yyyyMMddHHmmss}";
+                newBill.BillNumber = $"BILL-{_dateTimeService.Now():yyyyMMddHHmmss}";
                 newBill.Status = "Draft";
                 newBill.AmountPaid = 0;
 
@@ -626,9 +628,9 @@ namespace Saffrat.Controllers
                     PayrollId = payrollId,
                     Amount = amount,
                     PaymentMethod = paymentMethod,
-                    PaymentDate = DateTime.Today,
+                    PaymentDate = CurrentDateTime(),
                     Notes = notes,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = CurrentDateTime()
                 };
 
                 _dbContext.PayrollPayments.Add(payment);
@@ -848,7 +850,7 @@ namespace Saffrat.Controllers
         public async Task<IActionResult> ManualJournal()
         {
             ViewBag.Accounts = await _dbContext.Set<GLAccount>().Where(a => a.IsActive).ToListAsync();
-            return View(new JournalEntry { EntryDate = DateTime.Today });
+            return View(new JournalEntry { EntryDate = CurrentDateTime() });
         }
 
         [HttpPost]
@@ -857,7 +859,7 @@ namespace Saffrat.Controllers
             if (ModelState.IsValid)
             {
                 entry.SourceDocumentType = "ManualJournal";
-                entry.CreatedAt = DateTime.Now;
+                entry.CreatedAt = CurrentDateTime();
                 entry.IsPosted = false;
 
                 try
@@ -1046,8 +1048,8 @@ namespace Saffrat.Controllers
             {
                 Accounts = await _dbContext.Set<GLAccount>().Where(a => a.IsActive).OrderBy(a => a.AccountCode).ToListAsync(),
                 SelectedAccountId = accountId,
-                StartDate = startDate ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1),
-                EndDate = endDate ?? DateTime.Today,
+                StartDate = startDate ?? new DateTime(_dateTimeService.Now().Year, _dateTimeService.Now().Month, 1),
+                EndDate = endDate ?? _dateTimeService.Now(),
                 Search = search
             };
 

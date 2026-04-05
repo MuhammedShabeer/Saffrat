@@ -30,8 +30,8 @@ namespace Saffrat.Controllers
 
         public POSController(ILogger<POSController> logger, RestaurantDBContext dbContext,
             IHubContext<NotificationHub> hub, IConverter converter,
-            ILanguageService languageService, ILocalizationService localizationService)
-        : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
             _logger = logger;
             _dbContext = dbContext;

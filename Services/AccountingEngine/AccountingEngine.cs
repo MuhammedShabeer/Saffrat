@@ -11,10 +11,12 @@ namespace Saffrat.Services.AccountingEngine
     public class DefaultAccountingEngine : IAccountingEngine
     {
         private readonly RestaurantDBContext _dbContext;
+        private readonly IDateTimeService _dateTimeService;
 
-        public DefaultAccountingEngine(RestaurantDBContext dbContext)
+        public DefaultAccountingEngine(RestaurantDBContext dbContext, IDateTimeService dateTimeService)
         {
             _dbContext = dbContext;
+            _dateTimeService = dateTimeService;
         }
 
         /// <summary>
@@ -57,7 +59,7 @@ namespace Saffrat.Services.AccountingEngine
                 EntryDate = closeDate,
                 SourceDocumentType = "DailyClose",
                 IsPosted = false,
-                CreatedAt = DateTime.Now,
+                CreatedAt = _dateTimeService.Now(),
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -229,7 +231,7 @@ namespace Saffrat.Services.AccountingEngine
                 SourceDocumentType = "Invoice",
                 SourceDocumentId = invoice.Id,
                 IsPosted = false,
-                CreatedAt = DateTime.Now,
+                CreatedAt = _dateTimeService.Now(),
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -254,7 +256,7 @@ namespace Saffrat.Services.AccountingEngine
                 SourceDocumentType = "Bill",
                 SourceDocumentId = bill.Id,
                 IsPosted = false,
-                CreatedAt = DateTime.Now,
+                CreatedAt = _dateTimeService.Now(),
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -275,11 +277,11 @@ namespace Saffrat.Services.AccountingEngine
             {
                 ReferenceNumber = $"PAY-{invoice.InvoiceNumber}",
                 Description = $"Payment Receipt for Invoice {invoice.InvoiceNumber}",
-                EntryDate = DateTime.Today,
+                EntryDate = _dateTimeService.Now(),
                 SourceDocumentType = "InvoicePayment",
                 SourceDocumentId = invoice.Id,
                 IsPosted = false,
-                CreatedAt = DateTime.Now,
+                CreatedAt = _dateTimeService.Now(),
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -300,11 +302,11 @@ namespace Saffrat.Services.AccountingEngine
             {
                 ReferenceNumber = $"PMT-{bill.BillNumber}",
                 Description = $"Payment Sent for Bill {bill.BillNumber}",
-                EntryDate = DateTime.Today,
+                EntryDate = _dateTimeService.Now(),
                 SourceDocumentType = "BillPayment",
                 SourceDocumentId = bill.Id,
                 IsPosted = false,
-                CreatedAt = DateTime.Now,
+                CreatedAt = _dateTimeService.Now(),
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -327,7 +329,7 @@ namespace Saffrat.Services.AccountingEngine
             {
                 account = new GLAccount
                 {
-                    AccountCode = $"{(int)category + 1}00{DateTime.Now.Millisecond}",
+                    AccountCode = $"{(int)category + 1}00{_dateTimeService.Now().Millisecond}",
                     AccountName = defaultName,
                     Category = (int)category,
                     Type = (int)type,
@@ -348,11 +350,11 @@ namespace Saffrat.Services.AccountingEngine
             {
                 ReferenceNumber = $"PAYROLL-{payroll.Id}",
                 Description = $"Payroll Accrual for {payroll.Month}/{payroll.Year}",
-                EntryDate = DateTime.Today,
+                EntryDate = _dateTimeService.Now(),
                 SourceDocumentType = "PayrollAccrual",
                 SourceDocumentId = payroll.Id,
                 IsPosted = false,
-                CreatedAt = DateTime.Now,
+                CreatedAt = _dateTimeService.Now(),
                 LedgerEntries = new List<LedgerEntry>()
             };
 
@@ -393,7 +395,7 @@ namespace Saffrat.Services.AccountingEngine
                 SourceDocumentType = "PayrollPayment",
                 SourceDocumentId = payroll.Id,
                 IsPosted = false,
-                CreatedAt = DateTime.Now,
+                CreatedAt = _dateTimeService.Now(),
                 LedgerEntries = new List<LedgerEntry>()
             };
 

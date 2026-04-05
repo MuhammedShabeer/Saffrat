@@ -17,8 +17,8 @@ namespace Saffrat.Controllers
         private readonly IConfiguration _configuration;
 
         public AIReportController(IAIService aiService, GroqAIService groqService, RestaurantDBContext dbContext, ISqlQueryService sqlService,
-            ILanguageService languageService, ILocalizationService localizationService, IConfiguration configuration)
-            : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IConfiguration configuration, IDateTimeService dateTimeService)
+            : base(languageService, localizationService, dateTimeService)
         {
             _aiService = aiService;
             _groqService = groqService;

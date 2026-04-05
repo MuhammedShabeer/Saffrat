@@ -17,8 +17,8 @@ namespace Saffrat.Controllers
         private readonly RestaurantDBContext _dbContext;
 
         public SettingController(ILogger<SettingController> logger, RestaurantDBContext dbContext,
-            ILanguageService languageService, ILocalizationService localizationService)
-        : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
             _logger = logger;
             _dbContext = dbContext;

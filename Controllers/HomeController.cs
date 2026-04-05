@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Saffrat.Models;
@@ -17,8 +17,8 @@ namespace Saffrat.Controllers
         private readonly RestaurantDBContext _dbContext;
 
         public HomeController(ILogger<HomeController> logger, RestaurantDBContext dbContext,
-            ILanguageService languageService, ILocalizationService localizationService)
-        : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -120,7 +120,7 @@ namespace Saffrat.Controllers
                 List<MonthlyReportVM> purchases = new();
                 List<MonthlyReportVM> expenses = new();
 
-                var currentDate = DateTime.Now;
+                var currentDate = CurrentDateTime();
 
                 var today = EndOfDay(null);
                 var from = StartOfDay(null);
@@ -307,7 +307,7 @@ namespace Saffrat.Controllers
         public IActionResult SaleByOrderType()
         {
             var results = new Dictionary<string, string>();
-            var today = DateTime.Now;
+            var today = CurrentDateTime();
             var start = new DateTime(today.Year, today.Month, 1);
             try
             {

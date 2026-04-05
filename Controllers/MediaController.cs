@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.Models;
@@ -18,8 +18,8 @@ namespace Saffrat.Controllers
 		private readonly RestaurantDBContext _dbContext;
 
         public MediaController(ILogger<MediaController> logger, RestaurantDBContext dbContext,
-            ILanguageService languageService, ILocalizationService localizationService)
-        : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
 			_logger = logger;
 			_dbContext = dbContext;

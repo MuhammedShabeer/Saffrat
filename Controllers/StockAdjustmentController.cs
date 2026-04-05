@@ -20,8 +20,8 @@ namespace Saffrat.Controllers
         private readonly IAccountingEngine _accountingEngine;
 
         public StockAdjustmentController(RestaurantDBContext dbContext, IAccountingEngine accountingEngine,
-            ILanguageService languageService, ILocalizationService localizationService)
-            : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+            : base(languageService, localizationService, dateTimeService)
         {
             _dbContext = dbContext;
             _accountingEngine = accountingEngine;
@@ -130,7 +130,7 @@ namespace Saffrat.Controllers
             {
                 acc = new GLAccount
                 {
-                    AccountCode = $"{(int)category + 1}00{DateTime.Now.Millisecond}",
+                    AccountCode = $"{(int)category + 1}00{_dateTimeService.Now().Millisecond}",
                     AccountName = name,
                     Category = (int)category,
                     Type = (int)type,

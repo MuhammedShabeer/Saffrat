@@ -15,8 +15,8 @@ namespace Saffrat.Controllers
         private readonly RestaurantDBContext _dbContext;
 
         public ReportsController(ILogger<ReportsController> logger, RestaurantDBContext dbContext,
-            ILanguageService languageService, ILocalizationService localizationService)
-        : base(languageService, localizationService)
+            ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
+        : base(languageService, localizationService, dateTimeService)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -555,7 +555,7 @@ namespace Saffrat.Controllers
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> CashBook(DateTime? date)
         {
-            var reportDate = date ?? DateTime.Today;
+            var reportDate = date ?? CurrentDateTime();
             var from = StartOfDay(reportDate);
             var to = EndOfDay(reportDate);
 
@@ -576,7 +576,7 @@ namespace Saffrat.Controllers
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> DayBook(DateTime? date)
         {
-            var reportDate = date ?? DateTime.Today;
+            var reportDate = date ?? CurrentDateTime();
             var from = StartOfDay(reportDate);
             var to = EndOfDay(reportDate);
 

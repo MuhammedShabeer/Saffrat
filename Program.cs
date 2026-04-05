@@ -1,4 +1,4 @@
-﻿using DinkToPdf.Contracts;
+using DinkToPdf.Contracts;
 using DinkToPdf;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
@@ -57,6 +57,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAIService, GeminiAIService>();
 builder.Services.AddScoped<GroqAIService>();
 builder.Services.AddScoped<ISqlQueryService, SqlQueryService>();
+builder.Services.AddScoped<IDateTimeService, DateTimeService>();
 
 
 
