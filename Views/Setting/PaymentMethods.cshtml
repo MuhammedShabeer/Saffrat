@@ -238,7 +238,7 @@
                             $("#submit").text('@Localize("Update")');
                             $("#frm input[name='Id']").val(result.id);
                             $("#frm input[name='Title']").val(result.title);
-                            $("#frm select[name='GLAccountId']").val(result.glAccountId ?? "").selectpicker('refresh');
+                            $("#frm select[name='GLAccountId']").val(result.glAccountId ?? "");
                             $("#mainModal").modal('show');
                         }
                         else {
@@ -262,7 +262,7 @@
                 $("#submit").text('@Localize("Save")');
                 $("#frm input[name='Id']").val('');
                 $("#frm input[name='Title']").val('');
-                $("#frm select[name='GLAccountId']").val('').selectpicker('refresh');
+                $("#frm select[name='GLAccountId']").val('');
                 $("#mainModal").modal('show');
             }
         }

@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Saffrat.Models.Order>
+@model IEnumerable<Saffrat.Models.Order>
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -39,88 +39,119 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <form asp-action="OrderHistory" asp-controller="POS" method="get" class="needs-validation" novalidate="">
-                    <div class="row">
-                        <div class="col-md-3 form-group">
-                            <label class="control-label">@Localize("From") <code>*</code></label>
-                            <input type="date" name="start" value="@start" onclick="this.showPicker()" class="form-control" required />
-                            <div class="invalid-feedback">
-                                @Localize("Please select date.")
+                <ul class="nav nav-tabs mb-3" id="orderTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="active-orders-tab" data-bs-toggle="tab" href="#active-orders" role="tab" aria-controls="active-orders" aria-selected="true"><i class="fas fa-list me-2"></i>@Localize("Active Orders")</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="deleted-orders-tab" data-bs-toggle="tab" href="#deleted-orders" role="tab" aria-controls="deleted-orders" aria-selected="false"><i class="fas fa-trash-alt me-2"></i>@Localize("Deleted Orders")</a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="orderTabsContent">
+                    <div class="tab-pane fade show active" id="active-orders" role="tabpanel" aria-labelledby="active-orders-tab">
+                        <form asp-action="OrderHistory" asp-controller="POS" method="get" class="needs-validation" novalidate="">
+                            <div class="row">
+                                <div class="col-md-3 form-group">
+                                    <label class="control-label">@Localize("From") <code>*</code></label>
+                                    <input type="date" name="start" value="@start" onclick="this.showPicker()" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select date.")
+                                    </div>
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label class="control-label">@Localize("To") <code>*</code></label>
+                                    <input type="date" name="end" value="@end" onclick="this.showPicker()" class="form-control" required />
+                                    <div class="invalid-feedback">
+                                        @Localize("Please select date.")
+                                    </div>
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label class="control-label">@Localize("Payment Status")</label>
+                                    <select class="form-control selectpicker" id="status" name="status">
+                                        <option value="">@Localize("All")</option>
+                                        <option value="paid">@Localize("Paid")</option>
+                                        <option value="unpaid">@Localize("Unpaid")</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
+                                    <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3 form-group">
-                            <label class="control-label">@Localize("To") <code>*</code></label>
-                            <input type="date" name="end" value="@end" onclick="this.showPicker()" class="form-control" required />
-                            <div class="invalid-feedback">
-                                @Localize("Please select date.")
-                            </div>
-                        </div>
-                        <div class="col-md-3 form-group">
-                            <label class="control-label">@Localize("Payment Status")</label>
-                            <select class="form-control selectpicker" id="status" name="status">
-                                <option value="">@Localize("All")</option>
-                                <option value="paid">@Localize("Paid")</option>
-                                <option value="unpaid">@Localize("Unpaid")</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 form-group">
-                            <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
-                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
-                        </div>
-                    </div>
-                </form>
-                <div class="table-responsive">
-                    <table class="table" id="datatable">
-                        <thead>
-                            <tr>
-                                <th>@Localize("#")</th>
-                                <th>@Localize("Customer")</th>
-                                <th>@Localize("Order Type")</th>
-                                <th>@Localize("Total")</th>
-                                <th>@Localize("Paid")</th>
-                                <th>@Localize("Due")</th>
-                                <th>@Localize("Created At")</th>
-                                <th>@Localize("Actions")</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Model)
-                            {
-                                var id = "row" + item.Id;
-                                <tr id="@id">
-                                    <td>@item.Id</td>
-                                    @if (User.IsInRole("admin"))
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table" id="datatable">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("#")</th>
+                                        <th>@Localize("Customer")</th>
+                                        <th>@Localize("Order Type")</th>
+                                        <th>@Localize("Total")</th>
+                                        <th>@Localize("Paid")</th>
+                                        <th>@Localize("Due")</th>
+                                        <th>@Localize("Created At")</th>
+                                        <th>@Localize("Actions")</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model)
                                     {
-                                        <td><a asp-controller="People" asp-action="ViewCustomer" asp-route-Id="@item.CustomerId">@item.Customer.CustomerName</a></td>
-                                    }
-                                    else
-                                    {
-                                        <td>@item.Customer.CustomerName</td>
-                                    }
-                                    <td>@orderTypes[item.OrderType]</td>
-                                    <td>@GetCurrency(item.Total)</td>
-                                    <td>@GetCurrency(item.PaidAmount)</td>
-                                    <td>@GetCurrency(item.DueAmount)</td>
-                                    <td>@item.CreatedAt</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
-                                        <div class="dropdown-menu">
-                                            @if (item.DueAmount > 0)
-                                            {
-                                                <a class="dropdown-item btn" href="javascript:void(0);" onclick="ReceiveDue(@item.Id);"><i class="fas fa-money-bill"></i> <span class="ml-2">@Localize("Receive Due Amount")</span></a>
-                                            }
-                                            <a class="dropdown-item btn" href="javascript:void(0);" onclick="OpenModal(@item.Id);"><i class="fas fa-eye"></i> <span class="ml-2">@Localize("View")</span></a>
-                                            <a class="dropdown-item btn" href="javascript:void(0);" onclick="PrintFinalInvoice(@item.Id);"><i class="fas fa-print"></i> <span class="ml-2">@Localize("Print Invoice")</span></a>
+                                        var id = "row" + item.Id;
+                                        <tr id="@id">
+                                            <td>@item.Id</td>
                                             @if (User.IsInRole("admin"))
                                             {
-                                                <a class="dropdown-item btn" href="javascript:void(0);" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                                <td><a asp-controller="People" asp-action="ViewCustomer" asp-route-Id="@item.CustomerId">@item.Customer.CustomerName</a></td>
                                             }
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                                            else
+                                            {
+                                                <td>@item.Customer.CustomerName</td>
+                                            }
+                                            <td>@orderTypes[item.OrderType]</td>
+                                            <td>@GetCurrency(item.Total)</td>
+                                            <td>@GetCurrency(item.PaidAmount)</td>
+                                            <td>@GetCurrency(item.DueAmount)</td>
+                                            <td>@item.CreatedAt</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
+                                                <div class="dropdown-menu">
+                                                    @if (item.DueAmount > 0)
+                                                    {
+                                                        <a class="dropdown-item btn" href="javascript:void(0);" onclick="ReceiveDue(@item.Id);"><i class="fas fa-money-bill"></i> <span class="ml-2">@Localize("Receive Due Amount")</span></a>
+                                                    }
+                                                    <a class="dropdown-item btn" href="javascript:void(0);" onclick="OpenModal(@item.Id);"><i class="fas fa-eye"></i> <span class="ml-2">@Localize("View")</span></a>
+                                                    <a class="dropdown-item btn" href="javascript:void(0);" onclick="PrintFinalInvoice(@item.Id);"><i class="fas fa-print"></i> <span class="ml-2">@Localize("Print Invoice")</span></a>
+                                                    @if (User.IsInRole("admin"))
+                                                    {
+                                                        <a class="dropdown-item btn" href="javascript:void(0);" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="deleted-orders" role="tabpanel" aria-labelledby="deleted-orders-tab">
+                        <div class="table-responsive">
+                            <table class="table w-100" id="deleted-datatable">
+                                <thead>
+                                    <tr>
+                                        <th>@Localize("#")</th>
+                                        <th>@Localize("Customer")</th>
+                                        <th>@Localize("Total")</th>
+                                        <th>@Localize("Created At")</th>
+                                        <th>@Localize("Deleted At")</th>
+                                        <th>@Localize("Deleted By")</th>
+                                        <th>@Localize("Reason")</th>
+                                        <th>@Localize("Actions")</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -134,7 +165,7 @@
             <div class="modal-content">
                 <div class="modal-header bg-primary p-2">
                     <strong class="modal-title text-white">@Localize("Order No.") <span id="m-Id"></span></strong>
-                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
                         <span aria-hidden="true">x</span>
                     </button>
                 </div>
@@ -181,6 +212,23 @@
             </div><!-- modal-content -->
         </div><!-- modal-dialog -->
     </div><!-- modal -->
+
+    <div class="modal right fade" id="deletedOrderDetailModel" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger p-2">
+                    <strong class="modal-title text-white">@Localize("Deleted Order No.") <span id="dm-Id"></span></strong>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <div class="modal-body p-0" id="dm-body">
+                    <div class="order-items" id="dm-items">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @section scripts{
@@ -214,6 +262,67 @@
             ],
             'lengthMenu': [[50, 100, 150, 250, -1], [50, 100, 150, 250, "All"]],
         });
+
+        var ddt = $('#deleted-datatable').DataTable({
+            'language': {
+                "processing": '@Localize("Processing...")',
+                "loadingRecords": "@Localize("Loading...")",
+                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                "zeroRecords": "@Localize("No Result Found")",
+                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                "infoEmpty": '',
+                "infoFiltered": '',
+                "search": '@Localize("Search")',
+                'paginate': {
+                    'previous': '<i class="fa fa-chevron-left"></i>',
+                    'next': '<i class="fa fa-chevron-right"></i>'
+                }
+            },
+            order: [['4', 'desc']],
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [7]
+                }
+            ],
+            'lengthMenu': [[50, 100, 150, 250, -1], [50, 100, 150, 250, "All"]],
+        });
+
+        $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+            if (e.target.id == 'deleted-orders-tab') {
+                LoadDeletedOrders();
+            }
+            $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
+        });
+
+        function LoadDeletedOrders() {
+            var start = $('input[name="start"]').val();
+            var end = $('input[name="end"]').val();
+            
+            ddt.clear().draw();
+            $.ajax({
+                url: '/POS/GetDeletedOrderHistory',
+                type: 'GET',
+                data: { start: start, end: end },
+                success: function (data) {
+                    if (data.status == "success") {
+                        for (var i = 0; i < data.data.length; i++) {
+                            var item = data.data[i];
+                            ddt.row.add([
+                                item.orderId,
+                                item.customerName,
+                                GetCurrency(item.total),
+                                item.createdAt,
+                                item.deletedAt,
+                                item.deletedBy,
+                                item.deletionReason,
+                                '<button class="btn btn-sm btn-info" onclick="OpenDeletedModal(' + item.id + ')"><i class="fas fa-eye"></i></button>'
+                            ]).draw(false);
+                        }
+                    }
+                }
+            });
+        }
 
         function OpenModal(id) {
             $("#orderDetailModel").modal('show');
@@ -280,24 +389,78 @@
             });
         }
 
+        function OpenDeletedModal(id) {
+            $("#deletedOrderDetailModel").modal('show');
+            $("#dm-body").addClass("card-progress");
+            $("#dm-items").html("");
+            $("#dm-Id").text("");
+            $.ajax({
+                url: '/POS/GetDeletedOrderDetail',
+                type: 'GET',
+                data: { Id: id },
+                success: function (data) {
+                    if (data.status == "success") {
+                        var items = JSON.parse(data.order);
+                        var htmlText = '<table class="table table-sm"><thead><tr><th>@Localize("Food Item")</th><th class="text-center">@Localize("Quantity")</th><th class="text-end">@Localize("Price")</th></tr></thead><tbody>';
+                        for (var i = 0; i < items.length; i++) {
+                            var itemName = items[i].Item ? items[i].Item.ItemName : "N/A";
+                            htmlText += '<tr><td><div>' + itemName + '</div><div>';
+                            var modifiers = items[i].OrderItemModifiers;
+                            if (modifiers) {
+                                for (var j = 0; j < modifiers.length; j++) {
+                                    var modTitle = modifiers[j].Modifier ? modifiers[j].Modifier.Title : "N/A";
+                                    htmlText += '<span class="badge badge-primary m-1">' + modTitle + '</span>';
+                                }
+                            }
+                            htmlText += '</div></td>';
+                            htmlText += '<td class="text-center">' + items[i].Quantity + '</td>';
+                            htmlText += '<td class="text-end">' + GetCurrency(items[i].Total) + '</td></tr>';
+                        }
+                        htmlText += '</tbody></table>';
+                        $("#dm-items").html(htmlText);
+                        $("#dm-Id").text(data.id);
+                    }
+                    else {
+                        errorMessage(data.message);
+                        $("#deletedOrderDetailModel").modal('hide');
+                    }
+                },
+                complete: function () {
+                    $("#dm-body").removeClass("card-progress");
+                }
+            });
+        }
+
         function Delete(id) {
-            $.alert({
+            $.confirm({
                 title: '@Localize("Are you sure want to delete?")',
-                content: '@Localize("Once deleted, you will not be able to recover this record.")',
+                content: '' +
+                    '<form action="" class="formName">' +
+                    '<div class="form-group">' +
+                    '<label>@Localize("Once deleted, you will not be able to recover this record. Please provide a reason.")</label>' +
+                    '<textarea placeholder="@Localize("Reason")" class="reason form-control" required></textarea>' +
+                    '</div>' +
+                    '</form>',
                 rtl: isRTL(),
                 theme: 'modern',
                 buttons: {
                     confirm: {
                         text: '<i class="fa fa-trash"></i> @Localize("Delete")',
                         btnClass: 'btn btn-danger',
-                        action: function (btn) {
+                        action: function () {
+                            var reason = this.$content.find('.reason').val();
+                            if (!reason) {
+                                errorMessage('@Localize("Reason is required.")');
+                                return false;
+                            }
                             var self = this;
                             self.showLoading(true);
                             $.ajax({
                                 url: "/POS/DeleteOrder",
                                 type: 'DELETE',
                                 data: {
-                                    Id: id
+                                    Id: id,
+                                    Reason: reason
                                 },
                                 error: function (data) {
                                     if (data.status == 401) {
@@ -314,13 +477,15 @@
                                     if (data.status == "success") {
                                         successMessage('@Localize("Order deleted successfully.")');
                                         dt.row("#row" + id).remove().draw();
+                                        if ($("#deleted-orders-tab").hasClass("active")) {
+                                            LoadDeletedOrders();
+                                        }
                                     }
                                     else {
                                         errorMessage(data.message);
                                     }
                                 },
                                 complete: function () {
-
                                     self.close();
                                 }
                             });

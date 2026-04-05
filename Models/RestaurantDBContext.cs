@@ -77,6 +77,7 @@ namespace Saffrat.Models
         public virtual DbSet<StockAdjustment> StockAdjustments { get; set; }
         public virtual DbSet<Partner> Partners { get; set; }
         public virtual DbSet<PartnerTransaction> PartnerTransactions { get; set; }
+        public virtual DbSet<DeletedOrder> DeletedOrders { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -1114,6 +1115,25 @@ namespace Saffrat.Models
                     .WithMany()
                     .HasForeignKey(d => d.JournalEntryId)
                     .HasConstraintName("FK_PartnerTransactions_JournalEntries");
+            });
+
+            modelBuilder.Entity<DeletedOrder>(entity =>
+            {
+                entity.Property(e => e.Total).HasColumnType("decimal(18, 2)");
+                entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+                entity.Property(e => e.DeletedAt).HasColumnType("datetime");
+                entity.Property(e => e.DeletedBy).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.DeletionReason).IsRequired();
+                entity.Property(e => e.DetailsJson).IsRequired();
+                entity.Property(e => e.TableName).HasMaxLength(150);
+                entity.Property(e => e.Note).HasMaxLength(250);
+                entity.Property(e => e.WaiterOrDriver).HasMaxLength(150);
+
+                entity.HasOne(d => d.Customer)
+                    .WithMany()
+                    .HasForeignKey(d => d.CustomerId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_DeletedOrders_Customers");
             });
 
             OnModelCreatingPartial(modelBuilder);

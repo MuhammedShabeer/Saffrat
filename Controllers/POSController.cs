@@ -1,4 +1,4 @@
-﻿using DinkToPdf;
+using DinkToPdf;
 using DinkToPdf.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -1463,14 +1463,51 @@ namespace Saffrat.Controllers
         //Delete Order
         [HttpDelete]
         [Authorize(Roles = "admin")]
-        public async Task<JsonResult> DeleteOrder(int? Id)
+        public async Task<JsonResult> DeleteOrder(int? Id, string Reason)
         {
             var response = new Dictionary<string, string>();
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
             try
             {
-                var existing = await _dbContext.Orders.FindAsync(Id);
+                var existing = await _dbContext.Orders.Where(x => x.Id == Id)
+                                .Include(x => x.OrderDetails)
+                                    .ThenInclude(x => x.Item)
+                                .Include(x => x.OrderDetails)
+                                    .ThenInclude(x => x.OrderItemModifiers)
+                                        .ThenInclude(x => x.Modifier)
+                                .FirstOrDefaultAsync();
+
                 if (existing != null)
                 {
+                    if (string.IsNullOrEmpty(Reason))
+                    {
+                        response.Add("status", "error");
+                        response.Add("message", "Deletion reason is required.");
+                        return Json(response);
+                    }
+
+                    JsonSerializerOptions options = new()
+                    {
+                        ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                    };
+
+                    DeletedOrder deletedOrder = new()
+                    {
+                        OrderId = existing.Id,
+                        CustomerId = existing.CustomerId,
+                        TableName = existing.TableName,
+                        WaiterOrDriver = existing.WaiterOrDriver,
+                        Total = existing.Total,
+                        OrderType = existing.OrderType,
+                        Note = existing.Note,
+                        CreatedAt = existing.CreatedAt,
+                        DeletedAt = CurrentDateTime(),
+                        DeletedBy = userName,
+                        DeletionReason = Reason,
+                        DetailsJson = JsonSerializer.Serialize(existing.OrderDetails, options)
+                    };
+
+                    _dbContext.DeletedOrders.Add(deletedOrder);
                     _dbContext.Orders.Remove(existing);
                     await _dbContext.SaveChangesAsync();
 
@@ -1490,12 +1527,51 @@ namespace Saffrat.Controllers
                     response.Add("message", "Something went wrong.");
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 response.Add("status", "error");
-                response.Add("message", "Order not exist.");
+                response.Add("message", ex.Message);
             }
             return Json(response);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin,staff")]
+        public async Task<IActionResult> GetDeletedOrderHistory(DateTime? start, DateTime? end)
+        {
+            var from = StartOfDay(start);
+            var to = EndOfDay(end);
+
+            var deletedOrders = await _dbContext.DeletedOrders
+                .Where(x => x.DeletedAt >= from && x.DeletedAt <= to)
+                .Include(x => x.Customer)
+                .OrderByDescending(x => x.DeletedAt)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.OrderId,
+                    CustomerName = x.Customer.CustomerName,
+                    x.Total,
+                    x.OrderType,
+                    CreatedAt = x.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    DeletedAt = x.DeletedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    x.DeletedBy,
+                    x.DeletionReason
+                })
+                .ToListAsync();
+
+            return Json(new { status = "success", data = deletedOrders });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin,staff")]
+        public async Task<IActionResult> GetDeletedOrderDetail(int Id)
+        {
+            var order = await _dbContext.DeletedOrders.FindAsync(Id);
+            if (order == null)
+                return Json(new { status = "error", message = "Order not found" });
+
+            return Json(new { status = "success", order = order.DetailsJson, id = order.OrderId });
         }
 
         //Receive Due Amount From Customer
