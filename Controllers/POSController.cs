@@ -73,11 +73,16 @@ namespace Saffrat.Controllers
             var foodItems = _dbContext.FoodItems.ToList();
             var modifiers = _dbContext.Modifiers.ToList();
 
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var currentUser = _dbContext.Users.FirstOrDefault(x => x.UserName == userName);
+
             var response = new Dictionary<string, string>
             {
                 { "foodGroups", JsonSerializer.Serialize(foodGroups, options) },
                 { "foodItems", JsonSerializer.Serialize(foodItems, options) },
                 { "modifiers", JsonSerializer.Serialize(modifiers, options) },
+                { "permittedPriceTypes", currentUser?.PermittedPriceTypes ?? "" },
+                { "permittedOrderTypes", currentUser?.PermittedOrderTypes ?? "" }
             };
 
             return Json(response);

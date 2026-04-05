@@ -808,6 +808,8 @@
         var ChargeValue = 0;
         var category = 0;
         var PriceType = 'Retail';
+        var permittedPriceTypes = [];
+        var permittedOrderTypes = [];
 
         GetData();
         function ReloadData() {
@@ -819,6 +821,12 @@
             let data = localStorage.getItem("posdata");
             if (data != null) {
                 var json = JSON.parse(data);
+                // Invalidate cache if new permission fields are missing
+                if (json.permittedPriceTypes === undefined) {
+                    localStorage.removeItem("posdata");
+                    GetData();
+                    return;
+                }
                 LoadData(json);
                 $("body").removeClass('card-progress');
             }
@@ -855,9 +863,43 @@
             foodGroups = JSON.parse(data.foodGroups);
             foodItems = JSON.parse(data.foodItems);
             modifiers = JSON.parse(data.modifiers);
+
+            // Set Permissions
+            permittedPriceTypes = (data.permittedPriceTypes || "").split(",").filter(x => x);
+            permittedOrderTypes = (data.permittedOrderTypes || "").split(",").filter(x => x);
+
+            ApplyPermissions();
+
             LoadFoodGroup();
             LoadModifiers();
             ResetControls();
+        }
+
+        function ApplyPermissions() {
+            // Filter Price Types
+            if (permittedPriceTypes.length > 0) {
+                $("#PriceType option").each(function () {
+                    var val = $(this).val();
+                    if (!permittedPriceTypes.includes(val)) {
+                        $(this).addClass('d-none'); // For modern browsers
+                        $(this).prop('disabled', true); // Safe fallback
+                    } else {
+                        $(this).removeClass('d-none').prop('disabled', false);
+                    }
+                });
+            }
+
+            // Filter Order Types
+            if (permittedOrderTypes.length > 0) {
+                if (!permittedOrderTypes.includes("1")) $("#dineInBtn").addClass('d-none');
+                else $("#dineInBtn").removeClass('d-none');
+
+                if (!permittedOrderTypes.includes("2")) $("#pickUpBtn").addClass('d-none');
+                else $("#pickUpBtn").removeClass('d-none');
+
+                if (!permittedOrderTypes.includes("3")) $("#deliveryBtn").addClass('d-none');
+                else $("#deliveryBtn").removeClass('d-none');
+            }
         }
         function ResetControls() {
             OrderId = 0;
@@ -950,6 +992,12 @@
             SetCustomer();
 
             var defaultOrderType = parseInt('@Model.DefaultOrderType');
+            
+            // Check if default order type is permitted
+            if (permittedOrderTypes.length > 0 && !permittedOrderTypes.includes(defaultOrderType.toString())) {
+                defaultOrderType = parseInt(permittedOrderTypes[0]);
+            }
+
             if (defaultOrderType == 1) SetDineInOrder();
             else if (defaultOrderType == 2) SetPickUpOrder();
             else if (defaultOrderType == 3) SetDeliveryOrder();
@@ -958,8 +1006,14 @@
                 $(this).addClass('disabled');
             });
 
-            $("#PriceType").val('Retail');
-            PriceType = 'Retail';
+            // Handle Default Price Type
+            var defaultPrice = 'Retail';
+            if (permittedPriceTypes.length > 0 && !permittedPriceTypes.includes(defaultPrice)) {
+                defaultPrice = permittedPriceTypes[0];
+            }
+
+            $("#PriceType").val(defaultPrice);
+            PriceType = defaultPrice;
         }
 
         $("#PriceType").on("change", function () {

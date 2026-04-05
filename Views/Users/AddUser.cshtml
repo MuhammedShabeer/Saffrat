@@ -1,4 +1,4 @@
-﻿@model Saffrat.Models.User
+@model Saffrat.Models.User
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -89,6 +89,74 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label d-block">@Localize("Permitted Price Types")</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input price-type-check" type="checkbox" value="Retail" id="priceRetail">
+                                <label class="form-check-label" for="priceRetail">@Localize("Retail Price")</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input price-type-check" type="checkbox" value="VanSale" id="priceVanSale">
+                                <label class="form-check-label" for="priceVanSale">@Localize("Van Sale Price")</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input price-type-check" type="checkbox" value="WholeSale" id="priceWholeSale">
+                                <label class="form-check-label" for="priceWholeSale">@Localize("Whole Sale Price")</label>
+                            </div>
+                            <input type="hidden" asp-for="PermittedPriceTypes" id="PermittedPriceTypes" />
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label d-block">@Localize("Permitted Order Types")</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input order-type-check" type="checkbox" value="1" id="orderDineIn">
+                                <label class="form-check-label" for="orderDineIn">@Localize("Dine In")</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input order-type-check" type="checkbox" value="2" id="orderPickUp">
+                                <label class="form-check-label" for="orderPickUp">@Localize("Pick Up")</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input order-type-check" type="checkbox" value="3" id="orderDelivery">
+                                <label class="form-check-label" for="orderDelivery">@Localize("Delivery")</label>
+                            </div>
+                            <input type="hidden" asp-for="PermittedOrderTypes" id="PermittedOrderTypes" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label d-block">@Localize("Permitted Price Types")</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input price-type-check" type="checkbox" value="Retail" id="priceRetail" checked>
+                                <label class="form-check-label" for="priceRetail">@Localize("Retail Price")</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input price-type-check" type="checkbox" value="VanSale" id="priceVanSale">
+                                <label class="form-check-label" for="priceVanSale">@Localize("Van Sale Price")</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input price-type-check" type="checkbox" value="WholeSale" id="priceWholeSale">
+                                <label class="form-check-label" for="priceWholeSale">@Localize("Whole Sale Price")</label>
+                            </div>
+                            <input type="hidden" asp-for="PermittedPriceTypes" id="PermittedPriceTypes" />
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label d-block">@Localize("Permitted Order Types")</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input order-type-check" type="checkbox" value="1" id="orderDineIn" checked>
+                                <label class="form-check-label" for="orderDineIn">@Localize("Dine In")</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input order-type-check" type="checkbox" value="2" id="orderPickUp" checked>
+                                <label class="form-check-label" for="orderPickUp">@Localize("Pick Up")</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input order-type-check" type="checkbox" value="3" id="orderDelivery" checked>
+                                <label class="form-check-label" for="orderDelivery">@Localize("Delivery")</label>
+                            </div>
+                            <input type="hidden" asp-for="PermittedOrderTypes" id="PermittedOrderTypes" />
+                        </div>
+                    </div>
                 </div>
                 <div class="card-footer">
                     <button class="btn btn-primary m-1" type="submit" id="submit">@Localize("Save")</button>
@@ -103,6 +171,20 @@
     <script>
         $("#users-menu").addClass("active");
         $("#addUser-menu").addClass("active");
+
+        function syncPermissions() {
+            var prices = $(".price-type-check:checked").map(function () { return $(this).val(); }).get().join(",");
+            var orders = $(".order-type-check:checked").map(function () { return $(this).val(); }).get().join(",");
+            $("#PermittedPriceTypes").val(prices);
+            $("#PermittedOrderTypes").val(orders);
+        }
+
+        $(".price-type-check, .order-type-check").on("change", function () {
+            syncPermissions();
+        });
+
+        // Initial sync
+        syncPermissions();
 
         $("#frm").submit(function (e) {
             e.preventDefault();

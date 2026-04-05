@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Saffrat.Models
@@ -30,5 +30,7 @@ namespace Saffrat.Models
         public string UpdatedBy { get; set; }
         [JsonIgnore]
         public DateTime? UpdatedAt { get; set; }
+        public string PermittedPriceTypes { get; set; }
+        public string PermittedOrderTypes { get; set; }
     }
 }

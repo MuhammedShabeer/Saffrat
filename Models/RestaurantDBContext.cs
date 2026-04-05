@@ -1022,6 +1022,9 @@ namespace Saffrat.Models
                 entity.Property(e => e.UserName)
                     .IsRequired()
                     .HasMaxLength(150);
+
+                entity.Property(e => e.PermittedPriceTypes).IsRequired(false);
+                entity.Property(e => e.PermittedOrderTypes).IsRequired(false);
             });
 
             modelBuilder.Entity<UserToken>(entity =>
