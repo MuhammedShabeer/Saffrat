@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Saffrat.Models
@@ -30,6 +30,7 @@ namespace Saffrat.Models
         public DateTime CreatedAt { get; set; }
         public string ClosedBy { get; set; }
         public DateTime? ClosedAt { get; set; }
+        public string PriceType { get; set; }
 
         public virtual Customer Customer { get; set; }
         public virtual ICollection<OrderDetail> OrderDetails { get; set; }

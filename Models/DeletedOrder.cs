@@ -18,6 +18,7 @@ namespace Saffrat.Models
         public string DeletionReason { get; set; }
         public string DetailsJson { get; set; }
         public string PaymentMethod { get; set; }
+        public string PriceType { get; set; }
 
         public virtual Customer Customer { get; set; }
     }

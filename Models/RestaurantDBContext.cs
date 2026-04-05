@@ -662,9 +662,8 @@ namespace Saffrat.Models
                 entity.Property(e => e.Note).HasMaxLength(250);
 
                 entity.Property(e => e.PaidAmount).HasColumnType("decimal(18, 2)");
-
                 entity.Property(e => e.PaymentMethod).HasMaxLength(50);
-
+                entity.Property(e => e.PriceType).HasMaxLength(150);
                 entity.Property(e => e.SubTotal).HasColumnType("decimal(18, 2)");
 
                 entity.Property(e => e.TableName).HasMaxLength(150);
@@ -857,9 +856,8 @@ namespace Saffrat.Models
                 entity.Property(e => e.Note).HasMaxLength(250);
 
                 entity.Property(e => e.PaidAmount).HasColumnType("decimal(18, 2)");
-
                 entity.Property(e => e.PaymentMethod).HasMaxLength(150);
-
+                entity.Property(e => e.PriceType).HasMaxLength(150);
                 entity.Property(e => e.SubTotal).HasColumnType("decimal(18, 2)");
 
                 entity.Property(e => e.TableName).HasMaxLength(150);
@@ -1126,6 +1124,7 @@ namespace Saffrat.Models
                 entity.Property(e => e.DeletionReason).IsRequired();
                 entity.Property(e => e.DetailsJson).IsRequired();
                 entity.Property(e => e.PaymentMethod).HasMaxLength(150);
+                entity.Property(e => e.PriceType).HasMaxLength(150);
                 entity.Property(e => e.TableName).HasMaxLength(150);
                 entity.Property(e => e.Note).HasMaxLength(250);
                 entity.Property(e => e.WaiterOrDriver).HasMaxLength(150);

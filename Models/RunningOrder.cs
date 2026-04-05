@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Saffrat.Models
@@ -31,6 +31,7 @@ namespace Saffrat.Models
         public string Note { get; set; }
         public string CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string PriceType { get; set; }
 
         public virtual Charge Charges { get; set; }
         public virtual Customer Customer { get; set; }

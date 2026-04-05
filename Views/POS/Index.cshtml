@@ -1,4 +1,4 @@
-﻿@model Saffrat.ViewModels.POSVM
+@model Saffrat.ViewModels.POSVM
 
 @using Saffrat.Resources
 @using System.Globalization
@@ -67,7 +67,7 @@
         <div class="pos-left col-xxl-4 col-lg-5 col-12">
             <div class="card mb-0">
                 <div class="card-header bg-primary p-2">
-                    <div class="order-header-btns">
+                    <div class="order-header-btns d-flex align-items-center flex-wrap">
                         <a class="btn btn-icon icon-left">
                             <i class="fas fa-hashtag"></i> <span id="d-OrderId"></span>
                         </a>
@@ -89,6 +89,13 @@
                         <a href="javascript:void(0);" onclick="OpenDeliveryManModel();" class="btn btn-icon icon-left deliveryOption d-none">
                             <i class="fas fa-building-user"></i><span id="d-DeliveryMan">@Localize("Select Driver")</span> <i class="fas fa-edit"></i>
                         </a>
+                        <div class="ms-2">
+                            <select id="PriceType" class="form-select form-select-sm" style="width: auto; height: 31px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; border: none; background-color: rgba(255,255,255,0.2); color: white;">
+                                <option value="Retail" style="color: black;">@Localize("Retail Price")</option>
+                                <option value="VanSale" style="color: black;">@Localize("Van Sale Price")</option>
+                                <option value="WholeSale" style="color: black;">@Localize("Whole Sale Price")</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -800,6 +807,7 @@
         var ChargeIsPercentage = false;
         var ChargeValue = 0;
         var category = 0;
+        var PriceType = 'Retail';
 
         GetData();
         function ReloadData() {
@@ -949,7 +957,15 @@
             $("#cartActions a").each(function () {
                 $(this).addClass('disabled');
             });
+
+            $("#PriceType").val('Retail');
+            PriceType = 'Retail';
         }
+
+        $("#PriceType").on("change", function () {
+            PriceType = $(this).val();
+            LoadFoodItems(category);
+        });
 
         // Tax
         function OpenTaxModel() {
@@ -1350,10 +1366,14 @@
             }
         }
         function DisplayFoodItem(item) {
-            htmlText = '<div class="product-single" data-id="' + item.Id + '" data-name="' + item.ItemName + '" data-price="' + item.Price + '"><div class="position-relative h-100">';
+            var itemPrice = item.Price;
+            if (PriceType == "VanSale") itemPrice = item.VanSalePrice;
+            else if (PriceType == "WholeSale") itemPrice = item.WholeSalePrice;
+
+            htmlText = '<div class="product-single" data-id="' + item.Id + '" data-name="' + item.ItemName + '" data-price="' + itemPrice + '"><div class="position-relative h-100">';
             htmlText += '<img class="image" src="/Media/ProductImage?name=' + item.Image + '">';
-            htmlText += '<div class="px-2 pt-2 pb-1 details"<h6 class="product-title mb-0">' + item.ItemName + '</h6>';
-            htmlText += '<p class="badge-right m-0"><span class="badge badge-primary">' + GetCurrency(getNumber(item.Price)) + '</span></p></div></div></div>';
+            htmlText += '<div class="px-2 pt-2 pb-1 details"><h6 class="product-title mb-0">' + item.ItemName + '</h6>';
+            htmlText += '<p class="badge-right m-0"><span class="badge badge-primary">' + GetCurrency(getNumber(itemPrice)) + '</span></p></div></div></div>';
 
             $("#products").append(htmlText);
         }
@@ -1675,6 +1695,12 @@
                 $("#splitBillItems").html(splitItems);
             }
 
+            if (order.PriceType) {
+                PriceType = order.PriceType;
+                $("#PriceType").val(PriceType);
+                LoadFoodItems(category);
+            }
+
             $("#d-OrderId").text(OrderId);
             $('#noteInput').val(order.Note);
             EnterNote();
@@ -1933,6 +1959,7 @@
                 data.append("ChargeId", ChargeId);
                 data.append("Guests", Guests);
                 data.append("WaiterOrDriver", WaiterOrDriver);
+                data.append("PriceType", PriceType);
 
                 $.ajax({
                     url: url,
@@ -2000,7 +2027,11 @@
                     var itemFound = false;
                     for (var i = 0; i < foodItems.length; i++) {
                         if (foodItems[i].Barcode == bcode) {
-                            AddItemInCart(foodItems[i].Id, foodItems[i].ItemName, foodItems[i].Price, 1);
+                            var itemPrice = foodItems[i].Price;
+                            if (PriceType == "VanSale") itemPrice = foodItems[i].VanSalePrice;
+                            else if (PriceType == "WholeSale") itemPrice = foodItems[i].WholeSalePrice;
+
+                            AddItemInCart(foodItems[i].Id, foodItems[i].ItemName, itemPrice, 1);
                             itemFound = true;
                             break;
                         }

@@ -87,7 +87,7 @@ namespace Saffrat.Controllers
         [HttpPost]
         [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> SaveRunningOrder(int[] ItemIds, int[] Quantities, string[] Modifiers, string Note, int CustomerId,
-            int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver)
+            int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType)
         {
             var results = new Dictionary<string, string>();
             var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -169,6 +169,7 @@ namespace Saffrat.Controllers
                         TaxId = TaxId,
                         DiscountId = DiscountId,
                         ChargesId = ChargeId,
+                        PriceType = PriceType,
                         TaxTotal = 0,
                         DiscountTotal = 0,
                         ChargeTotal = 0,
@@ -209,6 +210,7 @@ namespace Saffrat.Controllers
                                 TaxId = TaxId,
                                 DiscountId = DiscountId,
                                 ChargesId = ChargeId,
+                                PriceType = PriceType,
                                 TaxTotal = 0,
                                 DiscountTotal = 0,
                                 ChargeTotal = 0,
@@ -228,11 +230,15 @@ namespace Saffrat.Controllers
                         var item = _dbContext.FoodItems.FirstOrDefault(x => x.Id == ItemIds[i]);
                         if (item != null)
                         {
+                            var detailPrice = item.Price;
+                            if (PriceType == "VanSale") detailPrice = item.VanSalePrice;
+                            else if (PriceType == "WholeSale") detailPrice = item.WholeSalePrice;
+
                             RunningOrderDetail orderDetail = new()
                             {
                                 OrderId = order.Id,
                                 ItemId = item.Id,
-                                Price = item.Price,
+                                Price = detailPrice,
                                 Quantity = Quantities[i],
                                 ModifierTotal = 0,
                                 Total = 0,
@@ -327,7 +333,7 @@ namespace Saffrat.Controllers
         [HttpPost]
         [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> UpdateRunningOrder(int OrderId, int[] ItemIds, int[] Quantities, string[] Modifiers, string Note, int CustomerId,
-            int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver)
+            int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType)
         {
             var response = new Dictionary<string, string>();
             var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -433,6 +439,7 @@ namespace Saffrat.Controllers
                         order.TaxId = TaxId;
                         order.DiscountId = DiscountId;
                         order.ChargesId = ChargeId;
+                        order.PriceType = PriceType;
                         order.WaiterOrDriver = WaiterOrDriver;
                         order.SubTotal = 0;
 
@@ -446,11 +453,15 @@ namespace Saffrat.Controllers
                             var item = _dbContext.FoodItems.FirstOrDefault(x => x.Id == ItemIds[i]);
                             if (item != null)
                             {
+                                var detailPrice = item.Price;
+                                if (PriceType == "VanSale") detailPrice = item.VanSalePrice;
+                                else if (PriceType == "WholeSale") detailPrice = item.WholeSalePrice;
+
                                 RunningOrderDetail orderDetail = new()
                                 {
                                     OrderId = order.Id,
                                     ItemId = item.Id,
-                                    Price = item.Price,
+                                    Price = detailPrice,
                                     Quantity = Quantities[i],
                                     ModifierTotal = 0,
                                     Total = 0,
@@ -777,6 +788,7 @@ namespace Saffrat.Controllers
                             CreatedAt = oorder.CreatedAt,
                             ClosedBy = userName,
                             ClosedAt = CurrentDateTime(),
+                            PriceType = oorder.PriceType,
                         };
 
                         _dbContext.Orders.Add(order);
@@ -1504,6 +1516,7 @@ namespace Saffrat.Controllers
                         DeletedAt = CurrentDateTime(),
                         DeletedBy = userName,
                         DeletionReason = Reason,
+                        PriceType = existing.PriceType,
                         DetailsJson = JsonSerializer.Serialize(existing.OrderDetails, options),
                         PaymentMethod = existing.PaymentMethod
                     };
