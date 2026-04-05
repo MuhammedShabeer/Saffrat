@@ -423,7 +423,7 @@
                         <!-- Bank Selection for Initial Payment -->
                         <div id="initialPaymentBankSection" style="display: none;" class="mb-3">
                             <label class="form-label fw-bold">@Localize("Bank/Cash Account") <code>*</code></label>
-                            <select name="glAccountId" id="genBankId" class="form-select selectpicker" data-live-search="true">
+                            <select name="glAccountId" id="genBankId" class="form-select" data-live-search="true">
                                 <option value="">@Localize("Select Bank/Cash Account")</option>
                                 @if (ViewBag.bankAccounts != null)
                                 {
