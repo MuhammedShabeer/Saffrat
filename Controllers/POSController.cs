@@ -1504,7 +1504,8 @@ namespace Saffrat.Controllers
                         DeletedAt = CurrentDateTime(),
                         DeletedBy = userName,
                         DeletionReason = Reason,
-                        DetailsJson = JsonSerializer.Serialize(existing.OrderDetails, options)
+                        DetailsJson = JsonSerializer.Serialize(existing.OrderDetails, options),
+                        PaymentMethod = existing.PaymentMethod
                     };
 
                     _dbContext.DeletedOrders.Add(deletedOrder);
@@ -1571,7 +1572,7 @@ namespace Saffrat.Controllers
             if (order == null)
                 return Json(new { status = "error", message = "Order not found" });
 
-            return Json(new { status = "success", order = order.DetailsJson, id = order.OrderId });
+            return Json(new { status = "success", order = order.DetailsJson, id = order.OrderId, paymentMethod = order.PaymentMethod });
         }
 
         //Receive Due Amount From Customer

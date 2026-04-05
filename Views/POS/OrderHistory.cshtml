@@ -225,6 +225,12 @@
                 <div class="modal-body p-0" id="dm-body">
                     <div class="order-items" id="dm-items">
                     </div>
+                    <div class="p-3 border-top mt-auto bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>@Localize("Payment Method"):</strong>
+                            <span id="dm-PaymentMethod" class="badge bg-secondary"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -394,6 +400,7 @@
             $("#dm-body").addClass("card-progress");
             $("#dm-items").html("");
             $("#dm-Id").text("");
+            $("#dm-PaymentMethod").text("");
             $.ajax({
                 url: '/POS/GetDeletedOrderDetail',
                 type: 'GET',
@@ -419,6 +426,7 @@
                         htmlText += '</tbody></table>';
                         $("#dm-items").html(htmlText);
                         $("#dm-Id").text(data.id);
+                        $("#dm-PaymentMethod").text(data.paymentMethod || "N/A");
                     }
                     else {
                         errorMessage(data.message);
