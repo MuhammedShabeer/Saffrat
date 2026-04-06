@@ -889,35 +889,38 @@ namespace Saffrat.Controllers
          */
         [HttpGet]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> Payroll(int? month, int? year)
+        public async Task<IActionResult> Payroll(int month, int year)
         {
             var current = CurrentDateTime();
-            if (month > 0 && year > 0)
+            
+            // Determine search parameters
+            int searchMonth = month;
+            int searchYear = year;
+
+            // Default to current month if not specified (Standard HRM view)
+            if (month == 0 && year == 0 && Request.Query.Count == 0)
             {
-                var payroll = await _dbContext.Payrolls.Where(x => x.Month == month && x.Year == year)
-                    .Include(x => x.PayrollDetails)
-                    .Include(x => x.Employee)
-                    .ThenInclude(x => x.Department)
-                    .Include(x => x.Employee)
-                    .ThenInclude(x => x.Designation).ToListAsync();
-                ViewBag.month = month;
-                ViewBag.year = year;
-                ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.IsCash || x.IsBank)).ToListAsync();
-                return View(payroll);
+                searchMonth = current.Month;
+                searchYear = current.Year;
             }
-            else
+
+            IQueryable<Payroll> payrollQuery = _dbContext.Payrolls
+                .Include(x => x.PayrollDetails)
+                .Include(x => x.Employee).ThenInclude(x => x.Department)
+                .Include(x => x.Employee).ThenInclude(x => x.Designation);
+
+            if (searchMonth > 0 && searchYear > 0)
             {
-                var payroll = await _dbContext.Payrolls.Where(x => x.Month == current.Month && x.Year == current.Year)
-                    .Include(x => x.PayrollDetails)
-                    .Include(x => x.Employee)
-                    .ThenInclude(x => x.Department)
-                    .Include(x => x.Employee)
-                    .ThenInclude(x => x.Designation).ToListAsync();
-                ViewBag.month = current.Month;
-                ViewBag.year = current.Year;
-                ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.IsCash || x.IsBank)).ToListAsync();
-                return View(payroll);
+                payrollQuery = payrollQuery.Where(x => x.Month == searchMonth && x.Year == searchYear);
             }
+
+            var payroll = await payrollQuery.OrderByDescending(p => p.Year).ThenByDescending(p => p.Month).ToListAsync();
+            
+            ViewBag.month = searchMonth;
+            ViewBag.year = searchYear;
+            ViewBag.bankAccounts = await _dbContext.GLAccounts.Where(x => x.IsActive && (x.IsCash || x.IsBank)).ToListAsync();
+            
+            return View(payroll);
         }
 
         // Get employees for customizable payroll generation
@@ -1458,14 +1461,24 @@ namespace Saffrat.Controllers
                 using var transaction = _dbContext.Database.BeginTransaction();
                 try
                 {
-                    // Find and reverse associated journals
+                    // 1. Find and reverse all associated journals (accruals and payments)
                     var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id).ToList();
                     foreach (var journal in existingJournals)
                     {
                         await _accountingEngine.ReverseJournalEntryAsync(journal.Id);
                     }
 
+                    // 2. Remove associated PayrollDetails (mandatory for FK constraints)
+                    var details = _dbContext.PayrollDetails.Where(x => x.PayrollId == existing.Id);
+                    _dbContext.PayrollDetails.RemoveRange(details);
+
+                    // 3. Remove associated PayrollPayments (mandatory for FK constraints)
+                    var payments = _dbContext.PayrollPayments.Where(x => x.PayrollId == existing.Id);
+                    _dbContext.PayrollPayments.RemoveRange(payments);
+
+                    // 4. Finally remove the parent Payroll record
                     _dbContext.Payrolls.Remove(existing);
+                    
                     await _dbContext.SaveChangesAsync();
                     await transaction.CommitAsync();
 

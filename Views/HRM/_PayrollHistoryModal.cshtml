@@ -1,0 +1,64 @@
+@using Saffrat.Resources
+@inherits LocService<dynamic>
+
+<!-- Payment History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Localize("Payment History")</h5>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <i class="fa fa-x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="payment-stat-card">
+                            <h5 style="font-size: 12px;">@Localize("Net Salary")</h5>
+                            <div class="amount" style="font-size: 18px;" id="histNetSalary">0.00</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="payment-stat-card success">
+                            <h5 style="font-size: 12px;">@Localize("Paid Amount")</h5>
+                            <div class="amount" style="font-size: 18px;" id="histPaidAmount">0.00</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="payment-stat-card danger">
+                            <h5 style="font-size: 12px;">@Localize("Remaining")</h5>
+                            <div class="amount" style="font-size: 18px;" id="histRemaining">0.00</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="payment-stat-card warning">
+                            <h5 style="font-size: 12px;">@Localize("Paid %")</h5>
+                            <div class="amount" style="font-size: 18px;" id="histPercentage">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mb-3">@Localize("Payment Transactions")</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover" id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Amount")</th>
+                                <th>@Localize("Method")</th>
+                                <th>@Localize("Notes")</th>
+                                <th>@Localize("Action")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="noPaymentHistory" class="alert alert-info" style="display: none;">
+                    @Localize("No payment history found for this payroll.")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

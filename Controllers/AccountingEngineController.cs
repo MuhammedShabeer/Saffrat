@@ -513,18 +513,6 @@ namespace Saffrat.Controllers
         // --- PAYROLL PAYMENT FLOWS ---
 
         [HttpGet]
-        public async Task<IActionResult> Payrolls()
-        {
-            var payrolls = await _dbContext.Payrolls
-                .Include(p => p.Employee)
-                .Include(p => p.PayrollPayments)
-                .OrderByDescending(p => p.Year)
-                .ThenByDescending(p => p.Month)
-                .ToListAsync();
-            return View(payrolls);
-        }
-
-        [HttpGet]
         public async Task<IActionResult> GetPayrollsList()
         {
             try
@@ -622,12 +610,23 @@ namespace Saffrat.Controllers
                 if (amount > remainingBalance)
                     return Json(new { status = "error", message = $"Payment amount exceeds remaining balance of {remainingBalance:C}." });
 
+                // Auto-determine payment method based on account type
+                string actualPaymentMethod = paymentMethod;
+                if (glAccountId.HasValue)
+                {
+                    var account = await _dbContext.GLAccounts.FindAsync(glAccountId.Value);
+                    if (account != null)
+                    {
+                        actualPaymentMethod = account.IsBank ? "BankTransfer" : "Cash";
+                    }
+                }
+
                 // Create payment record
                 var payment = new PayrollPayment
                 {
                     PayrollId = payrollId,
                     Amount = amount,
-                    PaymentMethod = paymentMethod,
+                    PaymentMethod = actualPaymentMethod,
                     PaymentDate = CurrentDateTime(),
                     Notes = notes,
                     CreatedAt = CurrentDateTime()

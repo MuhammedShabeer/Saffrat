@@ -8,7 +8,8 @@
     int month = Convert.ToInt32(ViewBag.month);
     int year = Convert.ToInt32(ViewBag.year);
     int currentyear = DateTime.UtcNow.Year;
-    ViewData["Title"] = @Localize("Payroll");
+    bool isAllPeriods = (month == 0 || year == 0);
+    ViewData["Title"] = isAllPeriods ? @Localize("Flexible Payroll Management") : @Localize("Payroll");
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
@@ -160,6 +161,14 @@
             color: white;
         }
 
+        .border-top-dash {
+            border-top: 1px dashed #ccc !important;
+        }
+
+        .italic {
+            font-style: italic;
+        }
+
         /* Custom Payroll Generation Modal Styles */
         .bg-light-primary {
             background-color: #f0f7ff !important;
@@ -190,113 +199,69 @@
         }
     </style>
 }
-<div class="page-header">
-    <div class="page-block">
-        <div class="row align-items-center">
-            <div class="col-auto">
-                <div class="page-header-title">
-                    <h4>
-                        @Localize("Payroll")
-                    </h4>
-                </div>
-                <ul class="breadcrumb">
-                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home me-1"></i>@Localize("Home")</a></li>
-                    <li class="breadcrumb-item">@Localize("Payroll")</li>
-                </ul>
-            </div>
-            <div class="col">
-                <div class="float-end">
-                    <button onclick="OpenGenerateModal();" class="btn btn-primary">@Localize("Generate")</button>
-                </div>
+<!-- Filter and Controls -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-3">
+                <form asp-action="Payroll" method="get" class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-alt text-primary me-2"></i>
+                            @(isAllPeriods ? Localize("All Periods") : $"{CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)} {year}")
+                        </h5>
+                    </div>
+                    @if (!isAllPeriods) { 
+                        <div class="col-auto ms-auto d-flex gap-2">
+                            <select name="month" class="form-select form-select-sm d-inline-block w-auto">
+                                @for (int i = 1; i <= 12; i++)
+                                {
+                                    <option value="@i" selected="@(i == month)">@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                }
+                            </select>
+                            <select name="year" class="form-select form-select-sm d-inline-block w-auto">
+                                @for (int i = currentyear - 5; i <= currentyear + 1; i++)
+                                {
+                                    <option value="@i" selected="@(i == year)">@i</option>
+                                }
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary">@Localize("Filter")</button>
+                            <button type="button" onclick="OpenGenerateModal();" class="btn btn-sm btn-success ms-2">
+                                <i class="fas fa-plus-circle me-1"></i>@Localize("Generate")
+                            </button>
+                        </div>
+                    }
+                    else {
+                        <div class="col-auto ms-auto">
+                            <a asp-action="Payroll" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-calendar-check me-1"></i>@Localize("Switch to Monthly View")
+                            </a>
+                        </div>
+                    }
+                </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Payment Summary Statistics -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="payment-stat-card">
-            <h5><i class="fas fa-money-bill-wave me-2"></i>@Localize("Total Payroll")</h5>
-            <div class="amount" id="totalPayroll">0.00</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="payment-stat-card success">
-            <h5><i class="fas fa-check-circle me-2"></i>@Localize("Total Paid")</h5>
-            <div class="amount" id="totalPaid">0.00</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="payment-stat-card warning">
-            <h5><i class="fas fa-hourglass-half me-2"></i>@Localize("Partially Paid")</h5>
-            <div class="amount" id="partiallyPaid">0</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="payment-stat-card danger">
-            <h5><i class="fas fa-exclamation-circle me-2"></i>@Localize("Unpaid")</h5>
-            <div class="amount" id="unpaidCount">0</div>
-        </div>
-    </div>
-</div>
+    <partial name="_PayrollSummaryCards" />
 
 <div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <form asp-action="Payroll" asp-controller="HRM" method="get" class="needs-validation" novalidate="">
-                    <div class="row">
-                        <div class="col-md-4 form-group">
-                            <label class="control-label">@Localize("Month") <code>*</code></label>
-                            <select id="month" name="month" class="form-control selectpicker" required>
-                                @for (int i = 1; i < 13; i++)
-                                {
-                                    var m = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(i);
-                                    <option value="@i">@m</option>
-                                }
-                            </select>
-                            <div class="invalid-feedback">
-                                @Localize("Please select month.")
-                            </div>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label class="control-label">@Localize("Year") <code>*</code></label>
-                            <select id="year" name="year" class="form-control selectpicker" required>
-                                @{
-                                    int y = currentyear;
-                                }
-                                @for (int i = 1; i < 13; i++)
-                                {
-                                    <option value="@y">@y</option>
-                                    y--;
-                                }
-                            </select>
-                            <div class="invalid-feedback">
-                                @Localize("Please select year.")
-                            </div>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label class="w-100 d-none d-md-inline-block">&nbsp;</label>
-                            <button class="btn btn-primary btn-icon" type="submit"><i class="fas fa-paper-plane"></i> @Localize("Filter")</button>
-                        </div>
-                    </div>
-                </form>
 
                 <div class="table-responsive">
-                    <table class="table" id="datatable">
+                    <table class="table table-hover" id="datatable">
                         <thead>
                             <tr>
-                                <th>@Localize("#")</th>
                                 <th>@Localize("Employee")</th>
-                                <th>@Localize("Payroll Type")</th>
-                                <th>@Localize("Basic Salary")</th>
+                                <th>@Localize("Month/Year")</th>
+                                <th>@Localize("Type")</th>
                                 <th>@Localize("Net Salary")</th>
-                                <th>@Localize("Month-Year")</th>
-                                <th>@Localize("Payment Status")</th>
-                                <th>@Localize("Paid Amount")</th>
-                                <th>@Localize("Remaining")</th>
-                                <th>@Localize("Generated At")</th>
+                                <th>@Localize("Status")</th>
+                                <th>@Localize("Total Paid")</th>
+                                <th>@Localize("Balance")</th>
                                 <th>@Localize("Action")</th>
                             </tr>
                         </thead>
@@ -305,15 +270,13 @@
                             {
                                 var id = "row" + item.Id;
                                 <tr id="@id">
-                                    <td>@item.Id</td>
                                     <td>
-                                        @String.Format("{0} (EMP-{1})", item.Employee.Name, item.Employee.Id) <br />
-                                        @String.Format("{0} - {1}", item.Employee.Department.Title, item.Employee.Designation.Title) <br />
+                                        <strong>@item.Employee.Name</strong><br>
+                                        <small class="text-muted">EMP-@item.Employee.Id | @(item.Employee.Department?.Title ?? "-")</small>
                                     </td>
+                                    <td>@item.Month/@item.Year</td>
                                     <td>@item.PayrollType</td>
-                                    <td>@item.Salary</td>
-                                    <td>@item.NetSalary</td>
-                                    <td>@item.Month-@item.Year</td>
+                                    <td><strong>@item.NetSalary.ToString("0.00")</strong></td>
                                     <td>
                                         @{
                                             string statusClass = "badge-unpaid";
@@ -335,25 +298,27 @@
                                     </td>
                                     <td>
                                         <span class="text-danger">
-                                            @((item.NetSalary - item.TotalAmountPaid).ToString("0.00"))
+                                            <strong>@((item.NetSalary - item.TotalAmountPaid).ToString("0.00"))</strong>
                                         </span>
                                     </td>
-                                    <td>@item.GeneratedAt</td>
                                     <td>
-                                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-bars me-1"></i></button>
-                                        <div class="dropdown-menu">
+                                        <div class="action-btn-group d-flex gap-1">
+                                            <button class="btn btn-sm btn-primary" onclick="OpenInvoiceModal(@item.Id);" title="@Localize("View Payslip")">
+                                                <i class="fas fa-file-invoice-dollar"></i>
+                                            </button>
                                             @if (item.PaymentStatus != "Paid")
                                             {
                                                 decimal remToPay = item.NetSalary - item.TotalAmountPaid;
-                                                <a class="dropdown-item btn" onclick="OpenPaymentModal(@item.Id, '@item.Employee.Name', @item.NetSalary, @remToPay, '@item.PaymentStatus');"><i class="fas fa-money-bill me-2"></i>@Localize("Record Payment")</a>
+                                                <button class="btn btn-sm btn-success" onclick="OpenPaymentModal(@item.Id, '@item.Employee.Name', @item.NetSalary, @remToPay, '@item.PaymentStatus', '@item.Month/@item.Year');" title="@Localize("Record Payment")">
+                                                    <i class="fas fa-money-bill-wave"></i>
+                                                </button>
                                             }
-                                            <a class="dropdown-item btn" onclick="ViewPaymentHistory(@item.Id);"><i class="fas fa-history me-2"></i>@Localize("Payment History")</a>
-                                            <a class="dropdown-item btn" onclick="OpenInvoiceModal(@item.Id);"><i class="fas fa-print me-2"></i>@Localize("View Payslip")</a>
-                                            @if (item.PaymentStatus == "Unpaid")
-                                            {
-                                                <a class="dropdown-item btn" onclick="PayInvoice(@item.Id);"><i class="fas fa-check-circle me-2"></i>@Localize("Mark Fully Paid")</a>
-                                            }
-                                            <a class="dropdown-item btn" onclick="Delete(@item.Id);"><i class="fas fa-trash me-2"></i>@Localize("Delete")</a>
+                                            <button class="btn btn-sm btn-info" onclick="ViewPaymentHistory(@item.Id);" title="@Localize("Payment History")">
+                                                <i class="fas fa-history"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="Delete(@item.Id);" title="@Localize("Delete")">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -474,269 +439,9 @@
         </div>
     </div>
 
-    <div class="modal fade" id="invoiceModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@Localize("Payslip")</h5>
-                    <button type="button" class="btn btn-light" data-dismiss="modal">
-                        <i class="fa fa-x" aria-hidden="true"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="text-md-end">
-                        <div class="mb-3">
-                            <button type="button" id="printinv" class="btn btn-info">
-                                <i class="fas fa-print me-2"></i>
-                                Print
-                            </button>
-                        </div>
-                    </div>
-                    <div class="invoice" id="empinv">
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="title">
-                                            <h4>@GetSetting.CompanyName</h4>
-                                            <address>
-                                                @GetSetting.CompanyAddress<br>
-                                                @Localize("Phone"): @GetSetting.CompanyPhone @Localize("Email"): @GetSetting.CompanyEmail
-                                            </address>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 text-md-end">
-                                        <div class="title">
-                                            <h4 class="text-primary">@Localize("PAYSLIP")</h4>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <address>
-                                            <strong>@Localize("Employee Information")</strong><br>
-                                            <span id="i-EmployeeName"></span> (EMP-<span id="i-EmployeeId"></span>)<br>
-                                            <span id="i-EmployeeDepartment"></span> - <span id="i-EmployeeDesignation"></span><br>
-                                            <span id="i-EmployeeAddress"></span><br>
-                                        </address>
-                                    </div>
-                                    <div class="col-md-6 text-md-end">
-                                        <address>
-                                            <strong>@Localize("Payroll") #</strong> <span id="i-PayrollNo"></span><br>
-                                            <strong>@Localize("Pay Type"):</strong> <span id="i-PayType"></span><br>
-                                            <strong>@Localize("Generated At"):</strong> <span id="i-PayDate"></span><br>
-                                            <strong>@Localize("Period"):</strong> <span id="i-Period"></span><br>
-                                        </address>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row g-1 mt-4">
-                            <div class="col-md-6">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-bordered">
-                                        <thead>
-                                            <tr>
-                                                <th scope="col">@Localize("Earning")</th>
-                                                <th scope="col" class="text-end">@Localize("Amount")</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="i-Earnings">
-                                            <tr>
-                                                <td>@Localize("Basic Pay")</td>
-                                                <td class="text-end" id="i-BasicPay"></td>
-                                            </tr>
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <th scope="col">@Localize("Gross Earnings")</th>
-                                                <th scope="col" class="text-end" id="i-TotalEarnings"></th>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-bordered">
-                                        <thead>
-                                            <tr>
-                                                <th scope="col">@Localize("Deduction")</th>
-                                                <th scope="col" class="text-end">@Localize("Amount")</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="i-Deductions">
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <th scope="col">@Localize("Total Deductions")</th>
-                                                <th scope="col" class="text-end" id="i-TotalDeductions"></th>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <div class="details text-end">
-                                <div class="title">@Localize("Net Pay")</div>
-                                <div class="value" id="i-NetPay"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment Recording Modal -->
-    <div class="modal fade" id="paymentModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@Localize("Record Payroll Payment")</h5>
-                    <button type="button" class="btn btn-light" data-dismiss="modal">
-                        <i class="fa fa-x" aria-hidden="true"></i>
-                    </button>
-                </div>
-                <form id="frmPayment" class="needs-validation" novalidate="">
-                    <div class="modal-body">
-                        <input type="hidden" id="paymentPayrollId" name="payrollId">
-
-                        <div class="alert alert-info" role="alert">
-                            <strong id="paymentEmployeeName"></strong><br>
-                            <small id="paymentPeriod"></small>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">@Localize("Net Salary")</label>
-                                <input type="text" class="form-control" id="paymentNetSalary" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">@Localize("Remaining")</label>
-                                <input type="text" class="form-control text-danger" id="paymentRemaining" readonly>
-                            </div>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label class="control-label">@Localize("Payment Amount") <code>*</code></label>
-                            <input type="number" id="paymentAmount" name="amount" class="form-control" step="0.01" min="0.01" placeholder="@Localize("Enter amount")" required>
-                            <div class="invalid-feedback">
-                                @Localize("Please enter a valid amount.")
-                            </div>
-                            <small class="form-text text-muted">
-                                @Localize("Maximum: ") <span id="maxAmount">0.00</span>
-                            </small>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label class="control-label">@Localize("Bank/Cash Account") <code>*</code></label>
-                            <select id="paymentBankId" name="glAccountId" class="form-control selectpicker" data-live-search="true" required>
-                                <option value="">@Localize("Select Bank/Cash Account")</option>
-                                @if (ViewBag.bankAccounts != null)
-                                {
-                                    foreach (var acc in ViewBag.bankAccounts)
-                                    {
-                                        <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
-                                    }
-                                }
-                            </select>
-                            <div class="invalid-feedback">
-                                @Localize("Please select bank/cash account.")
-                            </div>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label class="control-label">@Localize("Payment Method") <code>*</code></label>
-                            <select id="paymentMethod" name="paymentMethod" class="form-control selectpicker" required>
-                                <option value="">@Localize("Select Payment Method")</option>
-                                <option value="Cash">@Localize("Cash")</option>
-                                <option value="Check">@Localize("Check")</option>
-                                <option value="BankTransfer">@Localize("Bank Transfer")</option>
-                                <option value="Card">@Localize("Card")</option>
-                                <option value="Other">@Localize("Other")</option>
-                            </select>
-                            <div class="invalid-feedback">
-                                @Localize("Please select payment method.")
-                            </div>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label class="control-label">@Localize("Notes")</label>
-                            <textarea id="paymentNotes" name="notes" class="form-control" rows="2" placeholder="@Localize("Optional notes")"></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-whitesmoke br">
-                        <button type="submit" class="btn btn-primary submit">@Localize("Record Payment")</button>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment History Modal -->
-    <div class="modal fade" id="historyModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@Localize("Payment History")</h5>
-                    <button type="button" class="btn btn-light" data-dismiss="modal">
-                        <i class="fa fa-x" aria-hidden="true"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="row mb-4">
-                        <div class="col-md-3">
-                            <div class="payment-stat-card">
-                                <h5 style="font-size: 12px;">@Localize("Net Salary")</h5>
-                                <div class="amount" style="font-size: 18px;" id="histNetSalary">0.00</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="payment-stat-card success">
-                                <h5 style="font-size: 12px;">@Localize("Paid Amount")</h5>
-                                <div class="amount" style="font-size: 18px;" id="histPaidAmount">0.00</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="payment-stat-card danger">
-                                <h5 style="font-size: 12px;">@Localize("Remaining")</h5>
-                                <div class="amount" style="font-size: 18px;" id="histRemaining">0.00</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="payment-stat-card warning">
-                                <h5 style="font-size: 12px;">@Localize("Paid %")</h5>
-                                <div class="amount" style="font-size: 18px;" id="histPercentage">0%</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h6 class="mb-3">@Localize("Payment Transactions")</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover" id="historyTable">
-                            <thead>
-                                <tr>
-                                    <th>@Localize("Date")</th>
-                                    <th>@Localize("Amount")</th>
-                                    <th>@Localize("Method")</th>
-                                    <th>@Localize("Notes")</th>
-                                    <th>@Localize("Action")</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="noPaymentHistory" class="alert alert-info" style="display: none;">
-                        @Localize("No payment history found for this payroll.")
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <partial name="_PayrollInvoiceModal" />
+    <partial name="_PayrollPaymentModal" />
+    <partial name="_PayrollHistoryModal" />
 }
 
 @section scripts{
@@ -748,29 +453,7 @@
         $("#hrm-menu").addClass("active");
         $("#payrollList-menu").addClass("active");
 
-        var dt = $('#datatable').DataTable({
-            'language': {
-                "processing": '@Localize("Processing...")',
-                "loadingRecords": "@Localize("Loading...")",
-                'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
-                "zeroRecords": "@Localize("No Result Found")",
-                "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
-                "infoEmpty": '',
-                "infoFiltered": '',
-                "search": '@Localize("Search")',
-                'paginate': {
-                    'previous': '<i class="fa fa-chevron-left"></i>',
-                    'next': '<i class="fa fa-chevron-right"></i>'
-                }
-            },
-            'columnDefs': [
-                {
-                    "orderable": false,
-                    'targets': [9]
-                }
-            ],
-            'lengthMenu': [[50, 100, 150, -1], [50, 100, 150, "All"]],
-        });
+        var dt; // Will be initialized in $(document).ready()
 
         function OpenGenerateModal() {
             // Reset form
@@ -955,10 +638,21 @@
                             $('#i-EmployeeDepartment').text(res.employee.department.title);
                             $('#i-EmployeeDesignation').text(res.employee.designation.title);
                             $('#i-EmployeeAddress').text(res.employee.presentAddress);
+                            $('#i-JoiningDate').text(getDate(res.employee.joiningDate));
+                            $('#i-BankName').text(res.employee.bankName || '-');
+                            $('#i-AccountNumber').text(res.employee.accountNumber || '-');
+
                             $('#i-PayrollNo').text(res.id);
                             $('#i-PayType').text(res.payrollType);
-                            $('#i-PayDate').text(getDate(res.generatedAt));
-                            $('#i-Period').text(res.month + '-' + res.year);
+                            $('#i-Period').text(res.month + '/' + res.year);
+                            
+                            // Status Badge mapping
+                            let statusHtml = '';
+                            if (res.paymentStatus === 'Paid') statusHtml = '<span class="badge bg-success">@Localize("PAID")</span>';
+                            else if (res.paymentStatus === 'PartiallyPaid') statusHtml = '<span class="badge bg-warning">@Localize("PARTIAL")</span>';
+                            else statusHtml = '<span class="badge bg-danger">@Localize("UNPAID")</span>';
+                            $('#i-StatusBadge').html(statusHtml);
+
                             $('#i-BasicPay').text(GetCurrency(getNumber(res.salary)));
                             var detail = res.payrollDetails;
                             var earning = res.salary;
@@ -995,6 +689,12 @@
                             $('#i-TotalEarnings').text(GetCurrency(getNumber(earning.toFixed(2))));
                             $('#i-TotalDeductions').text(GetCurrency(getNumber(deduction.toFixed(2))));
                             $('#i-NetPay').text(GetCurrency(getNumber(res.netSalary.toFixed(2))));
+                            $('#i-NetPayWords').text(toWords(res.netSalary) + ' Only');
+                            
+                            // Payment Summary
+                            $('#i-TotalPaid').text(GetCurrency(getNumber(res.totalAmountPaid.toFixed(2))));
+                            var remaining = res.netSalary - res.totalAmountPaid;
+                            $('#i-Remaining').text(GetCurrency(getNumber(remaining.toFixed(2))));
 
                             $("#invoiceModal").modal('show');
                         }
@@ -1038,84 +738,6 @@
             printData();
         })
 
-        function PayInvoice(id) {
-            let bankOptions = '';
-            @if (ViewBag.bankAccounts != null)
-            {
-                foreach (var acc in ViewBag.bankAccounts)
-                {
-                    @:bankOptions += '<option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>';
-                }
-            }
-
-            $.confirm({
-                title: '@Localize("Pay Salary")',
-                content: '' +
-                '<form action="" class="formName">' +
-                '<div class="form-group">' +
-                '<label>@Localize("Select Bank/Cash Account")</label>' +
-                '<select class="bankId form-control" required>' +
-                '<option value="">@Localize("Select Bank")</option>' +
-                bankOptions +
-                '</select>' +
-                '</div>' +
-                '</form>',
-                rtl: isRTL(),
-                theme: 'modern',
-                buttons: {
-                    formSubmit: {
-                        text: '<i class="fa fa-check"></i> @Localize("Pay Now")',
-                        btnClass: 'btn-primary',
-                        action: function () {
-                            var bankId = this.$content.find('.bankId').val();
-                            if(!bankId){
-                                $.alert('@Localize("Please select a bank account.")');
-                                return false;
-                            }
-                            
-                            var self = this;
-                            self.showLoading(true);
-                            $.ajax({
-                                url: "/HRM/PaySalary",
-                                type: 'PUT',
-                                data: {
-                                    Id: id,
-                                    glAccountId: bankId
-                                },
-                                error: function (data) {
-                                    if (data.status == 401) {
-                                        window.location.href = '/Account/Login';
-                                    }
-                                    else if (data.status == 403) {
-                                        errorMessage('@Localize("Access denied.")');
-                                    }
-                                    else {
-                                        console.log(JSON.stringify(data));
-                                    }
-                                    self.close();
-                                },
-                                success: function (data) {
-                                    if (data.status == "success") {
-                                        setCookie('successMessage', '@Localize("Salary paid successfully.")');
-                                        window.location.reload(true);
-                                    }
-                                    else {
-                                        errorMessage(data.message);
-                                        self.close();
-                                    }
-                                }
-                            });
-                            return false;
-                        }
-                    },
-                    cancel: {
-                        text: '@Localize("Cancel")',
-                        action: function () {
-                        }
-                    }
-                }
-            });
-        }
 
         function Delete(id) {
             $.alert({
@@ -1326,13 +948,14 @@
                 if (!row) return;
 
                 // Extract numbers from row data - using getLocaleNumber for actual numeric values
-                let netSalary = getLocaleNumber($(row).find('td:nth-child(5)').text());
-                let paidAmount = getLocaleNumber($(row).find('td:nth-child(8)').text());
+                // Column indices (1-indexed): 4: Net Salary, 5: Status, 6: Total Paid
+                let netSalary = getLocaleNumber($(row).find('td:nth-child(4)').text().trim());
+                let paidAmount = getLocaleNumber($(row).find('td:nth-child(6)').text().trim());
                 
                 totalPayroll += netSalary;
                 totalPaid += paidAmount;
 
-                let status = $(row).find('td:nth-child(7) .badge').text().trim() || '';
+                let status = $(row).find('td:nth-child(5)').text().trim() || '';
                 if (status.includes('Partially Paid')) {
                     partialCount++;
                 } else if (status.includes('Unpaid')) {
@@ -1347,15 +970,15 @@
         }
 
         // Open Payment Modal
-        function OpenPaymentModal(payrollId, employeeName, netSalary, remaining, status) {
+        function OpenPaymentModal(payrollId, employeeName, netSalary, remaining, status, period) {
             $('#paymentPayrollId').val(payrollId);
             $('#paymentEmployeeName').text(employeeName);
+            $('#paymentPeriod').text(period || '');
             $('#paymentNetSalary').val(GetCurrency(netSalary));
             $('#paymentRemaining').val(GetCurrency(remaining));
             $('#maxAmount').text(remaining.toFixed(2));
             $('#paymentAmount').attr('max', remaining);
             $('#paymentAmount').val('');
-            $('#paymentMethod').val('');
             $('#paymentNotes').val('');
 
             $("#paymentModal").modal('show');
@@ -1425,7 +1048,6 @@
             if (performValidation($("#frmPayment"))) {
                 var payrollId = $('#paymentPayrollId').val();
                 var amount = parseFloat($('#paymentAmount').val());
-                var method = $('#paymentMethod').val();
                 var notes = $('#paymentNotes').val();
 
                 $("#frmPayment .submit").addClass("disabled btn-progress");
@@ -1438,7 +1060,6 @@
                         payrollId: payrollId,
                         amount: amount,
                         glAccountId: glAccountId,
-                        paymentMethod: method,
                         notes: notes
                     },
                     dataType: "json",
@@ -1468,6 +1089,49 @@
         });
 
         // Reverse Payment
+        function toWords(s) {
+            var th = ['', 'Thousand', 'Million', 'Billion', 'Trillion'];
+            var dg = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            var tn = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            var tw = ['Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+            s = s.toString();
+            s = s.replace(/[\, ]/g, '');
+            if (s != parseFloat(s)) return 'not a number';
+            var x = s.indexOf('.');
+            if (x == -1) x = s.length;
+            if (x > 15) return 'too big';
+            var n = s.split('');
+            var str = '';
+            var sk = 0;
+            for (var i = 0; i < x; i++) {
+                if ((x - i) % 3 == 2) {
+                    if (n[i] == '1') {
+                        str += tn[Number(n[i + 1])] + ' ';
+                        i++;
+                        sk = 1;
+                    } else if (n[i] != 0) {
+                        str += tw[n[i] - 2] + ' ';
+                        sk = 1;
+                    }
+                } else if (n[i] != 0) {
+                    str += dg[n[i]] + ' ';
+                    if ((x - i) % 3 == 0) str += 'Hundred ';
+                    sk = 1;
+                }
+                if ((x - i) % 3 == 1) {
+                    if (sk) str += th[(x - i - 1) / 3] + ' ';
+                    sk = 0;
+                }
+            }
+            if (x != s.length) {
+                var y = s.length;
+                str += 'and ';
+                for (var i = x + 1; i < y; i++) str += dg[n[i]] + ' ';
+            }
+            return str.replace(/\s+/g, ' ');
+        }
+
         function ReversePayment(paymentId, payrollId) {
             $.alert({
                 title: '@Localize("Reverse Payment")',
@@ -1490,6 +1154,8 @@
                                     if (data.status == "success") {
                                         successMessage('@Localize("Payment reversed successfully.")');
                                         ViewPaymentHistory(payrollId);
+                                        // RELOAD TABLE ACTION TO UPDATE THE MAIN ROW AS WELL
+                                        window.location.reload(true);
                                     } else {
                                         errorMessage(data.message);
                                     }
@@ -1520,7 +1186,33 @@
         }
 
         // Initialize
+        var dt;
         $(document).ready(function () {
+             dt = $('#datatable').DataTable({
+                "order": [[1, "desc"]], // Default order by Month/Year column
+                "pageLength": 50,
+                'language': {
+                    "processing": '@Localize("Processing...")',
+                    "loadingRecords": "@Localize("Loading...")",
+                    'lengthMenu': '@Localize("Show") _MENU_ @Localize("Entries")',
+                    "zeroRecords": "@Localize("No Result Found")",
+                    "info": '<small>@Localize("Showing") _START_ - _END_ (_TOTAL_)</small>',
+                    "infoEmpty": '',
+                    "infoFiltered": '',
+                    "search": '@Localize("Search")',
+                    'paginate': {
+                        'previous': '<i class="fa fa-chevron-left"></i>',
+                        'next': '<i class="fa fa-chevron-right"></i>'
+                    }
+                },
+                'columnDefs': [
+                    {
+                        "orderable": false,
+                        'targets': [7] // Action column index
+                    }
+                ],
+                'lengthMenu': [[50, 100, 150, -1], [50, 100, 150, "@Localize("All")"]],
+            });
             // Month/Year change listeners for custom payroll
             $('#genMonth, #genYear').on('change', function() {
                 if ($('#useCustomSalary').is(':checked')) {

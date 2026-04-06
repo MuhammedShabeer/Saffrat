@@ -1,0 +1,75 @@
+@using Saffrat.Resources
+@inherits LocService<dynamic>
+
+<!-- Payment Recording Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Localize("Record Payroll Payment")</h5>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <i class="fa fa-x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <form id="frmPayment" class="needs-validation" novalidate="">
+                <div class="modal-body">
+                    <input type="hidden" id="paymentPayrollId" name="payrollId">
+
+                    <div class="alert alert-info" role="alert">
+                        <strong id="paymentEmployeeName"></strong><br>
+                        <small id="paymentPeriod"></small>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">@Localize("Net Salary")</label>
+                            <input type="text" class="form-control" id="paymentNetSalary" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">@Localize("Remaining")</label>
+                            <input type="text" class="form-control text-danger" id="paymentRemaining" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Payment Amount") <code>*</code></label>
+                        <input type="number" id="paymentAmount" name="amount" class="form-control" step="0.01" min="0.01" placeholder="@Localize("Enter amount")" required>
+                        <div class="invalid-feedback">
+                            @Localize("Please enter a valid amount.")
+                        </div>
+                        <small class="form-text text-muted">
+                            @Localize("Maximum: ") <span id="maxAmount">0.00</span>
+                        </small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Bank/Cash Account") <code>*</code></label>
+                        <select id="paymentBankId" name="glAccountId" class="form-control selectpicker" data-live-search="true" required>
+                            <option value="">@Localize("Select Bank/Cash Account")</option>
+                            @if (ViewBag.bankAccounts != null)
+                            {
+                                foreach (var acc in ViewBag.bankAccounts)
+                                {
+                                    <option value="@acc.Id">@acc.AccountCode - @acc.AccountName</option>
+                                }
+                            }
+                        </select>
+                        <div class="invalid-feedback">
+                            @Localize("Please select bank/cash account.")
+                        </div>
+                    </div>
+
+
+                    <div class="form-group mb-3">
+                        <label class="control-label">@Localize("Notes")</label>
+                        <textarea id="paymentNotes" name="notes" class="form-control" rows="2" placeholder="@Localize("Optional notes")"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-whitesmoke br">
+                    <button type="submit" class="btn btn-primary submit">@Localize("Record Payment")</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@Localize("Cancel")</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

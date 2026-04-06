@@ -1,0 +1,30 @@
+@using Saffrat.Resources
+@inherits LocService<dynamic>
+
+<!-- Payment Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="payment-stat-card">
+            <h5><i class="fas fa-money-bill-wave me-2"></i>@Localize("Total Payroll")</h5>
+            <div class="amount" id="totalPayroll">0.00</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="payment-stat-card success">
+            <h5><i class="fas fa-check-circle me-2"></i>@Localize("Total Paid")</h5>
+            <div class="amount" id="totalPaid">0.00</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="payment-stat-card warning">
+            <h5><i class="fas fa-hourglass-half me-2"></i>@Localize("Partially Paid")</h5>
+            <div class="amount" id="partiallyPaid">0</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="payment-stat-card danger">
+            <h5><i class="fas fa-exclamation-circle me-2"></i>@Localize("Unpaid")</h5>
+            <div class="amount" id="unpaidCount">0</div>
+        </div>
+    </div>
+</div>

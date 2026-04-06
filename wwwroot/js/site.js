@@ -1,4 +1,4 @@
-﻿// Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
+// Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
 // for details on configuring this project to bundle and minify static web assets.
 
 // Write your JavaScript code.
@@ -37,9 +37,19 @@ function getNumber(num) {
 }
 
 function getLocaleNumber(num) {
-    var res = num.toString().replace(/(?!-)[^0-9]/g, '.');
-
-    return Number(res);
+    if (num === null || num === undefined || num === '') return 0;
+    // Remove everything EXCEPT digits, dots, and minus signs.
+    var res = num.toString().trim().replace(/(?!-)[^0-9.]/g, ''); 
+    
+    // If there are multiple dots (e.g. 1.234.56 from thousand separator replacement),
+    // keep only the last one as the decimal separator.
+    if (res.split('.').length > 2) {
+        let parts = res.split('.');
+        let last = parts.pop();
+        res = parts.join('') + '.' + last;
+    }
+    
+    return parseFloat(res) || 0;
 }
 
 /* Toaster Message */
