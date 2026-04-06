@@ -1711,23 +1711,8 @@ namespace Saffrat.Controllers
                 html = LTRInvoice(order, lang.Id);
             }
 
-            // convert html to pdf by using dinktopdf library
-            var doc = new HtmlToPdfDocument()
-            {
-                GlobalSettings = {
-                    ColorMode = ColorMode.Color,
-                    Orientation = Orientation.Portrait,
-                    PaperSize = new PechkinPaperSize("88mm", "250mm"),
-                },
-                Objects = {
-                    new ObjectSettings() {
-                        HtmlContent = html,
-                    }
-                }
-            };
-
-            byte[] pdf = _converter.Convert(doc);
-            return new FileContentResult(pdf, "application/pdf");
+            html += "<script>window.onload = function() { window.print(); }</script>";
+            return Content(html, "text/html");
         }
 
         // Return Left To Right Order Invoice in html format
@@ -1833,7 +1818,9 @@ td, th { padding: 4px 0; text-align: left; vertical-align: top; font-size: 12px;
             var host = HttpContext.Request.Host;
             using (MemoryStream memoryStream = new())
             {
-                html = html.Replace("{Logo}", String.Format("https://{0}{1}", host, logoUrl));
+                var protocol = HttpContext.Request.Scheme;
+                var finalLogoUrl = logoUrl.StartsWith("/") ? logoUrl : "/" + logoUrl;
+                html = html.Replace("{Logo}", $"{protocol}://{host}{finalLogoUrl}");
                 html = html.Replace("{CompanyTaxNumber}", GetSetting.CompanyTaxNum);
                 html = html.Replace("{CompanyName}", GetSetting.CompanyName);
                 html = html.Replace("{CompanyEmail}", GetSetting.CompanyEmail);
@@ -1994,7 +1981,9 @@ td, th { padding: 4px 0; text-align: right; vertical-align: top; font-size: 12px
             var host = HttpContext.Request.Host;
             using (MemoryStream memoryStream = new())
             {
-                html = html.Replace("{Logo}", String.Format("https://{0}{1}", host, logoUrl));
+                var protocol = HttpContext.Request.Scheme;
+                var finalLogoUrl = logoUrl.StartsWith("/") ? logoUrl : "/" + logoUrl;
+                html = html.Replace("{Logo}", $"{protocol}://{host}{finalLogoUrl}");
                 html = html.Replace("{CompanyTaxNumber}", GetSetting.CompanyTaxNum);
                 html = html.Replace("{CompanyName}", GetSetting.CompanyName);
                 html = html.Replace("{CompanyEmail}", GetSetting.CompanyEmail);
