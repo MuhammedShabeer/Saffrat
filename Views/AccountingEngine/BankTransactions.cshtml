@@ -57,22 +57,22 @@
                                         <td>@journal.EntryDate.ToShortDateString()</td>
                                         <td>@journal.ReferenceNumber</td>
                                         <td>@entry.GLAccount.AccountName</td>
-                                        <td>
+                                        <td class="text-center">
                                             @if (entry.Debit > 0)
                                             {
-                                                <span class="badge badge-light-success">@Localize("Inflow")</span>
+                                                <span class="badge bg-light-success text-success border">@Localize("Inflow")</span>
                                             }
                                             else
                                             {
-                                                <span class="badge badge-light-danger">@Localize("Outflow")</span>
+                                                <span class="badge bg-light-danger text-danger border">@Localize("Outflow")</span>
                                             }
                                         </td>
                                         <td>@entry.Description</td>
                                         <td>@entry.Debit.ToString("N2")</td>
                                         <td>@entry.Credit.ToString("N2")</td>
-                                        <td>
-                                            <a href="/AccountingEngine/JournalEntries?search=@journal.ReferenceNumber" class="btn btn-info btn-sm">
-                                                <i class="feather icon-eye"></i>
+                                        <td class="text-center">
+                                            <a href="/AccountingEngine/JournalEntries?search=@journal.ReferenceNumber" class="btn btn-sm btn-info text-white" title="View Journal">
+                                                <i class="fa fa-eye"></i>
                                             </a>
                                         </td>
                                     </tr>

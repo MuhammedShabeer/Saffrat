@@ -72,8 +72,8 @@
                                         <td class="text-end">@(entry.Debit > 0 ? entry.Debit.ToString("N2") : "-")</td>
                                         <td class="text-end">@(entry.Credit > 0 ? entry.Credit.ToString("N2") : "-")</td>
                                         <td class="text-center">
-                                            <a href="/AccountingEngine/JournalEntries?search=@journal.ReferenceNumber" class="btn btn-link btn-sm" title="View Journal">
-                                                <i class="feather icon-eye"></i>
+                                            <a href="/AccountingEngine/JournalEntries?search=@journal.ReferenceNumber" class="btn btn-sm btn-info text-white" title="View Journal">
+                                                <i class="fa fa-eye"></i>
                                             </a>
                                         </td>
                                     </tr>

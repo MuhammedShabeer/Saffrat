@@ -6,6 +6,11 @@ namespace Saffrat.ViewModels
 {
     public class BulkEntryRow
     {
+        public BulkEntryRow()
+        {
+            EntryDate = DateTime.Today;
+        }
+
         public DateTime EntryDate { get; set; }
         public string ReferenceNumber { get; set; }
         public int BankAccountId { get; set; }

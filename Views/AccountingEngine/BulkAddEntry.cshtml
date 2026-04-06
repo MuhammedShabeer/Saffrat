@@ -133,7 +133,11 @@
             $('#btnAddRow').on('click', function () {
                 var newRow = $('#bulkTable tbody tr:first').clone();
                 newRow.find('input').val('');
-                newRow.find('input[type="date"]').val('@DateTime.Today.ToString("yyyy-MM-dd")');
+                
+                // Set default date to today
+                var today = new Date().toISOString().split('T')[0];
+                newRow.find('input[type="date"]').val(today);
+                
                 newRow.find('select').val('');
                 newRow.find('.select2-container').remove();
                 newRow.find('.select2').removeClass('select2-hidden-accessible').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
