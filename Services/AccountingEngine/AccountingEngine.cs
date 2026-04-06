@@ -120,11 +120,12 @@ namespace Saffrat.Services.AccountingEngine
         /// </summary>
         public async Task<BalanceSheetReport> GenerateBalanceSheetAsync(DateTime asOfDate)
         {
+            var endOfAsOfDate = new DateTime(asOfDate.Year, asOfDate.Month, asOfDate.Day, 23, 59, 59, 999);
             var report = new BalanceSheetReport { AsOfDate = asOfDate };
 
             var actualBalances = await _dbContext.Set<LedgerEntry>()
                 .Include(l => l.GLAccount)
-                .Where(l => l.JournalEntry.EntryDate <= asOfDate && l.JournalEntry.IsPosted)
+                .Where(l => l.JournalEntry.EntryDate <= endOfAsOfDate && l.JournalEntry.IsPosted)
                 .GroupBy(l => new { l.GLAccount.Type, l.GLAccount.Category })
                 .Select(g => new
                 {
@@ -166,13 +167,15 @@ namespace Saffrat.Services.AccountingEngine
         /// </summary>
         public async Task<ProfitAndLossReport> GenerateProfitAndLossAsync(DateTime startDate, DateTime endDate)
         {
+            var from = new DateTime(startDate.Year, startDate.Month, startDate.Day, 0, 0, 0);
+            var to = new DateTime(endDate.Year, endDate.Month, endDate.Day, 23, 59, 59, 999);
             var report = new ProfitAndLossReport { StartDate = startDate, EndDate = endDate };
 
             var incomeStmtEntries = await _dbContext.Set<LedgerEntry>()
                 .Include(l => l.GLAccount)
                 .Where(l => (l.GLAccount.Category == (int)AccountCategory.Revenue || l.GLAccount.Category == (int)AccountCategory.Expense)
-                            && l.JournalEntry.EntryDate >= startDate
-                            && l.JournalEntry.EntryDate <= endDate
+                            && l.JournalEntry.EntryDate >= from
+                            && l.JournalEntry.EntryDate <= to
                             && l.JournalEntry.IsPosted)
                 .GroupBy(l => new { l.GLAccount.AccountName, l.GLAccount.Category })
                 .Select(g => new

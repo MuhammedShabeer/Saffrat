@@ -155,34 +155,37 @@
     </div>
 </div>
 
-<!-- Modal for detailed statement -->
-<div class="modal fade" id="statementModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered shadow">
-        <div class="modal-content border-0" id="statementModalContent">
-            <div class="modal-body text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+@section models {
+    <!-- Modal for detailed statement -->
+    <div class="modal fade" id="statementModal" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0" id="statementModalContent" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="mt-2 text-muted">@Localize("Loading detailed statement...")</div>
                 </div>
-                <div class="mt-2">@Localize("Loading detailed statement...")</div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal for source document details (POS items, etc.) -->
-<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered shadow">
-        <div class="modal-content border-0">
-            <div class="modal-header bg-dark text-white py-2">
-                <h5 class="modal-title fw-bold" id="detailModalTitle">@Localize("Document Vision")</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0" id="detailModalBody">
-                <!-- Content loaded via Ajax -->
+    <!-- Modal for source document -->
+    <div class="modal fade" id="detailModal" tabindex="-1" role="dialog" data-bs-backdrop="static" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header border-bottom py-2">
+                    <h5 class="modal-title fw-bold" id="detailModalTitle">@Localize("Document Vision")</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0" id="detailModalBody">
+                    <!-- Content loaded via Ajax -->
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
+
 
 <style>
     .show-account-details:hover { text-decoration: underline !important; color: #0056b3 !important; }

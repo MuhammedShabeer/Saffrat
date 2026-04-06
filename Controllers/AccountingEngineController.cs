@@ -196,8 +196,8 @@ namespace Saffrat.Controllers
         public async Task<IActionResult> JournalEntries(DateTime? start, DateTime? end, int? accountId, string search)
         {
             var now = CurrentDateTime();
-            var startDate = start ?? new DateTime(now.Year, now.Month, 1);
-            var endDate = end ?? now;
+            var startDate = StartOfDay(start ?? new DateTime(now.Year, now.Month, 1));
+            var endDate = EndOfDay(end ?? now);
 
             var matchingReferenceNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -306,7 +306,7 @@ namespace Saffrat.Controllers
         [HttpGet]
         public async Task<IActionResult> BalanceSheet(DateTime? asOfDate)
         {
-            var date = asOfDate ?? CurrentDateTime();
+            var date = EndOfDay(asOfDate ?? CurrentDateTime());
             ViewBag.Date = date.ToString("yyyy-MM-dd");
             var report = await _accountingEngine.GenerateBalanceSheetAsync(date);
             return View(report);
@@ -316,8 +316,8 @@ namespace Saffrat.Controllers
         public async Task<IActionResult> ProfitAndLoss(DateTime? start, DateTime? end)
         {
             var now = CurrentDateTime();
-            var startDate = start ?? new DateTime(now.Year, now.Month, 1);
-            var endDate = end ?? now;
+            var startDate = StartOfDay(start ?? new DateTime(now.Year, now.Month, 1));
+            var endDate = EndOfDay(end ?? now);
             ViewBag.Start = startDate.ToString("yyyy-MM-dd");
             ViewBag.End = endDate.ToString("yyyy-MM-dd");
 
@@ -1063,8 +1063,8 @@ namespace Saffrat.Controllers
             {
                 Accounts = await _dbContext.Set<GLAccount>().Where(a => a.IsActive).OrderBy(a => a.AccountCode).ToListAsync(),
                 SelectedAccountId = accountId,
-                StartDate = startDate ?? new DateTime(_dateTimeService.Now().Year, _dateTimeService.Now().Month, 1),
-                EndDate = endDate ?? _dateTimeService.Now(),
+                StartDate = StartOfDay(startDate ?? new DateTime(_dateTimeService.Now().Year, _dateTimeService.Now().Month, 1)),
+                EndDate = EndOfDay(endDate ?? _dateTimeService.Now()),
                 Search = search
             };
 

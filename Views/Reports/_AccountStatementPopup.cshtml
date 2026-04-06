@@ -12,37 +12,48 @@
     }
 }
 
-<div class="modal-header bg-primary text-white py-3">
+<div class="modal-header border-bottom py-3">
     <h5 class="modal-title fw-bold">
-        <i class="fa fa-file-invoice me-2"></i>
-        @ViewBag.AccountName (@ViewBag.AccountCode) - @Localize("Detailed Statement")
+        <i class="fa fa-book me-2 text-primary"></i>
+        @ViewBag.AccountName (@ViewBag.AccountCode) - @Localize("Account Statement")
     </h5>
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
-<div class="modal-body p-0">
-    <div class="bg-light p-3 border-bottom d-flex justify-content-between align-items-center">
-        <div>
-            <span class="text-muted small text-uppercase fw-bold">@Localize("Period")</span>
-            <div class="fw-bold fs-6">@Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
+
+<div class="p-4 bg-light border-bottom">
+    <div class="row gx-5">
+        <div class="col-md-5">
+            <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Period")</label>
+            <div class="h6 mb-0 fw-bold">@Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
         </div>
-        <div class="text-end">
-            <span class="text-muted small text-uppercase fw-bold">@Localize("Opening Balance")</span>
-            <div class="fw-bold fs-6 text-primary">@GetCurrency(Math.Abs(Model.OpeningBalance)) @GetBalanceLabel(Model.OpeningBalance)</div>
+        <div class="col-md-7 border-start">
+            <div class="row">
+                <div class="col-6">
+                    <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Opening Balance")</label>
+                    <div class="h6 mb-0 fw-bold text-primary">@GetCurrency(Math.Abs(Model.OpeningBalance)) @GetBalanceLabel(Model.OpeningBalance)</div>
+                </div>
+                <div class="col-6">
+                    <label class="text-muted small text-uppercase fw-bold mb-1">@Localize("Reference Type")</label>
+                    <div class="h6 mb-0 small text-muted">@Localize("Drill-down Statement")</div>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-        <table class="table table-sm table-hover table-striped align-middle mb-0">
-            <thead class="bg-light sticky-top shadow-sm small fw-bold">
+<div class="modal-body p-0">
+    <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light sticky-top shadow-sm text-uppercase small">
                 <tr>
-                    <th class="ps-3 py-2">@Localize("Date")</th>
+                    <th class="ps-4 py-2">@Localize("Date")</th>
                     <th class="py-2">@Localize("Reference")</th>
                     <th class="py-2">@Localize("Description")</th>
-                    <th class="py-2">@Localize("Offset Account")</th>
+                    <th class="py-2">@Localize("Offset")</th>
                     <th class="text-end py-2">@Localize("Debit")</th>
                     <th class="text-end py-2">@Localize("Credit")</th>
-                    <th class="text-end pe-3 py-2">@Localize("Balance")</th>
-                    <th class="text-center py-2">@Localize("Action")</th>
+                    <th class="text-end pe-4 py-2">@Localize("Balance")</th>
+                    <th class="text-center py-2 notexport">@Localize("View")</th>
                 </tr>
             </thead>
             <tbody>
@@ -50,22 +61,22 @@
                 {
                     @foreach (var row in Model.Transactions)
                     {
-                        <tr class="small">
-                            <td class="ps-3">@row.Date.ToString("yyyy-MM-dd")</td>
-                            <td class="fw-bold text-nowrap">@row.Reference</td>
-                            <td class="text-wrap" style="max-width: 150px;">@row.Description</td>
-                            <td class="text-muted">@row.OffsetAccountName</td>
-                            <td class="text-end text-success">@(row.Debit > 0 ? GetCurrency(row.Debit) : "-")</td>
-                            <td class="text-end text-danger">@(row.Credit > 0 ? GetCurrency(row.Credit) : "-")</td>
-                            <td class="text-end pe-3 fw-bold">@GetCurrency(Math.Abs(row.RunningBalance)) @GetBalanceLabel(row.RunningBalance)</td>
+                        <tr>
+                            <td class="ps-4 small">@row.Date.ToString("yyyy-MM-dd")</td>
+                            <td class="fw-bold small text-nowrap">@row.Reference</td>
+                            <td class="text-wrap small" style="max-width: 200px;">@row.Description</td>
+                            <td class="text-muted small">@row.OffsetAccountName</td>
+                            <td class="text-end text-success small">@(row.Debit > 0 ? GetCurrency(row.Debit) : "-")</td>
+                            <td class="text-end text-danger small">@(row.Credit > 0 ? GetCurrency(row.Credit) : "-")</td>
+                            <td class="text-end pe-4 fw-bold small">@GetCurrency(Math.Abs(row.RunningBalance)) @GetBalanceLabel(row.RunningBalance)</td>
                             <td class="text-center">
                                 @if (row.SourceDocumentId > 0)
                                 {
-                                    <button class="btn btn-sm btn-outline-primary py-0 px-2 view-source-doc" 
+                                    <button class="btn btn-sm btn-light py-0 px-2 view-source-doc border" 
                                             data-type="@row.SourceDocumentType" 
                                             data-id="@row.SourceDocumentId" 
-                                            title="@Localize("View Detailed Vision")">
-                                        <i class="fa fa-eye"></i>
+                                            title="@Localize("Detailed Vision")">
+                                        <i class="fa fa-eye text-primary"></i>
                                     </button>
                                 }
                             </td>
@@ -75,19 +86,22 @@
                 else
                 {
                     <tr>
-                        <td colspan="6" class="text-center py-4 text-muted small">@Localize("No transactions found in this period.")</td>
+                        <td colspan="8" class="text-center py-4 text-muted small">@Localize("No transactions found.")</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
 </div>
-<div class="modal-footer bg-light py-3 border-top d-flex justify-content-between">
-    <div class="text-start">
-        <span class="text-muted small text-uppercase fw-bold d-block">@Localize("Closing Balance")</span>
-        <span class="h5 fw-bold text-primary mb-0">@GetCurrency(Math.Abs(Model.ClosingBalance)) @GetBalanceLabel(Model.ClosingBalance)</span>
+
+<div class="modal-footer bg-light py-2 border-top d-flex justify-content-between">
+    <div class="ps-3 text-start">
+        <span class="text-muted small text-uppercase fw-bold">@Localize("Closing Balance")</span>
+        <span class="fw-bold text-primary d-block">@GetCurrency(Math.Abs(Model.ClosingBalance)) @GetBalanceLabel(Model.ClosingBalance)</span>
     </div>
-    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">@Localize("Close")</button>
+    <div class="pe-3">
+        <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">@Localize("Close")</button>
+    </div>
 </div>
 
 <script>
@@ -95,44 +109,40 @@
         var type = $(this).data('type');
         var id = $(this).data('id');
         
-        $('#detailModalBody').html('<div class="text-center py-5"><div class="spinner-border text-dark"></div></div>');
+        $('#detailModalBody').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
         $('#detailModal').modal('show');
 
         $.get('@Url.Action("GetSourceDocumentDetails", "AccountingEngine")', { type: type, id: id }, function(res) {
             if (res.status === 'success') {
                 var html = '<div class="p-4">';
-                html += '<div class="d-flex justify-content-between mb-4 border-bottom pb-2">';
-                html += '<div><span class="text-muted small">TYPE</span><br/><strong>' + res.type + '</strong></div>';
+                html += '<div class="row g-3 mb-4 border-bottom pb-3">';
+                html += '<div class="col-6"><span class="text-muted small text-uppercase d-block">Document Type</span><strong>' + res.type + '</strong></div>';
                 
                 if (res.type === 'POS Order') {
-                    html += '<div><span class="text-muted small">CUSTOMER</span><br/><strong>' + (res.data.customerName || 'Walk-in') + '</strong></div>';
-                    html += '<div><span class="text-muted small">TOTAL</span><br/><strong>' + res.data.total.toFixed(2) + '</strong></div>';
+                    html += '<div class="col-6 text-end"><span class="text-muted small text-uppercase d-block">Customer</span><strong>' + (res.data.customerName || 'Walk-in') + '</strong></div>';
                 } else if (res.type === 'Purchase') {
-                    html += '<div><span class="text-muted small">SUPPLIER</span><br/><strong>' + res.data.supplierName + '</strong></div>';
-                    html += '<div><span class="text-muted small">INVOICE</span><br/><strong>' + res.data.invoiceNo + '</strong></div>';
+                    html += '<div class="col-6 text-end"><span class="text-muted small text-uppercase d-block">Supplier</span><strong>' + res.data.supplierName + '</strong></div>';
                 } else if (res.type === 'Payroll') {
-                    html += '<div><span class="text-muted small">EMPLOYEE</span><br/><strong>' + res.data.employeeName + '</strong></div>';
-                    html += '<div><span class="text-muted small">PERIOD</span><br/><strong>' + res.data.period + '</strong></div>';
+                    html += '<div class="col-6 text-end"><span class="text-muted small text-uppercase d-block">Employee</span><strong>' + res.data.employeeName + '</strong></div>';
                 }
                 html += '</div>';
 
                 // Items Table
-                html += '<table class="table table-sm table-bordered">';
-                html += '<thead class="bg-light text-uppercase small"><tr><th>Item/Title</th><th class="text-center">Qty/Type</th><th class="text-end">Price/Amt</th><th class="text-end">Total</th></tr></thead><tbody>';
+                html += '<table class="table table-sm table-hover align-middle border">';
+                html += '<thead class="bg-light text-uppercase small"><tr><th class="ps-3">Item/Title</th><th class="text-center">Qty/Type</th><th class="text-end pe-3">Amount</th></tr></thead><tbody>';
                 
                 var items = res.data.items || res.data.details;
                 items.forEach(function(item) {
                     html += '<tr>';
-                    html += '<td>' + (item.itemName || item.title) + '</td>';
+                    html += '<td class="ps-3">' + (item.itemName || item.title) + '</td>';
                     html += '<td class="text-center">' + (item.quantity !== undefined ? item.quantity : (item.amountType || '-')) + '</td>';
-                    html += '<td class="text-end">' + (item.price || item.purchasePrice || item.amount || 0).toFixed(2) + '</td>';
-                    html += '<td class="text-end">' + (item.total || item.amount || 0).toFixed(2) + '</td>';
+                    html += '<td class="text-end pe-3"><strong>' + (item.total || item.amount || 0).toFixed(2) + '</strong></td>';
                     html += '</tr>';
                 });
                 html += '</tbody></table></div>';
                 
                 $('#detailModalBody').html(html);
-                $('#detailModalTitle').text(res.type + ' Detailed Vision');
+                $('#detailModalTitle').html('<i class="fa fa-eye me-2"></i> ' + res.type + ' Detailed Vision');
             } else {
                 $('#detailModalBody').html('<div class="alert alert-danger m-3">' + res.message + '</div>');
             }

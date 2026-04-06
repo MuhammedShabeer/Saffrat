@@ -41,8 +41,10 @@ namespace Saffrat.Controllers
 
         [HttpGet]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> GetAccountStatement(int accountId, DateTime start, DateTime end)
+        public async Task<IActionResult> GetAccountStatement(int accountId, DateTime? start, DateTime? end)
         {
+            var from = StartOfDay(start);
+            var to = EndOfDay(end);
             var account = await _dbContext.GLAccounts.FirstOrDefaultAsync(a => a.Id == accountId);
             if (account == null) return NotFound();
 
@@ -62,7 +64,7 @@ namespace Saffrat.Controllers
 
             // Transactions within period
             var transactions = ledgerEntries
-                .Where(l => l.JournalEntry.EntryDate >= start && l.JournalEntry.EntryDate <= end)
+                .Where(l => l.JournalEntry.EntryDate >= from && l.JournalEntry.EntryDate <= to)
                 .OrderBy(l => l.JournalEntry.EntryDate).ThenBy(l => l.JournalEntryId).ToList();
 
             var journalIds = transactions.Select(t => t.JournalEntryId).Distinct().ToList();
@@ -74,8 +76,8 @@ namespace Saffrat.Controllers
             var model = new StatementOfAccountsVM
             {
                 SelectedAccountId = accountId,
-                StartDate = start,
-                EndDate = end,
+                StartDate = from,
+                EndDate = to,
                 OpeningBalance = openingBalance
             };
 
