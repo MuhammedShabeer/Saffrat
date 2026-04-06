@@ -89,18 +89,25 @@
                             <thead class="bg-primary text-white">
                                 <tr>
                                     <th>@Localize("Particulars")</th>
-                                    <th class="text-end">@Localize("Debit")</th>
-                                    <th class="text-end">@Localize("Credit")</th>
+                                    <th class="text-end">@Localize("Opening Balance")</th>
+                                    <th class="text-end">@Localize("Debit (Period)")</th>
+                                    <th class="text-end">@Localize("Credit (Period)")</th>
+                                    <th class="text-end">@Localize("Closing Balance")</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var group in groups)
                                 {
                                     <tr class="table-secondary">
-                                        <td colspan="3"><strong>@group.Key</strong></td>
+                                        <td class="bg-light"><strong>@group.Key</strong></td>
+                                        <td class="bg-light"></td>
+                                        <td class="bg-light"></td>
+                                        <td class="bg-light"></td>
+                                        <td class="bg-light"></td>
                                     </tr>
                                     @foreach (var account in group)
                                     {
+                                        bool isDebitNormal = (account.Category == 0 || account.Category == 4);
                                         <tr>
                                             <td class="ps-4">
                                                 <a href="javascript:void(0)" class="text-primary fw-bold show-account-details" 
@@ -109,22 +116,34 @@
                                                     @account.AccountName
                                                 </a>
                                             </td>
-                                            <td class="text-end">@account.TotalDebit.ToString("0.00")</td>
-                                            <td class="text-end">@account.TotalCredit.ToString("0.00")</td>
+                                            <td class="text-end">
+                                                @Math.Abs(account.OpeningBalance).ToString("N2")
+                                                <small class="text-muted">@(account.OpeningBalance >= 0 ? (isDebitNormal ? "DR" : "CR") : (isDebitNormal ? "CR" : "DR"))</small>
+                                            </td>
+                                            <td class="text-end text-success">@account.TotalDebit.ToString("N2")</td>
+                                            <td class="text-end text-danger">@account.TotalCredit.ToString("N2")</td>
+                                            <td class="text-end fw-bold">
+                                                @Math.Abs(account.ClosingBalance).ToString("N2")
+                                                <small class="text-primary">@(account.ClosingBalance >= 0 ? (isDebitNormal ? "DR" : "CR") : (isDebitNormal ? "CR" : "DR"))</small>
+                                            </td>
                                         </tr>
                                     }
                                     <tr class="table-light">
                                         <td class="text-end"><strong>Total @group.Key:</strong></td>
-                                        <td class="text-end"><strong>@group.Sum(x => x.TotalDebit).ToString("0.00")</strong></td>
-                                        <td class="text-end"><strong>@group.Sum(x => x.TotalCredit).ToString("0.00")</strong></td>
+                                        <td class="text-end"><strong>@group.Sum(x => x.OpeningBalance).ToString("N2")</strong></td>
+                                        <td class="text-end"><strong>@group.Sum(x => x.TotalDebit).ToString("N2")</strong></td>
+                                        <td class="text-end"><strong>@group.Sum(x => x.TotalCredit).ToString("N2")</strong></td>
+                                        <td class="text-end"><strong>@group.Sum(x => x.ClosingBalance).ToString("N2")</strong></td>
                                     </tr>
                                 }
                             </tbody>
                             <tfoot>
                                 <tr class="bg-primary text-white font-weight-bold">
                                     <th class="text-end text-white">@Localize("Grand Total")</th>
-                                    <th class="text-end text-white">@gTotalDebit.ToString("0.00")</th>
-                                    <th class="text-end text-white">@gTotalCredit.ToString("0.00")</th>
+                                    <th class="text-end text-white">@Model.Sum(x => x.OpeningBalance).ToString("N2")</th>
+                                    <th class="text-end text-white">@Model.Sum(x => x.TotalDebit).ToString("N2")</th>
+                                    <th class="text-end text-white">@Model.Sum(x => x.TotalCredit).ToString("N2")</th>
+                                    <th class="text-end text-white">@Model.Sum(x => x.ClosingBalance).ToString("N2")</th>
                                 </tr>
                             </tfoot>
                         </table>
@@ -145,6 +164,21 @@
                     <span class="visually-hidden">Loading...</span>
                 </div>
                 <div class="mt-2">@Localize("Loading detailed statement...")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for source document details (POS items, etc.) -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered shadow">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-dark text-white py-2">
+                <h5 class="modal-title fw-bold" id="detailModalTitle">@Localize("Document Vision")</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" id="detailModalBody">
+                <!-- Content loaded via Ajax -->
             </div>
         </div>
     </div>

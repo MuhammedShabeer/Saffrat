@@ -46,25 +46,30 @@ namespace Saffrat.Controllers
             var account = await _dbContext.GLAccounts.FirstOrDefaultAsync(a => a.Id == accountId);
             if (account == null) return NotFound();
 
-            var ledgerQuery = _dbContext.LedgerEntries
+            var ledgerEntries = await _dbContext.LedgerEntries
                 .Include(l => l.JournalEntry)
                 .Include(l => l.GLAccount)
-                .Where(l => l.JournalEntry.IsPosted && l.GLAccountId == accountId);
+                .Where(l => l.JournalEntry.IsPosted && l.GLAccountId == accountId)
+                .ToListAsync();
 
-            // Opening Balance Calculation
-            var openingEntries = await ledgerQuery
-                .Where(l => l.JournalEntry.EntryDate < start)
-                .Select(l => new { l.Debit, l.Credit }).ToListAsync();
+            // Opening Balance Calculation (all history before 'start')
+            var openingEntries = ledgerEntries.Where(l => l.JournalEntry.EntryDate < start).ToList();
 
             bool isDebitAccount = account.Category == (int)AccountCategory.Asset || account.Category == (int)AccountCategory.Expense;
             decimal openingBalance = isDebitAccount
                 ? openingEntries.Sum(e => e.Debit - e.Credit)
                 : openingEntries.Sum(e => e.Credit - e.Debit);
 
-            // Fetch Transactions within the period
-            var transactions = await ledgerQuery
+            // Transactions within period
+            var transactions = ledgerEntries
                 .Where(l => l.JournalEntry.EntryDate >= start && l.JournalEntry.EntryDate <= end)
-                .OrderBy(l => l.JournalEntry.EntryDate).ThenBy(l => l.JournalEntryId).ToListAsync();
+                .OrderBy(l => l.JournalEntry.EntryDate).ThenBy(l => l.JournalEntryId).ToList();
+
+            var journalIds = transactions.Select(t => t.JournalEntryId).Distinct().ToList();
+            var allJournalEntries = await _dbContext.LedgerEntries
+                .Include(le => le.GLAccount)
+                .Where(le => journalIds.Contains(le.JournalEntryId))
+                .ToListAsync();
 
             var model = new StatementOfAccountsVM
             {
@@ -78,6 +83,22 @@ namespace Saffrat.Controllers
             foreach (var trans in transactions)
             {
                 runningBal += isDebitAccount ? (trans.Debit - trans.Credit) : (trans.Credit - trans.Debit);
+                
+                // Detailed Vision: Resolve Offset Account
+                var otherEntries = allJournalEntries
+                    .Where(le => le.JournalEntryId == trans.JournalEntryId && le.Id != trans.Id)
+                    .ToList();
+                
+                string offset = "Multiple Accounts";
+                if (otherEntries.Count == 1)
+                {
+                    offset = otherEntries.First().GLAccount?.AccountName ?? "N/A";
+                }
+                else if (otherEntries.Count == 0)
+                {
+                    offset = "Self/Adjustment";
+                }
+
                 model.Transactions.Add(new StatementOfAccountRow
                 {
                     JournalEntryId = trans.JournalEntryId,
@@ -85,6 +106,7 @@ namespace Saffrat.Controllers
                     Reference = trans.JournalEntry.ReferenceNumber,
                     Description = trans.Description ?? trans.JournalEntry.Description,
                     AccountName = trans.GLAccount?.AccountName,
+                    OffsetAccountName = offset,
                     Debit = trans.Debit,
                     Credit = trans.Credit,
                     RunningBalance = runningBal,
@@ -461,28 +483,49 @@ namespace Saffrat.Controllers
             ViewBag.end = to.ToString("yyyy-MM-dd");
 
             var accounts = await _dbContext.GLAccounts.ToListAsync();
-            var ledgerEntries = await _dbContext.LedgerEntries
+            
+            // All posted entries for calculations
+            var allPostedEntries = await _dbContext.LedgerEntries
                 .Include(x => x.JournalEntry)
-                .Where(x => x.JournalEntry.EntryDate >= from && x.JournalEntry.EntryDate <= to)
+                .Where(x => x.JournalEntry.IsPosted)
                 .ToListAsync();
 
             var reportData = new List<Saffrat.ViewModels.TrialBalanceModel>();
 
             foreach (var account in accounts)
             {
-                var trans = ledgerEntries.Where(x => x.GLAccountId == account.Id).ToList();
-                var debit = trans.Sum(x => x.Debit);
-                var credit = trans.Sum(x => x.Credit);
+                var history = allPostedEntries.Where(x => x.GLAccountId == account.Id).ToList();
+                
+                // Normal Balance Logic: Assets (0) and Expenses (4) are Debit-normal
+                bool isDebitNormal = (account.Category == 0 || account.Category == 4);
 
-                if (debit > 0 || credit > 0)
+                // Opening Balance (before 'from')
+                var openingEntries = history.Where(x => x.JournalEntry.EntryDate < from).ToList();
+                decimal openingBalance = isDebitNormal
+                    ? openingEntries.Sum(x => x.Debit - x.Credit)
+                    : openingEntries.Sum(x => x.Credit - x.Debit);
+
+                // Period transactions
+                var periodEntries = history.Where(x => x.JournalEntry.EntryDate >= from && x.JournalEntry.EntryDate <= to).ToList();
+                decimal periodDebit = periodEntries.Sum(x => x.Debit);
+                decimal periodCredit = periodEntries.Sum(x => x.Credit);
+
+                // Closing Balance
+                decimal closingBalance = openingBalance + (isDebitNormal ? (periodDebit - periodCredit) : (periodCredit - periodDebit));
+
+                // Only show if there's any activity or balance
+                if (openingBalance != 0 || periodDebit != 0 || periodCredit != 0)
                 {
                     reportData.Add(new Saffrat.ViewModels.TrialBalanceModel
                     {
                         AccountId = Convert.ToInt32(account.Id),
                         AccountName = account.AccountName,
                         AccountGroup = ((AccountCategory)account.Category).ToString(),
-                        TotalDebit = debit,
-                        TotalCredit = credit
+                        Category = account.Category,
+                        OpeningBalance = openingBalance,
+                        TotalDebit = periodDebit,
+                        TotalCredit = periodCredit,
+                        ClosingBalance = closingBalance
                     });
                 }
             }

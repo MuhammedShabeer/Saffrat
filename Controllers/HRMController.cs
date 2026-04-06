@@ -974,16 +974,13 @@ namespace Saffrat.Controllers
 
                     foreach (var item in employees)
                     {
-                        var existing = _dbContext.Payrolls.Where(x => x.EmployeeId == item.Id && x.Month == month && x.Year == year).FirstOrDefault();
+                        var existing = await _dbContext.Payrolls
+                            .FirstOrDefaultAsync(x => x.EmployeeId == item.Id && x.Month == month && x.Year == year);
+
                         if (existing != null)
                         {
-                            var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id).ToList();
-                            foreach (var journal in existingJournals)
-                            {
-                                await _accountingEngine.ReverseJournalEntryAsync(journal.Id);
-                            }
-                            _dbContext.Payrolls.Remove(existing);
-                            await _dbContext.SaveChangesAsync();
+                            // User Request: If existing, do nothing
+                            continue;
                         }
 
                         var payroll = new Payroll()
@@ -1048,8 +1045,15 @@ namespace Saffrat.Controllers
                         }
                         payroll.NetSalary = netsalary;
                         payroll.RemainingBalance = netsalary;
+                        
+                        // Auto-Accrue in Accounting
+                        var accrual = await _accountingEngine.DraftPayrollJournalEntryAsync(payroll);
+                        _dbContext.JournalEntries.Add(accrual);
+                        await _dbContext.SaveChangesAsync(); // Save first to get real Id
+                        
+                        payroll.JournalEntryId = accrual.Id;
                         _dbContext.Payrolls.Update(payroll);
-                        _dbContext.SaveChanges();
+                        await _dbContext.SaveChangesAsync();
                     }
                     await transaction.CommitAsync();
                     return Json(new
@@ -1103,22 +1107,16 @@ namespace Saffrat.Controllers
                     if (employee == null) continue;
 
                     // Remove existing payroll for this month/year if any
-                    var existing = _dbContext.Payrolls.FirstOrDefault(x => 
-                        x.EmployeeId == data.EmployeeId && 
-                        x.Month == month && 
-                        x.Year == year);
+                    var existing = await _dbContext.Payrolls
+                        .FirstOrDefaultAsync(x => 
+                            x.EmployeeId == data.EmployeeId && 
+                            x.Month == month && 
+                            x.Year == year);
 
                     if (existing != null)
                     {
-                        var existingJournals = _dbContext.JournalEntries
-                            .Where(x => x.SourceDocumentType == "payroll" && x.SourceDocumentId == existing.Id)
-                            .ToList();
-                        foreach (var journal in existingJournals)
-                        {
-                            await _accountingEngine.ReverseJournalEntryAsync(journal.Id);
-                        }
-                        _dbContext.Payrolls.Remove(existing);
-                        await _dbContext.SaveChangesAsync();
+                        // User Request: If existing, do nothing
+                        continue;
                     }
 
                     // Create payroll with custom salary amount
@@ -1194,82 +1192,23 @@ namespace Saffrat.Controllers
                     }
 
                     payroll.NetSalary = netsalary;
+                    payroll.RemainingBalance = netsalary;
 
-                    // Validate and set remaining balance
-                    if (data.InitialPayingAmount > netsalary)
-                    {
-                        await transaction.RollbackAsync();
-                        return Json(new { status = "error", message = $"Initial payment amount cannot exceed net salary of {netsalary:C}" });
-                    }
+                    // 1. Auto-Accrue the Payroll
+                    var accrual = await _accountingEngine.DraftPayrollJournalEntryAsync(payroll);
+                    _dbContext.JournalEntries.Add(accrual);
+                    await _dbContext.SaveChangesAsync(); // Save first to get real Id
+                    
+                    payroll.JournalEntryId = accrual.Id;
 
-                    payroll.RemainingBalance = netsalary - data.InitialPayingAmount;
-
-                    // Update payment status based on initial payment amount
+                    // 2. Process Initial Payment if provided
                     if (data.InitialPayingAmount > 0)
                     {
                         if (data.InitialPayingAmount >= netsalary)
-                        {
                             payroll.PaymentStatus = "Paid";
-                        }
                         else
-                        {
                             payroll.PaymentStatus = "PartiallyPaid";
-                        }
 
-                        // NEW: Create Journal Entry for Initial Payment
-                        int salaryAccountId = 0;
-                        var salaryAccount = await _dbContext.GLAccounts.FirstOrDefaultAsync(x => x.AccountName == "Salaries" || (x.Category == (int)AccountCategory.Expense && x.Type == (int)AccountType.Labor));
-                        if (salaryAccount != null)
-                        {
-                            salaryAccountId = salaryAccount.Id;
-                        }
-                        else
-                        {
-                            var newExpAccount = new GLAccount
-                            {
-                                AccountCode = "5000",
-                                AccountName = "Salaries",
-                                Category = (int)AccountCategory.Expense,
-                                Type = (int)AccountType.Labor,
-                                CurrentBalance = 0,
-                                IsActive = true
-                            };
-                            _dbContext.GLAccounts.Add(newExpAccount);
-                            await _dbContext.SaveChangesAsync();
-                            salaryAccountId = newExpAccount.Id;
-                        }
-
-                        var initialPaymentJournal = new JournalEntry
-                        {
-                            ReferenceNumber = "PAYROLL-" + payroll.Id,
-                            Description = $"Initial Salary Payment - {payroll.Month}/{payroll.Year}",
-                            EntryDate = CurrentDateTime(),
-                            IsPosted = false,
-                            SourceDocumentType = "payroll",
-                            SourceDocumentId = payroll.Id,
-                            CreatedAt = CurrentDateTime(),
-                            LedgerEntries = new List<LedgerEntry>()
-                        };
-
-                        initialPaymentJournal.LedgerEntries.Add(new LedgerEntry
-                        {
-                            GLAccountId = salaryAccountId,
-                            Description = "Initial Salary Payment",
-                            Debit = data.InitialPayingAmount,
-                            Credit = 0
-                        });
-
-                        initialPaymentJournal.LedgerEntries.Add(new LedgerEntry
-                        {
-                            GLAccountId = glAccountId ?? Convert.ToInt32(GetSetting.PayrollAccount),
-                            Description = "Initial Salary Payment",
-                            Debit = 0,
-                            Credit = data.InitialPayingAmount
-                        });
-
-                        await _accountingEngine.PostJournalEntryAsync(initialPaymentJournal);
-
-                        // NEW: Create PayrollPayment record for history
                         var payment = new PayrollPayment
                         {
                             PayrollId = payroll.Id,
@@ -1277,13 +1216,25 @@ namespace Saffrat.Controllers
                             PaymentMethod = (await _dbContext.GLAccounts.FindAsync(glAccountId))?.AccountName ?? "Cash",
                             PaymentDate = CurrentDateTime(),
                             Notes = "Initial payment during generation",
-                            JournalEntryId = initialPaymentJournal.Id,
                             CreatedAt = CurrentDateTime()
                         };
                         _dbContext.PayrollPayments.Add(payment);
+                        await _dbContext.SaveChangesAsync();
+
+                        // 3. Record Payment in Accounting
+                        var paymentEntry = await _accountingEngine.RecordFlexiblePayrollPaymentAsync(payment, payroll, glAccountId);
+                        _dbContext.JournalEntries.Add(paymentEntry);
+                        await _dbContext.SaveChangesAsync(); // Save first to get real Id
                         
+                        payment.JournalEntryId = paymentEntry.Id;
+                        _dbContext.PayrollPayments.Update(payment);
+
                         payroll.TotalAmountPaid = data.InitialPayingAmount;
+                        payroll.RemainingBalance = netsalary - data.InitialPayingAmount;
                     }
+
+                    _dbContext.Payrolls.Update(payroll);
+                    await _dbContext.SaveChangesAsync();
 
                     _dbContext.Payrolls.Update(payroll);
                     await _dbContext.SaveChangesAsync();

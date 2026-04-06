@@ -28,5 +28,6 @@ namespace Saffrat.ViewModels
         public string SourceDocumentType { get; set; }
         public int? SourceDocumentId { get; set; }
         public string AccountName { get; set; }
+        public string OffsetAccountName { get; set; }
     }
 }

@@ -604,8 +604,17 @@ namespace Saffrat.Controllers
                 if (payroll == null)
                     return Json(new { status = "error", message = "Payroll not found." });
 
-                if (!payroll.JournalEntryId.HasValue)
-                    return Json(new { status = "error", message = "Payroll must be accrued before making payments." });
+                if (!payroll.JournalEntryId.HasValue || payroll.JournalEntryId == 0)
+                {
+                    // Auto-accrue on-the-fly if it was generated before this update
+                    var accrual = await _accountingEngine.DraftPayrollJournalEntryAsync(payroll);
+                    _dbContext.JournalEntries.Add(accrual);
+                    await _dbContext.SaveChangesAsync(); // Save first to get real Id
+                    
+                    payroll.JournalEntryId = accrual.Id;
+                    _dbContext.Payrolls.Update(payroll);
+                    await _dbContext.SaveChangesAsync();
+                }
 
                 if (amount <= 0)
                     return Json(new { status = "error", message = "Payment amount must be greater than 0." });

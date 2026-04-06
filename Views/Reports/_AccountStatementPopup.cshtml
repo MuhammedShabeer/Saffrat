@@ -38,9 +38,11 @@
                     <th class="ps-3 py-2">@Localize("Date")</th>
                     <th class="py-2">@Localize("Reference")</th>
                     <th class="py-2">@Localize("Description")</th>
+                    <th class="py-2">@Localize("Offset Account")</th>
                     <th class="text-end py-2">@Localize("Debit")</th>
                     <th class="text-end py-2">@Localize("Credit")</th>
                     <th class="text-end pe-3 py-2">@Localize("Balance")</th>
+                    <th class="text-center py-2">@Localize("Action")</th>
                 </tr>
             </thead>
             <tbody>
@@ -51,10 +53,22 @@
                         <tr class="small">
                             <td class="ps-3">@row.Date.ToString("yyyy-MM-dd")</td>
                             <td class="fw-bold text-nowrap">@row.Reference</td>
-                            <td class="text-wrap" style="max-width: 250px;">@row.Description</td>
+                            <td class="text-wrap" style="max-width: 150px;">@row.Description</td>
+                            <td class="text-muted">@row.OffsetAccountName</td>
                             <td class="text-end text-success">@(row.Debit > 0 ? GetCurrency(row.Debit) : "-")</td>
                             <td class="text-end text-danger">@(row.Credit > 0 ? GetCurrency(row.Credit) : "-")</td>
                             <td class="text-end pe-3 fw-bold">@GetCurrency(Math.Abs(row.RunningBalance)) @GetBalanceLabel(row.RunningBalance)</td>
+                            <td class="text-center">
+                                @if (row.SourceDocumentId > 0)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary py-0 px-2 view-source-doc" 
+                                            data-type="@row.SourceDocumentType" 
+                                            data-id="@row.SourceDocumentId" 
+                                            title="@Localize("View Detailed Vision")">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                }
+                            </td>
                         </tr>
                     }
                 }
@@ -75,3 +89,53 @@
     </div>
     <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">@Localize("Close")</button>
 </div>
+
+<script>
+    $('.view-source-doc').on('click', function() {
+        var type = $(this).data('type');
+        var id = $(this).data('id');
+        
+        $('#detailModalBody').html('<div class="text-center py-5"><div class="spinner-border text-dark"></div></div>');
+        $('#detailModal').modal('show');
+
+        $.get('@Url.Action("GetSourceDocumentDetails", "AccountingEngine")', { type: type, id: id }, function(res) {
+            if (res.status === 'success') {
+                var html = '<div class="p-4">';
+                html += '<div class="d-flex justify-content-between mb-4 border-bottom pb-2">';
+                html += '<div><span class="text-muted small">TYPE</span><br/><strong>' + res.type + '</strong></div>';
+                
+                if (res.type === 'POS Order') {
+                    html += '<div><span class="text-muted small">CUSTOMER</span><br/><strong>' + (res.data.customerName || 'Walk-in') + '</strong></div>';
+                    html += '<div><span class="text-muted small">TOTAL</span><br/><strong>' + res.data.total.toFixed(2) + '</strong></div>';
+                } else if (res.type === 'Purchase') {
+                    html += '<div><span class="text-muted small">SUPPLIER</span><br/><strong>' + res.data.supplierName + '</strong></div>';
+                    html += '<div><span class="text-muted small">INVOICE</span><br/><strong>' + res.data.invoiceNo + '</strong></div>';
+                } else if (res.type === 'Payroll') {
+                    html += '<div><span class="text-muted small">EMPLOYEE</span><br/><strong>' + res.data.employeeName + '</strong></div>';
+                    html += '<div><span class="text-muted small">PERIOD</span><br/><strong>' + res.data.period + '</strong></div>';
+                }
+                html += '</div>';
+
+                // Items Table
+                html += '<table class="table table-sm table-bordered">';
+                html += '<thead class="bg-light text-uppercase small"><tr><th>Item/Title</th><th class="text-center">Qty/Type</th><th class="text-end">Price/Amt</th><th class="text-end">Total</th></tr></thead><tbody>';
+                
+                var items = res.data.items || res.data.details;
+                items.forEach(function(item) {
+                    html += '<tr>';
+                    html += '<td>' + (item.itemName || item.title) + '</td>';
+                    html += '<td class="text-center">' + (item.quantity !== undefined ? item.quantity : (item.amountType || '-')) + '</td>';
+                    html += '<td class="text-end">' + (item.price || item.purchasePrice || item.amount || 0).toFixed(2) + '</td>';
+                    html += '<td class="text-end">' + (item.total || item.amount || 0).toFixed(2) + '</td>';
+                    html += '</tr>';
+                });
+                html += '</tbody></table></div>';
+                
+                $('#detailModalBody').html(html);
+                $('#detailModalTitle').text(res.type + ' Detailed Vision');
+            } else {
+                $('#detailModalBody').html('<div class="alert alert-danger m-3">' + res.message + '</div>');
+            }
+        });
+    });
+</script>
