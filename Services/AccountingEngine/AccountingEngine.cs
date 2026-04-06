@@ -27,6 +27,13 @@ namespace Saffrat.Services.AccountingEngine
             var startOfDay = new DateTime(closeDate.Year, closeDate.Month, closeDate.Day, 0, 0, 0);
             var endOfDay = startOfDay.AddDays(1).AddTicks(-1);
 
+            string refNo = $"DC-{closeDate:yyyyMMdd}";
+            var existing = await _dbContext.Set<JournalEntry>().AnyAsync(j => j.ReferenceNumber == refNo);
+            if (existing)
+            {
+                throw new Exception($"Daily Close has already been performed for {closeDate:yyyy-MM-dd}.");
+            }
+
             // Fetch raw operational data
             var dailyOrders = await _dbContext.Orders
                 .Where(o => o.CreatedAt >= startOfDay && o.CreatedAt <= endOfDay)
@@ -54,9 +61,9 @@ namespace Saffrat.Services.AccountingEngine
             // Create Master Journal
             var journalEntry = new JournalEntry
             {
-                ReferenceNumber = $"DC-{closeDate:yyyyMMdd}",
+                ReferenceNumber = refNo,
                 Description = $"Daily Close Summary for {closeDate:yyyy-MM-dd}",
-                EntryDate = closeDate,
+                EntryDate = closeDate.Date.Add(_dateTimeService.Now().TimeOfDay),
                 SourceDocumentType = "DailyClose",
                 IsPosted = false,
                 CreatedAt = _dateTimeService.Now(),
@@ -70,12 +77,21 @@ namespace Saffrat.Services.AccountingEngine
             int taxAccId = await GetOrCreateGLAccountAsync("Sales Tax", AccountType.OtherCurrentLiability, AccountCategory.Liability);
             int cogsAccId = await GetOrCreateGLAccountAsync("Cost of Goods Sold", AccountType.CostOfGoodsSold, AccountCategory.Expense);
             int invAccId = await GetOrCreateGLAccountAsync("Inventory", AccountType.Inventory, AccountCategory.Asset);
-            int defaultCashAccId = await GetOrCreateGLAccountAsync("Cash & Bank", AccountType.CashAndBank, AccountCategory.Asset);
+            
+            // Resolve Defaults by Flag
+            int defaultCashAccId = await GetOrCreateGLAccountByFlagAsync("Main Cash", true, false);
+            int defaultBankAccId = await GetOrCreateGLAccountByFlagAsync("Main Bank", false, true);
 
             // Debits: Cash/Bank accounts
             foreach (var pay in paymentsByAccount)
             {
-                int targetAccId = pay.GLAccountId ?? defaultCashAccId;
+                // Logic: 
+                // 1. Explicitly Linked?
+                // 2. Title contains "Bank"? Use defaultBankAccId
+                // 3. Fallback to defaultCashAccId
+                int targetAccId = pay.GLAccountId ?? 
+                                 ((pay.MethodTitle?.ToLower().Contains("bank") ?? false) ? defaultBankAccId : defaultCashAccId);
+
                 journalEntry.LedgerEntries.Add(new LedgerEntry 
                 { 
                     Description = $"Daily Register {pay.MethodTitle}", 
@@ -333,6 +349,28 @@ namespace Saffrat.Services.AccountingEngine
                     AccountName = defaultName,
                     Category = (int)category,
                     Type = (int)type,
+                    IsCash = (type == AccountType.CashAndBank),
+                    IsActive = true
+                };
+                _dbContext.Set<GLAccount>().Add(account);
+                await _dbContext.SaveChangesAsync();
+            }
+            return account.Id;
+        }
+
+        private async Task<int> GetOrCreateGLAccountByFlagAsync(string defaultName, bool isCash, bool isBank)
+        {
+            var account = await _dbContext.Set<GLAccount>().FirstOrDefaultAsync(a => (isCash && a.IsCash) || (isBank && a.IsBank));
+            if (account == null)
+            {
+                account = new GLAccount
+                {
+                    AccountCode = isCash ? "1010" : "1020",
+                    AccountName = defaultName,
+                    Category = (int)AccountCategory.Asset,
+                    Type = (int)AccountType.CashAndBank,
+                    IsCash = isCash,
+                    IsBank = isBank,
                     IsActive = true
                 };
                 _dbContext.Set<GLAccount>().Add(account);

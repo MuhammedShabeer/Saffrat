@@ -48,7 +48,7 @@ namespace Saffrat.Controllers
                 var prefix = sourceType == "Cash" ? "CASH-" : "BANK-";
                 var journal = new JournalEntry
                 {
-                    EntryDate = entryDate,
+                    EntryDate = entryDate.Date.Add(CurrentDateTime().TimeOfDay),
                     ReferenceNumber = prefix + (string.IsNullOrEmpty(referenceNumber) ? CurrentDateTime().Ticks.ToString().Substring(10) : referenceNumber),
                     Description = description ?? $"Manual {sourceType} {transactionType}",
                     SourceDocumentType = sourceType + "Entry",
@@ -153,14 +153,15 @@ namespace Saffrat.Controllers
                     if (entry.Amount <= 0 || entry.BankAccountId == 0 || entry.OffsetAccountId == 0) continue;
 
                     var prefix = model.SourceType == "Cash" ? "CASH-" : "BANK-";
+                    var now = CurrentDateTime();
                     var journal = new JournalEntry
                     {
-                        EntryDate = entry.EntryDate,
-                        ReferenceNumber = prefix + (string.IsNullOrEmpty(entry.ReferenceNumber) ? CurrentDateTime().Ticks.ToString().Substring(10) : entry.ReferenceNumber),
+                        EntryDate = entry.EntryDate.Date.Add(now.TimeOfDay),
+                        ReferenceNumber = prefix + (string.IsNullOrEmpty(entry.ReferenceNumber) ? now.Ticks.ToString().Substring(10) : entry.ReferenceNumber),
                         Description = entry.Description ?? $"Bulk {model.SourceType} {entry.TransactionType}",
                         SourceDocumentType = model.SourceType + "Entry",
                         SourceDocumentId = 0,
-                        CreatedAt = CurrentDateTime()
+                        CreatedAt = now
                     };
 
                     decimal bankDebit = entry.TransactionType == "Inflow" ? entry.Amount : 0;
@@ -502,6 +503,10 @@ namespace Saffrat.Controllers
             try
             {
                 var entry = await _accountingEngine.PerformDailyCloseAsync(closeDate);
+                if (entry == null)
+                {
+                    return Json(new { status = "error", message = "No orders found for this date." });
+                }
                 return Json(new { status = "success", message = "Daily Close Journal generated!" });
             }
             catch (Exception ex)
@@ -857,8 +862,10 @@ namespace Saffrat.Controllers
         {
             if (ModelState.IsValid)
             {
+                var now = CurrentDateTime();
+                entry.EntryDate = entry.EntryDate.Date.Add(now.TimeOfDay);
                 entry.SourceDocumentType = "ManualJournal";
-                entry.CreatedAt = CurrentDateTime();
+                entry.CreatedAt = now;
                 entry.IsPosted = false;
 
                 try
