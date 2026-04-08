@@ -1,4 +1,4 @@
-﻿@model Saffrat.Models.Customer
+@model Saffrat.Models.Customer
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -46,11 +46,19 @@
                             <input asp-for="Email" type="email" class="form-control">
                         </div>
                         <div class="col-md-6 form-group">
-                            <label class="control-label">@Localize("Phone Number") <code>*</code></label>
-                            <input asp-for="Phone" type="tel" class="form-control" required />
+                            <label class="control-label">@Localize("Phone") <code>*</code></label>
+                            <input asp-for="Phone" type="text" class="form-control" required />
                             <div class="invalid-feedback">
-                                @Localize("Please enter phone number.")
+                                @Localize("Please enter phone.")
                             </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Latitude")</label>
+                            <input asp-for="Latitude" type="text" class="form-control" />
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Longitude")</label>
+                            <input asp-for="Longitude" type="text" class="form-control" />
                         </div>
                     </div>
                     <div class="form-group">

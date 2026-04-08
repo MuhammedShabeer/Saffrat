@@ -84,7 +84,7 @@ namespace Saffrat.Controllers
             {
                 customer.UpdatedAt = CurrentDateTime();
                 customer.UpdatedBy = userName;
-                customer.Email = customer.Email.ToLower();
+                customer.Email = customer.Email?.ToLower();
 
                 try
                 {
@@ -119,7 +119,7 @@ namespace Saffrat.Controllers
             {
                 customer.UpdatedAt = CurrentDateTime();
                 customer.UpdatedBy = userName;
-                customer.Email = customer.Email.ToLower();
+                customer.Email = customer.Email?.ToLower();
 
                 try
                 {

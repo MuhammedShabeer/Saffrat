@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Saffrat.Models
@@ -20,6 +20,8 @@ namespace Saffrat.Models
         public string Phone { get; set; }
         [Required]
         public string Address { get; set; }
+        public string Latitude { get; set; }
+        public string Longitude { get; set; }
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

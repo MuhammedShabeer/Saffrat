@@ -216,6 +216,34 @@ namespace Saffrat.Controllers
 
         [HttpGet]
         [Authorize(Roles = "admin")]
+        public async Task<IActionResult> VanSaleReport(DateTime? start, DateTime? end, string driver)
+        {
+            DateTime from = StartOfDay(start);
+            DateTime to = EndOfDay(end);
+
+            ViewBag.start = from.ToString("yyyy-MM-dd");
+            ViewBag.end = to.ToString("yyyy-MM-dd");
+            ViewBag.driver = driver;
+
+            var query = _dbContext.Orders
+                .Include(x => x.Customer)
+                .Where(x => x.PriceType == "VanSale" && x.CreatedAt >= from && x.CreatedAt <= to);
+
+            if (!string.IsNullOrEmpty(driver))
+            {
+                query = query.Where(x => x.ClosedBy == driver);
+            }
+
+            var orders = await query.OrderByDescending(x => x.Id).ToListAsync();
+            
+            // Fetch potential drivers (Users with staff role)
+            ViewBag.drivers = await _dbContext.Users.ToListAsync();
+
+            return View(orders);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
         public IActionResult SaleSummaryReport(DateTime? start, DateTime? end)
         {
             DateTime from = StartOfDay(start);

@@ -32,5 +32,6 @@ namespace Saffrat.Models
         public DateTime? UpdatedAt { get; set; }
         public string PermittedPriceTypes { get; set; }
         public string PermittedOrderTypes { get; set; }
+        public int? VanCashAccountId { get; set; }
     }
 }

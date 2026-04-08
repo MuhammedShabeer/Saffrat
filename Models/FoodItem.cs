@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Saffrat.Models
@@ -28,6 +28,7 @@ namespace Saffrat.Models
         public string Image { get; set; }
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public string PermittedSalesTypes { get; set; }
 
         [JsonIgnore]
         public virtual FoodGroup Group { get; set; }

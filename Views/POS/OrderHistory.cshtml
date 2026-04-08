@@ -123,6 +123,7 @@
                                                     }
                                                     <a class="dropdown-item btn" href="javascript:void(0);" onclick="OpenModal(@item.Id);"><i class="fas fa-eye"></i> <span class="ml-2">@Localize("View")</span></a>
                                                     <a class="dropdown-item btn" href="javascript:void(0);" onclick="PrintFinalInvoice(@item.Id);"><i class="fas fa-print"></i> <span class="ml-2">@Localize("Print Invoice")</span></a>
+                                                    <a class="dropdown-item btn text-success" href="javascript:void(0);" onclick="PromptWhatsAppFromHistory(@item.Id, '@item.Customer.Phone', '@item.Customer.CustomerName', '@item.OrderGuid', @item.CustomerId);"><i class="fab fa-whatsapp"></i> <span class="ml-2">@Localize("Send WhatsApp")</span></a>
                                                     @if (User.IsInRole("admin"))
                                                     {
                                                         <a class="dropdown-item btn" href="javascript:void(0);" onclick="Delete(@item.Id);"><i class="fas fa-trash"></i> <span class="ml-2">@Localize("Delete")</span></a>
@@ -240,6 +241,7 @@
 }
 
 @section scripts{
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $("#status").val('@ViewBag.status');
 
@@ -571,6 +573,54 @@
             var strWindowFeatures = "location=yes,height=570,width=520,scrollbars=yes,status=yes";
             var link = "/POS/PrintFinalInvoice/" + id;
             var win = window.open(link, "_blank", strWindowFeatures);
+        }
+
+        function PromptWhatsAppFromHistory(orderId, phone, name, guid, custId) {
+            var defaultCust = parseInt('@GetSetting.DefaultCustomer');
+            
+            if (custId == defaultCust || !phone || phone == 'null' || phone == '') {
+                // Prompt for number
+                Swal.fire({
+                    title: '@Localize("Enter WhatsApp Number")',
+                    input: 'tel',
+                    inputLabel: '@Localize("Enter the customer phone number (with country code)")',
+                    inputPlaceholder: 'e.g., 971501234567',
+                    showCancelButton: true,
+                    confirmButtonText: '@Localize("Send Bill")',
+                    preConfirm: (val) => {
+                        if (!val) {
+                            Swal.showValidationMessage('@Localize("Please enter a valid number")');
+                        }
+                        return val;
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        SendWhatsAppRedirect(orderId, result.value, name, guid);
+                    }
+                });
+            } else {
+                // Send directly or prompt to confirm
+                Swal.fire({
+                    title: '@Localize("Send WhatsApp?")',
+                    text: "@Localize("Send bill link to ") " + phone,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#25D366',
+                    confirmButtonText: '<i class="fab fa-whatsapp"></i> @Localize("Send Now")'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        SendWhatsAppRedirect(orderId, phone, name, guid);
+                    }
+                });
+            }
+        }
+
+        function SendWhatsAppRedirect(orderId, phone, name, guid) {
+            var cleanPhone = phone.replace(/\D/g,'');
+            var baseUrl = window.location.origin;
+            var link = baseUrl + "/POS/DigitalInvoice?guid=" + guid;
+            var text = encodeURIComponent("Hello " + name + ",\nYour bill for order #" + orderId + " is ready. You can view it here: " + link);
+            window.open('https://wa.me/' + cleanPhone + '?text=' + text);
         }
     </script>
 }

@@ -522,8 +522,19 @@
                                         @Localize("Please enter address.")
                                     </div>
                                 </div>
+                                 <div class="row">
+                                    <div class="col-md-6 form-group">
+                                        <label class="control-label">@Localize("Latitude")</label>
+                                        <input name="Latitude" id="custLat" class="form-control" />
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label class="control-label">@Localize("Longitude")</label>
+                                        <input name="Longitude" id="custLong" class="form-control" />
+                                    </div>
+                                </div>
                                 <div class="form-group">
                                     <button class="btn btn-primary mr-1" type="submit" id="submitCustomer">@Localize("Save")</button>
+                                    <button class="btn btn-dark" type="button" onclick="CaptureLocation();"><i class="fas fa-location-arrow"></i> @Localize("Capture Location")</button>
                                 </div>
                             </form>
                         </div>
@@ -1002,6 +1013,17 @@
             else if (defaultOrderType == 2) SetPickUpOrder();
             else if (defaultOrderType == 3) SetDeliveryOrder();
 
+            // Smart Defaults for Van Sale / Restricted Users
+            if (permittedOrderTypes.length === 1) {
+                var type = permittedOrderTypes[0];
+                if (type === "1") SetDineInOrder();
+                else if (type === "2") SetPickUpOrder();
+                else if (type === "3") SetDeliveryOrder();
+                
+                // Hide top buttons if only one is available to clean up UI
+                $("#topBtns #dineInBtn, #topBtns #pickUpBtn, #topBtns #deliveryBtn").addClass('d-none');
+            }
+
             $("#cartActions a").each(function () {
                 $(this).addClass('disabled');
             });
@@ -1096,6 +1118,9 @@
         //Customer Operations
         function OpenCustomerModel() {
             $("#CustomerModel").modal('show');
+            if ($("#customers").children().length <= 1) {
+                SearchCustomer();
+            }
         }
         function SearchCustomer() {
             $("#customers").html('');
@@ -1141,7 +1166,7 @@
             });
         }
         function DisplayCustomers(item) {
-            htmlText = '<div class="col-6 col-md-4 item" data-id="' + item.Id + '" data-name="' + item.CustomerName + '">';
+            htmlText = '<div class="col-6 col-md-4 item" data-id="' + item.Id + '" data-name="' + item.CustomerName + '" data-phone="' + (item.Phone || '') + '">';
             htmlText += '<div class="card-box p-2 text-center"><h2>' + item.CustomerName + '</h2>';
             htmlText += '<h2>' + item.Phone + '</h2>';
             htmlText += '</div></div>';
@@ -1184,6 +1209,10 @@
                             CustomerName = cus.CustomerName;
                             DisplayCustomers(cus);
                             SetCustomer();
+                            
+                            // Switch to search tab to show the added customer
+                            var tabTrigger = new bootstrap.Tab(document.querySelector('#customersearch-tab'));
+                            tabTrigger.show();
                         }
                         else {
                             errorMessage(data.message);
@@ -1829,6 +1858,12 @@
 
         //Payment
         function OpenPaymentModel() {
+            if (PriceType == "VanSale" && CustomerId == parseInt('@GetSetting.DefaultCustomer')) {
+                errorMessage('@Localize("Customer selection is mandatory for Van Sales.")');
+                OpenCustomerModel();
+                return;
+            }
+
             var total = getNumber(ExistingTotalAmount.toFixed(2));
             $('#PaymentAmount').val(total);
             $(".d-OrderTotalAmount").text(GetCurrency(total));
@@ -1910,6 +1945,28 @@
                     success: function (data) {
                         if (data.status == "success") {
                             successMessage("Order closed successfully.");
+                            
+                            // WhatsApp Sharing for Van Sales
+                            if (PriceType == "VanSale") {
+                                var orderId = data.id;
+                                var customerPhone = $("#customers .item[data-id='" + CustomerId + "']").data('phone') || "";
+                                if (!customerPhone) {
+                                    // Fallback if phone not in search results
+                                     $.ajax({
+                                        url: '/People/CustomerDetail',
+                                        data: { Id: CustomerId },
+                                        success: function(res) {
+                                            if (res.status == "success") PromptWhatsApp(res.data.id, res.data.phone, res.data.customerName, res.data.orderGuid);
+                                        }
+                                     });
+                                } else {
+                                    // Normally we'd need the Guid from the server response
+                                    // For now, I'll assume the server returns it or we fetch it.
+                                    // I'll update the server to return Guid in Step 3 re-run.
+                                    PromptWhatsApp(orderId, customerPhone, CustomerName, data.guid);
+                                }
+                            }
+                            
                             $("#PaymentModel").modal('hide');
                             ResetControls();
                             PrintFinalInvoice(data.id);
@@ -1983,6 +2040,10 @@
             }
             else if (OrderType <= 0) {
                 errorMessage('@Localize("Please select order type.")');
+            }
+            else if (PriceType == "VanSale" && CustomerId == parseInt('@GetSetting.DefaultCustomer')) {
+                errorMessage('@Localize("Customer selection is mandatory for Van Sales.")');
+                OpenCustomerModel();
             }
             else {
                 var url = OrderId > 0 ? '/POS/UpdateRunningOrder' : '/POS/SaveRunningOrder';
@@ -2075,9 +2136,9 @@
         }
 
         function BarcodeScan(e) {
-            if(e.key === 'Enter' || e.keyCode === 13){
+            if (e.keyCode == 13) {
                 var bcode = $("#barcodeInput").val();
-                if(bcode !== ''){
+                if (bcode !== '') {
                     var itemFound = false;
                     for (var i = 0; i < foodItems.length; i++) {
                         if (foodItems[i].Barcode == bcode) {
@@ -2090,12 +2151,53 @@
                             break;
                         }
                     }
-                    if(!itemFound){
+                    if (!itemFound) {
                         errorMessage('Item not found');
                     }
                     $("#barcodeInput").val('');
                 }
             }
+        }
+
+        // Van Sale Helpers
+        function CaptureLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    $('#custLat').val(position.coords.latitude);
+                    $('#custLong').val(position.coords.longitude);
+                    successMessage('@Localize("Location captured successfully.")');
+                }, function(error) {
+                    errorMessage('@Localize("Unable to retrieve location.")');
+                });
+            } else {
+                errorMessage('@Localize("Geolocation is not supported by this browser.")');
+            }
+        }
+
+        function PromptWhatsApp(orderId, phone, name, guid) {
+            if (!phone) {
+                 errorMessage('@Localize("Customer phone number is missing.")');
+                 return;
+            }
+            
+            var cleanPhone = phone.replace(/\D/g,'');
+            var baseUrl = window.location.origin;
+            var link = baseUrl + "/POS/DigitalInvoice?guid=" + guid;
+            var text = encodeURIComponent("Hello " + name + ",\nYour bill for order #" + orderId + " is ready. You can view it here: " + link);
+            
+            Swal.fire({
+                title: '@Localize("Send Bill to WhatsApp?")',
+                text: "@Localize("The bill link will be sent to ") " + phone,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#25D366',
+                cancelButtonColor: '#d33',
+                confirmButtonText: '<i class="fab fa-whatsapp"></i> @Localize("Send Now")'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.open('https://wa.me/' + cleanPhone + '?text=' + text);
+                }
+            });
         }
 
         function PrintOrderSticker() {

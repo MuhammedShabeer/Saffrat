@@ -1,4 +1,4 @@
-﻿@model Saffrat.Models.FoodItem
+@model Saffrat.Models.FoodItem
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -94,9 +94,25 @@
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="control-label">@Localize("Barcode")</label>
-                        <input asp-for="Barcode" type="text" class="form-control" />
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Barcode")</label>
+                            <input asp-for="Barcode" type="text" class="form-control" />
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label">@Localize("Permitted Sales Types")</label>
+                            <div class="mt-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input sales-type-check" type="checkbox" value="POS" id="salesPOS" @(string.IsNullOrEmpty(Model?.PermittedSalesTypes) || Model.PermittedSalesTypes.Contains("POS") ? "checked" : "")>
+                                    <label class="form-check-label" for="salesPOS">@Localize("POS")</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input sales-type-check" type="checkbox" value="VanSale" id="salesVan" @(Model?.PermittedSalesTypes?.Contains("VanSale") == true ? "checked" : "")>
+                                    <label class="form-check-label" for="salesVan">@Localize("Van Sale")</label>
+                                </div>
+                                <input type="hidden" asp-for="PermittedSalesTypes" id="PermittedSalesTypes" />
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="control-label">@Localize("Image")</label>
@@ -218,6 +234,13 @@
 
         $("#frm").submit(function (e) {
             e.preventDefault();
+
+            var salesTypes = [];
+            $('.sales-type-check:checked').each(function () {
+                salesTypes.push($(this).val());
+            });
+            $('#PermittedSalesTypes').val(salesTypes.join(','));
+
             var formData = new FormData(this);
 
             if (performValidation($("#frm"))) {

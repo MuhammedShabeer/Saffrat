@@ -77,6 +77,20 @@ namespace Saffrat.Controllers
             var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var currentUser = _dbContext.Users.FirstOrDefault(x => x.UserName == userName);
 
+            // Filter menu items by Sales Type if the user is restricted
+            if (currentUser != null && !string.IsNullOrEmpty(currentUser.PermittedPriceTypes))
+            {
+                var permittedTypes = currentUser.PermittedPriceTypes.Split(',');
+                foodItems = foodItems.Where(x => 
+                    string.IsNullOrEmpty(x.PermittedSalesTypes) || 
+                    permittedTypes.Any(t => x.PermittedSalesTypes.Contains(t))
+                ).ToList();
+
+                // Filter groups to only show those that have at least one visible item
+                var visibleGroupIds = foodItems.Select(x => x.GroupId).Distinct().ToList();
+                foodGroups = foodGroups.Where(x => visibleGroupIds.Contains(Convert.ToInt32(x.Id))).ToList();
+            }
+
             var response = new Dictionary<string, string>
             {
                 { "foodGroups", JsonSerializer.Serialize(foodGroups, options) },
@@ -137,6 +151,11 @@ namespace Saffrat.Controllers
             {
                 results.Add("status", "error");
                 results.Add("message", "Please select customer.");
+            }
+            else if (PriceType == "VanSale" && CustomerId == GetSetting.DefaultCustomer)
+            {
+                results.Add("status", "error");
+                results.Add("message", "Customer selection is mandatory for Van Sales.");
             }
             else if (ItemIds.Length <= 0)
             {
@@ -383,6 +402,11 @@ namespace Saffrat.Controllers
             {
                 response.Add("status", "error");
                 response.Add("message", "Please select customer.");
+            }
+            else if (PriceType == "VanSale" && CustomerId == GetSetting.DefaultCustomer)
+            {
+                response.Add("status", "error");
+                response.Add("message", "Customer selection is mandatory for Van Sales.");
             }
             else if (ItemIds.Length <= 0)
             {
@@ -761,6 +785,13 @@ namespace Saffrat.Controllers
                     }
                     else if (oorder != null)
                     {
+                        if (oorder.PriceType == "VanSale" && oorder.CustomerId == GetSetting.DefaultCustomer)
+                        {
+                            response.Add("status", "error");
+                            response.Add("message", "Customer selection is mandatory for Van Sales.");
+                            return Json(response);
+                        }
+
                         if (oorder.OrderType == 1)
                         {
                             var existingTable = _dbContext.RestaurantTables.FirstOrDefault(x => x.TableName == oorder.TableName);
@@ -833,27 +864,99 @@ namespace Saffrat.Controllers
                         await _dbContext.SaveChangesAsync();
                         await transaction.CommitAsync();
 
+                        if (oorder.PriceType == "VanSale" && oorder.CustomerId == GetSetting.DefaultCustomer)
+                        {
+                            response.Add("status", "error");
+                            response.Add("message", "Customer selection is mandatory for Van Sales.");
+                            return Json(response);
+                        }
+
+                        _dbContext.Remove(oorder);
+                        await _dbContext.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
                         // Double-Entry Accounting Engine: Log Sale
                         int revenueAccountId = 0;
-                        var revenueAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Sales Account" || x.Category == (int)AccountCategory.Revenue);
-                        if (revenueAccount != null)
+                        int cashAccountId = Convert.ToInt32(GetSetting.SaleAccount); // Default
+
+                        // Resolve Driver-specific Van Cash Account
+                        var currentUser = _dbContext.Users.FirstOrDefault(x => x.UserName == order.ClosedBy);
+                        if (oorder.PriceType == "VanSale")
                         {
-                            revenueAccountId = Convert.ToInt32(revenueAccount.Id);
+                            // 1. Resolve/Create Van Sale Revenue Account
+                            var vRevenueAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Van Sale Revenue");
+                            if (vRevenueAccount == null)
+                            {
+                                vRevenueAccount = new GLAccount
+                                {
+                                    AccountCode = "4001",
+                                    AccountName = "Van Sale Revenue",
+                                    Category = (int)AccountCategory.Revenue,
+                                    Type = (int)AccountType.Sales,
+                                    CurrentBalance = 0,
+                                    IsActive = true
+                                };
+                                _dbContext.GLAccounts.Add(vRevenueAccount);
+                                await _dbContext.SaveChangesAsync();
+                            }
+                            revenueAccountId = vRevenueAccount.Id;
+
+                            // 2. Resolve/Create Driver-Specific Van Cash Account
+                            if (currentUser != null)
+                            {
+                                if (currentUser.VanCashAccountId.HasValue)
+                                {
+                                    cashAccountId = currentUser.VanCashAccountId.Value;
+                                }
+                                else
+                                {
+                                    var vCashAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Van Cash - " + currentUser.FullName);
+                                    if (vCashAccount == null)
+                                    {
+                                        vCashAccount = new GLAccount
+                                        {
+                                            AccountCode = "1011-" + currentUser.Id,
+                                            AccountName = "Van Cash - " + currentUser.FullName,
+                                            Category = (int)AccountCategory.Asset,
+                                            Type = (int)AccountType.CashAndBank,
+                                            SubType = (int)AccountSubType.Cash,
+                                            IsCash = true,
+                                            CurrentBalance = 0,
+                                            IsActive = true
+                                        };
+                                        _dbContext.GLAccounts.Add(vCashAccount);
+                                        await _dbContext.SaveChangesAsync();
+                                    }
+                                    cashAccountId = vCashAccount.Id;
+                                    currentUser.VanCashAccountId = vCashAccount.Id;
+                                    _dbContext.Users.Update(currentUser);
+                                    await _dbContext.SaveChangesAsync();
+                                }
+                            }
                         }
                         else
                         {
-                            var newRevAccount = new GLAccount
+                            // Standard POS Sale Account Resolution
+                            var revenueAccount = _dbContext.GLAccounts.FirstOrDefault(x => x.AccountName == "Sales Account" || x.Category == (int)AccountCategory.Revenue);
+                            if (revenueAccount != null)
                             {
-                                AccountCode = "4000",
-                                AccountName = "Sales Account",
-                                Category = (int)AccountCategory.Revenue, // Revenue
-                                Type = (int)AccountType.Sales,    // Sales
-                                CurrentBalance = 0,
-                                IsActive = true
-                            };
-                            _dbContext.GLAccounts.Add(newRevAccount);
-                            await _dbContext.SaveChangesAsync();
-                            revenueAccountId = newRevAccount.Id;
+                                revenueAccountId = Convert.ToInt32(revenueAccount.Id);
+                            }
+                            else
+                            {
+                                var newRevAccount = new GLAccount
+                                {
+                                    AccountCode = "4000",
+                                    AccountName = "Sales Account",
+                                    Category = (int)AccountCategory.Revenue,
+                                    Type = (int)AccountType.Sales,
+                                    CurrentBalance = 0,
+                                    IsActive = true
+                                };
+                                _dbContext.GLAccounts.Add(newRevAccount);
+                                await _dbContext.SaveChangesAsync();
+                                revenueAccountId = newRevAccount.Id;
+                            }
                         }
 
                         JournalEntry saleJournal = new JournalEntry
@@ -872,7 +975,7 @@ namespace Saffrat.Controllers
                         LedgerEntry debitCash = new LedgerEntry
                         {
                             JournalEntryId = saleJournal.Id,
-                            GLAccountId = Convert.ToInt32(GetSetting.SaleAccount),
+                            GLAccountId = cashAccountId,
                             Description = "Payment Received",
                             Debit = order.Total,
                             Credit = 0
@@ -920,6 +1023,65 @@ namespace Saffrat.Controllers
             return Json(response);
         }
 
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> DigitalInvoice(Guid guid)
+        {
+            var order = await _dbContext.Orders.Where(x => x.OrderGuid == guid)
+                    .Include(x => x.Customer)
+                    .Include(x => x.OrderDetails)
+                    .ThenInclude(x => x.Item)
+                    .Include(x => x.OrderDetails)
+                    .ThenInclude(x => x.OrderItemModifiers)
+                    .ThenInclude(x => x.Modifier)
+                    .FirstOrDefaultAsync();
+
+            if (order == null)
+                return NotFound();
+
+            var html = String.Empty;
+            var lang = _dbContext.Languages.FirstOrDefault(x => x.Culture == GetSetting.DefaultLanguage);
+            if (CultureInfo.GetCultureInfo(GetSetting.DefaultLanguage).TextInfo.IsRightToLeft)
+            {
+                html = RTLInvoice(order, lang.Id);
+            }
+            else
+            {
+                html = LTRInvoice(order, lang.Id);
+            }
+
+            return Content(html, "text/html");
+        }
+        
+        [HttpGet]
+        [Authorize(Roles = "admin,staff")]
+        public IActionResult ValidateCustomer(int id, string priceType)
+        {
+            var results = new Dictionary<string, string>();
+            var defaultCustomer = GetSetting.DefaultCustomer;
+
+            if (priceType == "VanSale" && id == defaultCustomer)
+            {
+                results.Add("status", "error");
+                results.Add("message", "Customer selection is mandatory for Van Sales.");
+            }
+            else
+            {
+                var customer = _dbContext.Customers.FirstOrDefault(x => x.Id == id);
+                if (customer == null)
+                {
+                    results.Add("status", "error");
+                    results.Add("message", "Customer not found.");
+                }
+                else
+                {
+                    results.Add("status", "success");
+                    results.Add("message", "valid");
+                }
+            }
+
+            return Json(results);
+        }
 
         [HttpGet]
         [Authorize(Roles = "admin,staff")]
