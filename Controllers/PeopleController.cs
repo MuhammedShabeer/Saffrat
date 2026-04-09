@@ -26,7 +26,7 @@ namespace Saffrat.Controllers
          */
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> Customers()
         {
             var users = await _dbContext.Customers.ToListAsync();
@@ -34,14 +34,14 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult AddCustomer()
         {
             return View();
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult EditCustomer(int? Id)
         {
             var existing = _dbContext.Customers.FirstOrDefault(x => x.Id == Id);
@@ -86,6 +86,17 @@ namespace Saffrat.Controllers
                 customer.UpdatedBy = userName;
                 customer.Email = customer.Email?.ToLower();
 
+                if (!string.IsNullOrEmpty(customer.Phone))
+                {
+                    var existingPhone = await _dbContext.Customers.AnyAsync(x => x.Phone == customer.Phone);
+                    if (existingPhone)
+                    {
+                        response.Add("status", "error");
+                        response.Add("message", "This phone number is already registered.");
+                        return Json(response);
+                    }
+                }
+
                 try
                 {
                     _dbContext.Customers.Add(customer);
@@ -110,7 +121,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPut]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> UpdateCustomer(Customer customer)
         {
             var response = new Dictionary<string, string>();
@@ -120,6 +131,17 @@ namespace Saffrat.Controllers
                 customer.UpdatedAt = CurrentDateTime();
                 customer.UpdatedBy = userName;
                 customer.Email = customer.Email?.ToLower();
+
+                if (!string.IsNullOrEmpty(customer.Phone))
+                {
+                    var existingPhone = await _dbContext.Customers.AnyAsync(x => x.Phone == customer.Phone && x.Id != customer.Id);
+                    if (existingPhone)
+                    {
+                        response.Add("status", "error");
+                        response.Add("message", "This phone number is already registered to another customer.");
+                        return Json(response);
+                    }
+                }
 
                 try
                 {
@@ -143,7 +165,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<JsonResult> DeleteCustomer(int? Id)
         {
             var response = new Dictionary<string, string>();
@@ -189,13 +211,18 @@ namespace Saffrat.Controllers
 
         [HttpGet]
         [Authorize(Roles = "admin,staff")]
-        public IActionResult SearchCustomer(string search)
+        public async Task<IActionResult> SearchCustomer(string search)
         {
             var response = new Dictionary<string, string>();
             try
             {
-                var customers = _dbContext.Customers.Where(x => x.CustomerName.Contains(search) || x.Phone.Contains(search) || x.Id == GetSetting.DefaultCustomer)
-                    .OrderByDescending(x => x.Id);
+                IQueryable<Customer> query = _dbContext.Customers;
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(x => x.CustomerName.Contains(search) || x.Phone.Contains(search) || x.Id == GetSetting.DefaultCustomer);
+                }
+
+                var customers = await query.OrderByDescending(x => x.Id).ToListAsync();
 
                 string obj = JsonSerializer.Serialize(customers);
                 response.Add("data", obj);
@@ -215,7 +242,7 @@ namespace Saffrat.Controllers
         */
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> Suppliers()
         {
             var users = await _dbContext.Suppliers.ToListAsync();
@@ -229,7 +256,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult EditSupplier(int? Id)
         {
             var existing = _dbContext.Suppliers.FirstOrDefault(x => x.Id == Id);
@@ -241,7 +268,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult ViewSupplier(int? Id)
         {
             var existing = _dbContext.Suppliers.FirstOrDefault(x => x.Id == Id);
@@ -263,7 +290,7 @@ namespace Saffrat.Controllers
          * Supplier APIs
         */
         [HttpPost]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> AddSupplier(Supplier supplier)
         {
             var response = new Dictionary<string, string>();
@@ -297,7 +324,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPut]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> UpdateSupplier(Supplier supplier)
         {
             var response = new Dictionary<string, string>();
@@ -331,7 +358,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<JsonResult> DeleteSupplier(int? Id)
         {
             var response = new Dictionary<string, string>();

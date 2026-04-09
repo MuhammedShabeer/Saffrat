@@ -616,7 +616,7 @@
         }
 
         function SendWhatsAppRedirect(orderId, phone, name, guid) {
-            var cleanPhone = phone.replace(/\D/g,'');
+            var cleanPhone = String(phone).replace(/\D/g,'');
             var baseUrl = window.location.origin;
             var link = baseUrl + "/POS/DigitalInvoice?guid=" + guid;
             var text = encodeURIComponent("Hello " + name + ",\nYour bill for order #" + orderId + " is ready. You can view it here: " + link);

@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Builder
+@using Microsoft.AspNetCore.Builder
 @using Microsoft.AspNetCore.Localization
 @using System.Globalization
 @using Microsoft.Extensions.Options
@@ -43,6 +43,7 @@
         <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
     }
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap-select.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     @await RenderSectionAsync("styles", required: false)
 
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -200,6 +201,7 @@
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="~/lib/jquery-confirm/jquery-confirm.min.js"></script>
     <script src="~/lib/izitoast/js/iziToast.min.js"></script>
     <script src="~/lib/cleave/cleave.min.js"></script>

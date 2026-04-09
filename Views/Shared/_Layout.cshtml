@@ -42,6 +42,7 @@
     }
     <link rel="stylesheet" href="~/lib/datatable/css/dataTables.bootstrap5.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap-select.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     @await RenderSectionAsync("styles", required: false)
 
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -187,7 +188,7 @@
                                     <li id="ae-profitandloss-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="ProfitAndLoss">@Localize("Profit & Loss")</a></li>
                                     <li id="ae-invoices-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="Invoices">@Localize("AR Invoices")</a></li>
                                     <li id="ae-bills-menu"><a class="nav-link" asp-controller="AccountingEngine" asp-action="Bills">@Localize("AP Bills")</a></li>
-                                                    <li id="payroll-payments-menu"><a class="nav-link" asp-controller="HRM" asp-action="Payroll">@Localize("Payroll Settlement")</a></li>
+                                    <li id="payroll-payments-menu"><a class="nav-link" asp-controller="HRM" asp-action="Payroll">@Localize("Payroll Settlement")</a></li>
                                     <li id="partner-equity-menu"><a class="nav-link" asp-controller="PartnerDashboard" asp-action="Index">@Localize("Partner Equity")</a></li>
                                 </ul>
                             </li>
@@ -301,6 +302,26 @@
                                     <li id="orderList-menu"><a class="nav-link" asp-controller="POS" asp-action="OrderHistory">@Localize("Order History")</a></li>
                                 </ul>
                             </li>
+                            <li class="dropdown" id="purchase-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-credit-card"></i><span>@Localize("Purchase")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addPurchase-menu"><a class="nav-link" asp-controller="Purchase" asp-action="AddPurchase">@Localize("Add Purchase")</a></li>
+                                    <li id="purchaseList-menu"><a class="nav-link" asp-controller="Purchase" asp-action="PurchaseHistory">@Localize("Purchase History")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="people-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-users"></i><span>@Localize("People")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addCustomer-menu"><a class="nav-link" asp-controller="People" asp-action="AddCustomer">@Localize("Add Customer")</a></li>
+                                    <li id="customerList-menu"><a class="nav-link" asp-controller="People" asp-action="Customers">@Localize("Customers")</a></li>
+                                    <li id="addSupplier-menu"><a class="nav-link" asp-controller="People" asp-action="AddSupplier">@Localize("Add Supplier")</a></li>
+                                    <li id="supplierList-menu"><a class="nav-link" asp-controller="People" asp-action="Suppliers">@Localize("Suppliers")</a></li>
+                                </ul>
+                            </li>
                             <li class="dropdown" id="account-menu">
                                 <a href="#" class="menu-toggle nav-link has-dropdown">
                                     <i class="fas fa-user-circle"></i><span>@Localize("My Account")</span>
@@ -389,6 +410,7 @@
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="~/lib/jquery-confirm/jquery-confirm.min.js"></script>
     <script src="~/lib/izitoast/js/iziToast.min.js"></script>
     <script src="~/lib/cleave/cleave.min.js"></script>

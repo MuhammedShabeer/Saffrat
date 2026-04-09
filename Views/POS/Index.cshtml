@@ -289,7 +289,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-whitesmoke">
-                    <button type="button" onclick="PrintOrderSticker();" class="btn btn-dark">@Localize("Print Stickers")</button>
+                    @* <button type="button" onclick="PrintOrderSticker();" class="btn btn-dark">@Localize("Print Stickers")</button> *@
                     <button type="button" id="closeOrderBtn" onclick="CloseOrder();" class="btn btn-primary">@Localize("Print & Close")</button>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
                 </div>
@@ -1948,23 +1948,7 @@
                             
                             // WhatsApp Sharing for Van Sales
                             if (PriceType == "VanSale") {
-                                var orderId = data.id;
-                                var customerPhone = $("#customers .item[data-id='" + CustomerId + "']").data('phone') || "";
-                                if (!customerPhone) {
-                                    // Fallback if phone not in search results
-                                     $.ajax({
-                                        url: '/People/CustomerDetail',
-                                        data: { Id: CustomerId },
-                                        success: function(res) {
-                                            if (res.status == "success") PromptWhatsApp(res.data.id, res.data.phone, res.data.customerName, res.data.orderGuid);
-                                        }
-                                     });
-                                } else {
-                                    // Normally we'd need the Guid from the server response
-                                    // For now, I'll assume the server returns it or we fetch it.
-                                    // I'll update the server to return Guid in Step 3 re-run.
-                                    PromptWhatsApp(orderId, customerPhone, CustomerName, data.guid);
-                                }
+                                PromptWhatsApp(data.id, data.phone, data.customerName, data.guid);
                             }
                             
                             $("#PaymentModel").modal('hide');
@@ -2180,7 +2164,7 @@
                  return;
             }
             
-            var cleanPhone = phone.replace(/\D/g,'');
+            var cleanPhone = String(phone).replace(/\D/g,'');
             var baseUrl = window.location.origin;
             var link = baseUrl + "/POS/DigitalInvoice?guid=" + guid;
             var text = encodeURIComponent("Hello " + name + ",\nYour bill for order #" + orderId + " is ready. You can view it here: " + link);

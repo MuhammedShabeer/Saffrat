@@ -862,18 +862,6 @@ namespace Saffrat.Controllers
 
                         _dbContext.Remove(oorder);
                         await _dbContext.SaveChangesAsync();
-                        await transaction.CommitAsync();
-
-                        if (oorder.PriceType == "VanSale" && oorder.CustomerId == GetSetting.DefaultCustomer)
-                        {
-                            response.Add("status", "error");
-                            response.Add("message", "Customer selection is mandatory for Van Sales.");
-                            return Json(response);
-                        }
-
-                        _dbContext.Remove(oorder);
-                        await _dbContext.SaveChangesAsync();
-                        await transaction.CommitAsync();
 
                         // Double-Entry Accounting Engine: Log Sale
                         int revenueAccountId = 0;
@@ -992,6 +980,8 @@ namespace Saffrat.Controllers
                         _dbContext.LedgerEntries.AddRange(debitCash, creditRevenue);
                         await _dbContext.SaveChangesAsync();
 
+                        await transaction.CommitAsync();
+
                         await _hub.Clients.Group("admin").SendAsync("OrderNotification", "closed", order.Id);
                         await _hub.Clients.Group("staff").SendAsync("OrderNotification", "closed", order.Id);
                         if (!String.IsNullOrEmpty(order.WaiterOrDriver))
@@ -1000,6 +990,9 @@ namespace Saffrat.Controllers
                         response.Add("status", "success");
                         response.Add("message", "success");
                         response.Add("id", order.Id.ToString());
+                        response.Add("guid", order.OrderGuid.ToString());
+                        response.Add("phone", oorder.Customer?.Phone ?? "");
+                        response.Add("customerName", oorder.Customer?.CustomerName ?? "Customer");
                     }
                     else
                     {
@@ -1013,9 +1006,12 @@ namespace Saffrat.Controllers
                     response.Add("message", "Enter required fields.");
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                await transaction.RollbackAsync();
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync();
+                }
                 response.Add("status", "error");
                 response.Add("message", "Something went wrong.");
             }

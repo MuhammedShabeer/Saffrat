@@ -32,7 +32,7 @@ namespace Saffrat.Controllers
          */
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult AddPurchase()
         {
             ViewBag.suppliers = this.GetSuppliers();
@@ -42,7 +42,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult EditPurchase(int? Id)
         {
             var purchase = _dbContext.Purchases
@@ -64,7 +64,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult PurchaseHistory(int? supplier, DateTime? start, DateTime? end, string status)
         {
             DateTime from = StartOfDay(start);
@@ -97,7 +97,7 @@ namespace Saffrat.Controllers
          */
 
         [HttpPost]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> AddPurchase(Purchase purchase, int?[] ItemId, decimal?[] ItemQuantity, decimal?[] ItemRate)
         {
             var response = new Dictionary<string, string>();
@@ -246,7 +246,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPut]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> UpdatePurchase(Purchase pur, int?[] ItemId, decimal?[] ItemQuantity, decimal?[] ItemRate)
         {
             var response = new Dictionary<string, string>();
@@ -387,7 +387,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<JsonResult> DeletePurchase(int? Id)
         {
             var response = new Dictionary<string, string>();
@@ -437,7 +437,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPut]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<JsonResult> PayDue(int? Id)
         {
             var response = new Dictionary<string, string>();
