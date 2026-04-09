@@ -1030,7 +1030,12 @@
 
             // Handle Default Price Type
             var defaultPrice = 'Retail';
-            if (permittedPriceTypes.length > 0 && !permittedPriceTypes.includes(defaultPrice)) {
+            var isVanSales = '@ViewBag.IsVanSales' === 'True';
+
+            if (isVanSales) {
+                defaultPrice = 'VanSale';
+                $("#PriceType").attr('disabled', true);
+            } else if (permittedPriceTypes.length > 0 && !permittedPriceTypes.includes(defaultPrice)) {
                 defaultPrice = permittedPriceTypes[0];
             }
 

@@ -44,6 +44,10 @@ namespace Saffrat.Controllers
         [Authorize(Roles = "admin,staff")]
         public IActionResult Index()
         {
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var currentUser = _dbContext.Users.FirstOrDefault(x => x.UserName == userName);
+            ViewBag.IsVanSales = currentUser?.IsVanSales ?? false;
+
             POSVM pos = new()
             {
                 TaxRates = _dbContext.TaxRates.ToList(),
@@ -78,13 +82,25 @@ namespace Saffrat.Controllers
             var currentUser = _dbContext.Users.FirstOrDefault(x => x.UserName == userName);
 
             // Filter menu items by Sales Type if the user is restricted
-            if (currentUser != null && !string.IsNullOrEmpty(currentUser.PermittedPriceTypes))
+            if (currentUser != null && (currentUser.IsVanSales || !string.IsNullOrEmpty(currentUser.PermittedPriceTypes)))
             {
-                var permittedTypes = currentUser.PermittedPriceTypes.Split(',');
+                var permittedTypes = !string.IsNullOrEmpty(currentUser.PermittedPriceTypes) 
+                    ? currentUser.PermittedPriceTypes.Split(',').ToList() 
+                    : new List<string>();
+                
+                if (currentUser.IsVanSales && !permittedTypes.Contains("VanSale"))
+                    permittedTypes.Add("VanSale");
+
                 foodItems = foodItems.Where(x => 
-                    string.IsNullOrEmpty(x.PermittedSalesTypes) || 
-                    permittedTypes.Any(t => x.PermittedSalesTypes.Contains(t))
+                    (!currentUser.IsVanSales && string.IsNullOrEmpty(x.PermittedSalesTypes)) || 
+                    permittedTypes.Any(t => x.PermittedSalesTypes != null && x.PermittedSalesTypes.Contains(t))
                 ).ToList();
+
+                // If strictly VanSales, only show items with "VanSale" in PermittedSalesTypes
+                if (currentUser.IsVanSales)
+                {
+                    foodItems = foodItems.Where(x => x.PermittedSalesTypes != null && x.PermittedSalesTypes.Contains("VanSale")).ToList();
+                }
 
                 // Filter groups to only show those that have at least one visible item
                 var visibleGroupIds = foodItems.Select(x => x.GroupId).Distinct().ToList();

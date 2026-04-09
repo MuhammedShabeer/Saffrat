@@ -33,5 +33,6 @@ namespace Saffrat.Models
         public string PermittedPriceTypes { get; set; }
         public string PermittedOrderTypes { get; set; }
         public int? VanCashAccountId { get; set; }
+        public bool IsVanSales { get; set; }
     }
 }

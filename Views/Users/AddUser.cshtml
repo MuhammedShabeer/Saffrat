@@ -122,6 +122,13 @@
                             </div>
                             <input type="hidden" asp-for="PermittedOrderTypes" id="PermittedOrderTypes" />
                         </div>
+                        <div class="col-md-6 form-group">
+                            <label class="control-label d-block">@Localize("Extra Options")</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" asp-for="IsVanSales" id="IsVanSales">
+                                <label class="form-check-label" for="IsVanSales">@Localize("Van Sale Mode")</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="card-footer">
