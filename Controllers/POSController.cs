@@ -92,7 +92,8 @@ namespace Saffrat.Controllers
                     permittedTypes.Add("VanSale");
 
                 foodItems = foodItems.Where(x => 
-                    (!currentUser.IsVanSales && string.IsNullOrEmpty(x.PermittedSalesTypes)) || 
+                    (string.IsNullOrEmpty(x.PermittedSalesTypes)) || 
+                    (!currentUser.IsVanSales && x.PermittedSalesTypes.Contains("POS")) ||
                     permittedTypes.Any(t => x.PermittedSalesTypes != null && x.PermittedSalesTypes.Contains(t))
                 ).ToList();
 
@@ -122,7 +123,7 @@ namespace Saffrat.Controllers
         // Insert New Order
         [HttpPost]
         [Authorize(Roles = "admin,staff")]
-        public async Task<IActionResult> SaveRunningOrder(int[] ItemIds, int[] Quantities, string[] Modifiers, string Note, int CustomerId,
+        public async Task<IActionResult> SaveRunningOrder(int[] ItemIds, int[] Quantities, string[] Modifiers, decimal[] ItemPrices, string Note, int CustomerId,
             int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType)
         {
             var results = new Dictionary<string, string>();
@@ -271,9 +272,12 @@ namespace Saffrat.Controllers
                         var item = _dbContext.FoodItems.FirstOrDefault(x => x.Id == ItemIds[i]);
                         if (item != null)
                         {
-                            var detailPrice = item.Price;
-                            if (PriceType == "VanSale") detailPrice = item.VanSalePrice;
-                            else if (PriceType == "WholeSale") detailPrice = item.WholeSalePrice;
+                            var detailPrice = (ItemPrices != null && ItemPrices.Length > i) ? ItemPrices[i] : item.Price;
+                            
+                            if (ItemPrices == null || ItemPrices.Length <= i) {
+                                if (PriceType == "VanSale") detailPrice = item.VanSalePrice;
+                                else if (PriceType == "WholeSale") detailPrice = item.WholeSalePrice;
+                            }
 
                             RunningOrderDetail orderDetail = new()
                             {
@@ -373,7 +377,7 @@ namespace Saffrat.Controllers
         // Update Running Order
         [HttpPost]
         [Authorize(Roles = "admin,staff")]
-        public async Task<IActionResult> UpdateRunningOrder(int OrderId, int[] ItemIds, int[] Quantities, string[] Modifiers, string Note, int CustomerId,
+        public async Task<IActionResult> UpdateRunningOrder(int OrderId, int[] ItemIds, int[] Quantities, string[] Modifiers, decimal[] ItemPrices, string Note, int CustomerId,
             int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType)
         {
             var response = new Dictionary<string, string>();
@@ -499,9 +503,12 @@ namespace Saffrat.Controllers
                             var item = _dbContext.FoodItems.FirstOrDefault(x => x.Id == ItemIds[i]);
                             if (item != null)
                             {
-                                var detailPrice = item.Price;
-                                if (PriceType == "VanSale") detailPrice = item.VanSalePrice;
-                                else if (PriceType == "WholeSale") detailPrice = item.WholeSalePrice;
+                                var detailPrice = (ItemPrices != null && ItemPrices.Length > i) ? ItemPrices[i] : item.Price;
+                                
+                                if (ItemPrices == null || ItemPrices.Length <= i) {
+                                    if (PriceType == "VanSale") detailPrice = item.VanSalePrice;
+                                    else if (PriceType == "WholeSale") detailPrice = item.WholeSalePrice;
+                                }
 
                                 RunningOrderDetail orderDetail = new()
                                 {

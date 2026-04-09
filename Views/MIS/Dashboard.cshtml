@@ -1,0 +1,284 @@
+@using Saffrat.Resources
+@inherits LocService<TModel>
+@{
+    ViewData["Title"] = Localize("MIS Analytics Dashboard");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --premium-blue: #4e73df;
+        --premium-emerald: #1cc88a;
+        --premium-gold: #f6c23e;
+        --premium-crimson: #e74a3b;
+    }
+
+    .mis-container {
+        padding: 20px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: calc(100vh - 150px);
+        border-radius: 20px;
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
+    }
+
+    .stat-card {
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: white;
+    }
+
+    .stat-value {
+        font-size: 24px;
+        font-weight: 800;
+        color: #2e384d;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: #707070;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .chart-container {
+        padding: 15px;
+    }
+
+    .card-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #2e384d;
+        margin-bottom: 20px;
+        padding-left: 10px;
+        border-left: 4px solid var(--premium-blue);
+    }
+
+    /* Pulse Animation */
+    .pulse-live {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: var(--premium-emerald);
+        border-radius: 50%;
+        margin-right: 5px;
+        box-shadow: 0 0 0 rgba(28, 200, 138, 0.4);
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(28, 200, 138, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(28, 200, 138, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(28, 200, 138, 0); }
+    }
+</style>
+
+<div class="mis-container mt-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+        <h3 class="fw-bold text-dark"><i class="fas fa-chart-line text-primary me-2"></i> @Localize("MIS Analytics Control Center")</h3>
+        <div class="badge bg-white text-dark p-2 rounded-pill shadow-sm border">
+            <span class="pulse-live"></span> @Localize("LIVE VISION")
+        </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="glass-card stat-card">
+                <div>
+                    <div class="stat-label">@Localize("Today Revenue")</div>
+                    <div class="stat-value" id="stat-today-revenue">...</div>
+                </div>
+                <div class="stat-icon bg-primary shadow">
+                    <i class="fas fa-wallet"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="glass-card stat-card">
+                <div>
+                    <div class="stat-label">@Localize("Orders Count")</div>
+                    <div class="stat-value" id="stat-today-orders">...</div>
+                </div>
+                <div class="stat-icon bg-success shadow">
+                    <i class="fas fa-shopping-basket"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="glass-card stat-card">
+                <div>
+                    <div class="stat-label">@Localize("Monthly Sales")</div>
+                    <div class="stat-value" id="stat-month-revenue">...</div>
+                </div>
+                <div class="stat-icon bg-info shadow">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="glass-card stat-card">
+                <div>
+                    <div class="stat-label">@Localize("Avg Transaction")</div>
+                    <div class="stat-value" id="stat-avg-value">...</div>
+                </div>
+                <div class="stat-icon bg-warning shadow">
+                    <i class="fas fa-receipt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-4">
+            <div class="glass-card h-100 chart-container">
+                <div class="card-title">@Localize("Revenue Velocity (Last 30 Days)")</div>
+                <div id="chart-revenue-velocity"></div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="glass-card h-100 chart-container">
+                <div class="card-title">@Localize("Daily Hourly Pulse")</div>
+                <div id="chart-hourly-pulse"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Charts Row -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="glass-card h-100 chart-container">
+                <div class="card-title">@Localize("Product Performance Leaderboard")</div>
+                <div id="chart-top-items"></div>
+            </div>
+        </div>
+        <div class="col-lg-3 mb-4">
+            <div class="glass-card h-100 chart-container">
+                <div class="card-title">@Localize("Revenue Mix (Order Type)")</div>
+                <div id="chart-order-mix"></div>
+            </div>
+        </div>
+        <div class="col-lg-3 mb-4">
+            <div class="glass-card h-100 chart-container">
+                <div class="card-title">@Localize("Payment Distribution")</div>
+                <div id="chart-payment-mix"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="~/lib/apexchart/apexcharts.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            LoadMISDashboard();
+        });
+
+        function LoadMISDashboard() {
+            $.ajax({
+                url: '/MIS/GetMISData',
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === "success") {
+                        const data = response.data;
+                        
+                        // Update Stats
+                        $('#stat-today-revenue').text(GetCurrency(data.todayRevenue));
+                        $('#stat-today-orders').text(data.todayOrders);
+                        $('#stat-month-revenue').text(GetCurrency(data.monthRevenue));
+                        $('#stat-avg-value').text(GetCurrency(data.avgOrderValue.toFixed(2)));
+
+                        RenderCharts(data);
+                    }
+                }
+            });
+        }
+
+        function RenderCharts(data) {
+            // 1. Revenue Velocity (Area)
+            new ApexCharts(document.querySelector("#chart-revenue-velocity"), {
+                series: [{ name: '@Localize("Revenue")', data: data.dailySales.map(x => x.amount) }],
+                chart: { type: 'area', height: 350, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 3 },
+                colors: [window.getComputedStyle(document.documentElement).getPropertyValue('--premium-blue') || '#4e73df'],
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0 } },
+                xaxis: { categories: data.dailySales.map(x => x.date) },
+                yaxis: { labels: { formatter: function(val) { return GetCurrency(val.toFixed(0)); } } },
+                tooltip: { theme: 'light' }
+            }).render();
+
+            // 2. Hourly Pulse (Bar)
+            new ApexCharts(document.querySelector("#chart-hourly-pulse"), {
+                series: [{ name: '@Localize("Sales")', data: data.hourlySales.map(x => x.amount) }],
+                chart: { type: 'bar', height: 350, toolbar: { show: false } },
+                plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
+                colors: ['#36b9cc'],
+                xaxis: { categories: data.hourlySales.map(x => x.hourLabel) },
+                dataLabels: { enabled: false }
+            }).render();
+
+            // 3. Top Items (Horizontal Bar)
+            new ApexCharts(document.querySelector("#chart-top-items"), {
+                series: [{ name: '@Localize("Revenue")', data: data.topItems.map(x => x.revenue) }],
+                chart: { type: 'bar', height: 400, toolbar: { show: false } },
+                plotOptions: { bar: { horizontal: true, borderRadius: 10, barHeight: '70%'} },
+                colors: ['#1cc88a'],
+                dataLabels: { enabled: true, formatter: function(val) { return GetCurrency(val.toFixed(0)); } },
+                xaxis: { categories: data.topItems.map(x => x.itemName) }
+            }).render();
+
+            // 4. Order Mix (Donut)
+            new ApexCharts(document.querySelector("#chart-order-mix"), {
+                series: data.orderTypeSales.map(x => x.amount),
+                labels: data.orderTypeSales.map(x => x.typeName),
+                chart: { type: 'donut', height: 300 },
+                colors: ['#4e73df', '#1cc88a', '#f6c23e', '#e74a3b'],
+                legend: { position: 'bottom' },
+                dataLabels: { enabled: false },
+                plotOptions: { pie: { donut: { size: '70%' } } }
+            }).render();
+
+            // 5. Payment Mix (Donut)
+            new ApexCharts(document.querySelector("#chart-payment-mix"), {
+                series: data.paymentMethodSales.map(x => x.amount),
+                labels: data.paymentMethodSales.map(x => x.methodName),
+                chart: { type: 'donut', height: 300 },
+                colors: ['#36b9cc', '#f6c23e', '#4e73df', '#e74a3b'],
+                legend: { position: 'bottom' },
+                dataLabels: { enabled: false },
+                plotOptions: { pie: { donut: { size: '70%' } } }
+            }).render();
+        }
+    </script>
+}

@@ -11,6 +11,23 @@
 }
 @section styles {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/1.3.3/owl.carousel.css" rel="stylesheet" />
+    <style>
+        .price-flexy {
+            cursor: pointer;
+            position: relative;
+            background: rgba(var(--bs-primary-rgb), 0.05);
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .price-flexy:hover {
+            background: rgba(var(--bs-primary-rgb), 0.15);
+            color: var(--bs-primary);
+        }
+        .price-flexy i {
+            font-size: 0.8em;
+            vertical-align: middle;
+        }
+    </style>
 }
 
 <nav class="top-nav" style="margin-top:71px; margin-bottom:3px;">
@@ -208,6 +225,48 @@
                 </div>
                 <div class="modal-footer bg-whitesmoke">
                     <button type="button" onclick="EnterGuests();" class="btn btn-primary">@Localize("Enter")</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!--Price Override Model-->
+    <div class="modal fade" id="PriceOverrideModel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modalTitle">@Localize("Adjust Unit Price")</h5>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">
+                        <span aria-hidden="true">x</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group p-0">
+                            <label class="d-block mb-1 text-muted fw-bold">@Localize("Enter New Price")</label>
+                            <input type="text" id="priceOverrideInput" placeholder="0.00" class="form-control d-invtotal cleave-number" inputmode="numeric" readonly />
+                        </div>
+                    </form>
+                    <div class="numpad">
+                        <div class="row g-0" id="priceOverridePad">
+                            <div class="col-4"><div data-value="7" class="item">@Localize("7")</div></div>
+                            <div class="col-4"><div data-value="8" class="item">@Localize("8")</div></div>
+                            <div class="col-4"><div data-value="9" class="item">@Localize("9")</div></div>
+                            <div class="col-4"><div data-value="4" class="item">@Localize("4")</div></div>
+                            <div class="col-4"><div data-value="5" class="item">@Localize("5")</div></div>
+                            <div class="col-4"><div data-value="6" class="item">@Localize("6")</div></div>
+                            <div class="col-4"><div data-value="1" class="item">@Localize("1")</div></div>
+                            <div class="col-4"><div data-value="2" class="item">@Localize("2")</div></div>
+                            <div class="col-4"><div data-value="3" class="item">@Localize("3")</div></div>
+                            <div class="col-4"><div data-value="0" class="item">@Localize("0")</div></div>
+                            <div class="col-4"><div data-value="@numberdelimeter" class="item">@numberdelimeter</div></div>
+                            <div class="col-4"><div data-value="x" class="item"><i class="fas fa-circle-xmark"></i></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-whitesmoke">
+                    <button type="button" onclick="ApplyPriceOverride();" class="btn btn-primary">@Localize("Apply")</button>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localize("Cancel")</button>
                 </div>
             </div>
@@ -1399,6 +1458,60 @@
             }
         }
 
+        // Price Override Operations
+        var overridingCartId = 0;
+        var priceString = "";
+
+        function OpenPriceOverrideModel(cartId) {
+            if (PriceType !== "VanSale") return; // Only for Van Sales
+
+            overridingCartId = cartId;
+            var item = cartItems.find(x => x.Id == cartId);
+            if (!item) return;
+
+            priceString = item.ItemPrice.toString();
+            $('#priceOverrideInput').val(priceString);
+            $("#PriceOverrideModel").modal('show');
+        }
+
+        $("#priceOverridePad").on("click", "div.item", function () {
+            var value = $(this).data("value").toString();
+            if (value == "x") {
+                priceString = '';
+            }
+            else if (priceString == '0' && value != numberformat.decimalseparator) {
+                priceString = value;
+            }
+            else if (priceString.includes(numberformat.decimalseparator) == true && value == numberformat.decimalseparator) {
+                return;
+            }
+            else {
+                priceString += value;
+            }
+
+            $('#priceOverrideInput').val(priceString);
+        });
+
+        function ApplyPriceOverride() {
+            var newPrice = getLocaleNumber($('#priceOverrideInput').val());
+
+            for (var i = 0; i < cartItems.length; i++) {
+                if (cartItems[i].Id == overridingCartId) {
+                    cartItems[i].ItemPrice = newPrice;
+
+                    var itemTotal = cartItems[i].ItemPrice + cartItems[i].ItemModifierTotal;
+                    itemTotal *= cartItems[i].ItemQuantity;
+
+                    $("#cart" + cartItems[i].Id + " td.price").text(GetCurrency(getNumber(itemTotal.toFixed(2))));
+                    CalculateTotal();
+                    break;
+                }
+            }
+
+            $("#PriceOverrideModel").modal('hide');
+            successMessage('@Localize("Price overridden successfully.")');
+        }
+
 
         // Products Operations
         function SearchItems() {
@@ -1516,9 +1629,13 @@
             var itemTotal = item.ItemPrice + item.ItemModifierTotal;
             itemTotal *= item.ItemQuantity;
 
+            var priceClass = PriceType == 'VanSale' ? 'clickable price-flexy' : '';
+            var priceAction = PriceType == 'VanSale' ? 'onclick="OpenPriceOverrideModel(' + item['Id'] + ')"' : '';
+            var editIcon = PriceType == 'VanSale' ? '<i class="fas fa-edit ms-1 opacity-50"></i>' : '';
+
             htmlText = '<tr class="item" id="cart' + item['Id'] + '" data-id="' + item['ItemId'] + '"><td><div>' + item['ItemName'] + '</div><div class="modifiers">';
             htmlText += '<td class="quantity text-center">' + getNumber(item['ItemQuantity']) + '</td>';
-            htmlText += '<td class="price text-end">' + GetCurrency(getNumber(itemTotal.toFixed(2))) + '</td></tr>';
+            htmlText += '<td class="price text-end ' + priceClass + '" ' + priceAction + '>' + GetCurrency(getNumber(itemTotal.toFixed(2))) + editIcon + '</td></tr>';
 
             $("#cartItems").append(htmlText);
             CalculateTotal();
@@ -2041,6 +2158,7 @@
                 for (var i = 0; i < cartItems.length; i++) {
                     data.append("ItemIds[]", cartItems[i].ItemId);
                     data.append("Quantities[]", cartItems[i].ItemQuantity);
+                    data.append("ItemPrices[]", getNumber(cartItems[i].ItemPrice));
                     var modifiers = [];
                     for (var j = 0; j < cartItems[i].modifiers.length; j++) {
                         modifiers.push(cartItems[i].modifiers[j].Id);
