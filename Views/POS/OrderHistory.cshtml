@@ -87,6 +87,7 @@
                                         <th>@Localize("Customer")</th>
                                         <th>@Localize("Order Type")</th>
                                         <th>@Localize("Payment Method")</th>
+                                        <th>@Localize("Billed By")</th>
                                         <th>@Localize("Total")</th>
                                         <th>@Localize("Paid")</th>
                                         <th>@Localize("Due")</th>
@@ -110,6 +111,7 @@
                                             }
                                             <td>@orderTypes[item.OrderType]</td>
                                             <td><span class="badge bg-secondary">@item.PaymentMethod</span></td>
+                                            <td>@item.ClosedBy</td>
                                             <td>@GetCurrency(item.Total)</td>
                                             <td>@GetCurrency(item.PaidAmount)</td>
                                             <td>@GetCurrency(item.DueAmount)</td>
@@ -177,6 +179,10 @@
                     </div>
                     <div style="position:absolute; bottom:0; width:100%;">
                         <div class="p-2 mt-4">
+                            <div class="d-flex text-muted mb-2">
+                                <div><small>@Localize("Billed By"):</small></div>
+                                <div class="ms-auto"><small id="d-BilledBy"></small></div>
+                            </div>
                             <div class="d-flex">
                                 <div>@Localize("Sub Total")</div>
                                 <div class="ms-auto" id="d-SubTotal"></div>
@@ -267,7 +273,7 @@
             'columnDefs': [
                 {
                     "orderable": false,
-                    'targets': [8]
+                    'targets': [9]
                 }
             ],
             'lengthMenu': [[50, 100, 150, 250, -1], [50, 100, 150, 250, "All"]],
@@ -371,6 +377,7 @@
                         $("#d-Tax").text(GetCurrency(order.TaxTotal));
                         $("#d-Charges").text(GetCurrency(order.ChargeTotal));
                         $("#d-Total").text(GetCurrency(order.Total));
+                        $("#d-BilledBy").text(order.ClosedBy || "N/A");
                         $('.d-CustomerName').text(order.Customer.CustomerName);
                         $('.d-CustomerEmail').text(order.Customer.Email);
                         $('.d-CustomerPhone').text(order.Customer.Phone);

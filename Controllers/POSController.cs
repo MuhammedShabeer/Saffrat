@@ -1598,8 +1598,25 @@ namespace Saffrat.Controllers
             ViewBag.start = from;
             ViewBag.end = to;
             ViewBag.status = status;
-            var orders = await _dbContext.Orders.Where(x => x.CreatedAt >= from && x.CreatedAt <= to)
-                    .Include(x => x.Customer).OrderByDescending(x => x.Id).ToListAsync();
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var currentUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.UserName == userName);
+            var isAdmin = User.IsInRole("admin");
+
+            var query = _dbContext.Orders.Where(x => x.CreatedAt >= from && x.CreatedAt <= to);
+
+            if (!isAdmin && currentUser != null)
+            {
+                if (currentUser.IsVanSales)
+                {
+                    query = query.Where(x => x.ClosedBy == userName);
+                }
+                else
+                {
+                    query = query.Where(x => x.PriceType != "VanSale");
+                }
+            }
+
+            var orders = await query.Include(x => x.Customer).OrderByDescending(x => x.Id).ToListAsync();
 
             if (status == "paid")
                 orders = orders.Where(x => x.DueAmount == 0).ToList();
@@ -1736,8 +1753,25 @@ namespace Saffrat.Controllers
             var from = StartOfDay(start);
             var to = EndOfDay(end);
 
-            var deletedOrders = await _dbContext.DeletedOrders
-                .Where(x => x.DeletedAt >= from && x.DeletedAt <= to)
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var currentUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.UserName == userName);
+            var isAdmin = User.IsInRole("admin");
+
+            var query = _dbContext.DeletedOrders.Where(x => x.DeletedAt >= from && x.DeletedAt <= to);
+
+            if (!isAdmin && currentUser != null)
+            {
+                if (currentUser.IsVanSales)
+                {
+                    query = query.Where(x => x.DeletedBy == userName);
+                }
+                else
+                {
+                    query = query.Where(x => x.PriceType != "VanSale");
+                }
+            }
+
+            var deletedOrders = await query
                 .Include(x => x.Customer)
                 .OrderByDescending(x => x.DeletedAt)
                 .Select(x => new

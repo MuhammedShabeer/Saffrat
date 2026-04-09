@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Saffrat.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Saffrat.Controllers
 {
@@ -28,13 +29,24 @@ namespace Saffrat.Controllers
         [Authorize(Roles = "admin,staff")]
         public IActionResult Index()
         {
-            var totalSales = _dbContext.Orders.Sum(x => x.Total);
-            var totalPurchases = _dbContext.Purchases.Sum(x => x.TotalAmount);
-            var totalExpenses = _dbContext.LedgerEntries.Include(x => x.GLAccount)
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin = User.IsInRole("admin");
+
+            var orderQuery = _dbContext.Orders.AsQueryable();
+            if (!isAdmin)
+            {
+                orderQuery = orderQuery.Where(x => x.ClosedBy == userName);
+            }
+
+            var totalSales = orderQuery.Any() ? orderQuery.Sum(x => x.Total) : 0;
+            var totalOrders = orderQuery.Count();
+
+            // Purchases and Expenses are generally admin-only figures
+            var totalPurchases = isAdmin ? _dbContext.Purchases.Sum(x => x.TotalAmount) : 0;
+            var totalExpenses = isAdmin ? _dbContext.LedgerEntries.Include(x => x.GLAccount)
                 .Where(x => x.GLAccount.Category == 4 || x.GLAccount.Category == 5)
                 .ToList()
-                .Sum(x => Math.Max(0, x.Debit - x.Credit));
-            var totalOrders = _dbContext.Orders.Count();
+                .Sum(x => Math.Max(0, x.Debit - x.Credit)) : 0;
 
             ViewBag.TotalSales = Math.Round(totalSales, 2);
             ViewBag.TotalPurchases = Math.Round(totalPurchases, 2);
@@ -73,19 +85,36 @@ namespace Saffrat.Controllers
         public IActionResult TodayReport()
         {
             var results = new Dictionary<string, string>();
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin = User.IsInRole("admin");
+
             try
             {
                 var today = StartOfDay(null);
                 var order = _dbContext.Orders.Where(x => x.CreatedAt >= today);
-                decimal totalSales = order.Sum(x => x.Total);
-                decimal customerDue = order.Sum(x => x.DueAmount);
+
+                if (!isAdmin)
+                {
+                    order = order.Where(x => x.ClosedBy == userName);
+                }
+
+                decimal totalSales = order.Any() ? order.Sum(x => x.Total) : 0;
+                decimal customerDue = order.Any() ? order.Sum(x => x.DueAmount) : 0;
                 int todayOrders = order.Count();
-                var purchase = _dbContext.Purchases.Where(x => x.PurchaseDate >= today);
-                decimal totalPurchases = purchase.Sum(x => x.TotalAmount);
-                decimal supplierDue = purchase.Sum(x => x.DueAmount);
-                var expense = _dbContext.LedgerEntries.Include(x => x.GLAccount).Include(x => x.JournalEntry)
-                    .Where(x => (x.GLAccount.Category == 4 || x.GLAccount.Category == 5) && x.JournalEntry.EntryDate >= today).ToList();
-                decimal totalExpenses = expense.Sum(x => Math.Max(0, x.Debit - x.Credit));
+
+                decimal totalPurchases = 0;
+                decimal supplierDue = 0;
+                decimal totalExpenses = 0;
+
+                if (isAdmin)
+                {
+                    var purchase = _dbContext.Purchases.Where(x => x.PurchaseDate >= today);
+                    totalPurchases = purchase.Any() ? purchase.Sum(x => x.TotalAmount) : 0;
+                    supplierDue = purchase.Any() ? purchase.Sum(x => x.DueAmount) : 0;
+                    var expense = _dbContext.LedgerEntries.Include(x => x.GLAccount).Include(x => x.JournalEntry)
+                        .Where(x => (x.GLAccount.Category == 4 || x.GLAccount.Category == 5) && x.JournalEntry.EntryDate >= today).ToList();
+                    totalExpenses = expense.Sum(x => Math.Max(0, x.Debit - x.Credit));
+                }
 
                 results.Add("totalSales", totalSales.ToString());
                 results.Add("customersDue", customerDue.ToString());
@@ -125,8 +154,16 @@ namespace Saffrat.Controllers
                 var today = EndOfDay(null);
                 var from = StartOfDay(null);
                 from = from.AddYears(-1);
-                var order = _dbContext.Orders
-                    .Where(x => x.CreatedAt >= from && x.CreatedAt <= today)
+                var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var isAdmin = User.IsInRole("admin");
+
+                var orderQuery = _dbContext.Orders.Where(x => x.CreatedAt >= from && x.CreatedAt <= today);
+                if (!isAdmin)
+                {
+                    orderQuery = orderQuery.Where(x => x.ClosedBy == userName);
+                }
+
+                var order = orderQuery
                     .OrderByDescending(x => x.Id)
                     .GroupBy(t => new
                     {
@@ -309,14 +346,21 @@ namespace Saffrat.Controllers
             var results = new Dictionary<string, string>();
             var today = CurrentDateTime();
             var start = new DateTime(today.Year, today.Month, 1);
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin = User.IsInRole("admin");
+
             try
             {
-                var order = _dbContext.Orders
-                    .Where(x => x.CreatedAt >= start);
+                var order = _dbContext.Orders.Where(x => x.CreatedAt >= start);
 
-                var dineIn = order.Where(x => x.OrderType == 1).Sum(x => x.Total);
-                var pickUp = order.Where(x => x.OrderType == 2).Sum(x => x.Total);
-                var delivery = order.Where(x => x.OrderType == 3).Sum(x => x.Total);
+                if (!isAdmin)
+                {
+                    order = order.Where(x => x.ClosedBy == userName);
+                }
+
+                var dineIn = order.Any() ? order.Where(x => x.OrderType == 1).Sum(x => x.Total) : 0;
+                var pickUp = order.Any() ? order.Where(x => x.OrderType == 2).Sum(x => x.Total) : 0;
+                var delivery = order.Any() ? order.Where(x => x.OrderType == 3).Sum(x => x.Total) : 0;
                 results.Add("dineIn", dineIn.ToString());
                 results.Add("pickUp", pickUp.ToString());
                 results.Add("delivery", delivery.ToString());
