@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Saffrat.Models.FoodItem>
+@model IEnumerable<Saffrat.Models.FoodItem>
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -25,6 +25,12 @@
             </div>
             <div class="col">
                 <div class="float-end">
+                    <a asp-controller="Food" asp-action="DownloadFoodExcel" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-file-excel me-1"></i> @Localize("Export Excel")
+                    </a>
+                    <button type="button" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-file-import me-1"></i> @Localize("Import Excel")
+                    </button>
                     <a asp-controller="Food" asp-action="AddFoodItem" class="btn btn-primary">
                         @Localize("Add New")
                     </a>
@@ -91,6 +97,37 @@
     </div>
 </div>
 
+@section models {
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" role="dialog" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold" id="mainModalTitle"><i class="fa fa-file-excel me-2 text-primary"></i> @Localize("Import Food Items via Excel")</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        @Localize("Upload an Excel (.xlsx) file to bulk insert or update food items with perfect Arabic character support. Use the 'Export Excel' button to get the latest data.")
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">@Localize("Select File")</label>
+                        <input type="file" id="menuFileInput" class="form-control" accept=".xlsx, .csv" />
+                        <small class="text-info"><i class="fas fa-info-circle me-1"></i> @Localize("Recommended format: .xlsx")</small>
+                    </div>
+                    <div id="importLoading" class="text-center d-none">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-primary font-weight-bold">@Localize("Processing file, please wait...")</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@Localize("Close")</button>
+                    <button type="button" class="btn btn-primary" id="btnImportFile">@Localize("Start Import")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+}
 
 @section scripts{
     <script>
@@ -177,5 +214,44 @@
                 }
             });
         }
+        $('#btnImportFile').on('click', function () {
+            var fileInput = $('#menuFileInput')[0];
+            if (fileInput.files.length === 0) {
+                errorMessage('@Localize("Please select an Excel or CSV file to upload.")');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('menuFile', fileInput.files[0]);
+
+            $('#btnImportFile').attr('disabled', true);
+            $('#importLoading').removeClass('d-none');
+
+            $.ajax({
+                url: '/Food/ImportFoodItems',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (data) {
+                    if (data.status === "success") {
+                        successMessage(data.message);
+                        setTimeout(function () {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        errorMessage(data.message);
+                    }
+                },
+                error: function (xhr) {
+                    errorMessage('@Localize("Error occurred while processing the file.")');
+                    console.log(xhr.responseText);
+                },
+                complete: function () {
+                    $('#btnImportFile').attr('disabled', false);
+                    $('#importLoading').addClass('d-none');
+                }
+            });
+        });
     </script>
 }

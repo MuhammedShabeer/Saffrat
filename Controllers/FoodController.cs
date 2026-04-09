@@ -5,6 +5,12 @@ using Saffrat.Helpers;
 using Saffrat.Models;
 using System.Security.Claims;
 using Saffrat.Services;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using CsvHelper;
+using CsvHelper.Configuration;
+using ClosedXML.Excel;
 
 namespace Saffrat.Controllers
 {
@@ -368,8 +374,8 @@ namespace Saffrat.Controllers
                     _dbContext.FoodItems.Remove(existing);
                     _dbContext.SaveChanges();
                     response.Add("status", "success");
-					response.Add("message", "success");
-				}
+                    response.Add("message", "success");
+                }
                 catch (DbUpdateException)
                 {
                     response.Add("status", "error");
@@ -384,10 +390,202 @@ namespace Saffrat.Controllers
             else
             {
                 response.Add("status", "error");
-				response.Add("message", "Food Item not exist.");
-			}
-            
+                response.Add("message", "Food Item not exist.");
+            }
+
             return Json(response);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> DownloadFoodExcel()
+        {
+            var items = await _dbContext.FoodItems.Include(x => x.Group).ToListAsync();
+            
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("FoodItems");
+                
+                // Headers
+                worksheet.Cell(1, 1).Value = "Id";
+                worksheet.Cell(1, 2).Value = "GroupName";
+                worksheet.Cell(1, 3).Value = "ItemName";
+                worksheet.Cell(1, 4).Value = "ArabicName";
+                worksheet.Cell(1, 5).Value = "Description";
+                worksheet.Cell(1, 6).Value = "Price";
+                worksheet.Cell(1, 7).Value = "VanSalePrice";
+                worksheet.Cell(1, 8).Value = "WholeSalePrice";
+                worksheet.Cell(1, 9).Value = "Barcode";
+                worksheet.Cell(1, 10).Value = "PermittedSalesTypes";
+                worksheet.Cell(1, 11).Value = "Image";
+
+                // Header styling
+                var headerRange = worksheet.Range(1, 1, 1, 11);
+                headerRange.Style.Font.Bold = true;
+                headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+
+                // Data
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    int row = i + 2;
+                    worksheet.Cell(row, 1).Value = item.Id ?? 0;
+                    worksheet.Cell(row, 2).Value = item.Group?.GroupName;
+                    worksheet.Cell(row, 3).Value = item.ItemName;
+                    worksheet.Cell(row, 4).Value = item.ArabicName;
+                    worksheet.Cell(row, 5).Value = item.Description;
+                    worksheet.Cell(row, 6).Value = item.Price;
+                    worksheet.Cell(row, 7).Value = item.VanSalePrice;
+                    worksheet.Cell(row, 8).Value = item.WholeSalePrice;
+                    worksheet.Cell(row, 9).Value = item.Barcode;
+                    worksheet.Cell(row, 10).Value = item.PermittedSalesTypes;
+                    worksheet.Cell(row, 11).Value = item.Image;
+                }
+
+                worksheet.Columns().AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Saffrat_Menu_Excel.xlsx");
+                }
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> ImportFoodItems(IFormFile menuFile)
+        {
+            var results = new Dictionary<string, string>();
+            if (menuFile == null || menuFile.Length == 0)
+            {
+                results.Add("status", "error");
+                results.Add("message", "Please select a valid Excel or CSV file.");
+                return Json(results);
+            }
+
+            var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var groups = await _dbContext.FoodGroups.ToListAsync();
+            int inserted = 0;
+            int updated = 0;
+            int errors = 0;
+
+            try
+            {
+                var extension = Path.GetExtension(menuFile.FileName).ToLower();
+                if (extension == ".xlsx")
+                {
+                    using (var workbook = new XLWorkbook(menuFile.OpenReadStream()))
+                    {
+                        var worksheet = workbook.Worksheet(1);
+                        var rows = worksheet.RangeUsed().RowsUsed().Skip(1); // Skip header
+
+                        foreach (var row in rows)
+                        {
+                            try
+                            {
+                                int? id = null;
+                                if (!row.Cell(1).IsEmpty()) id = row.Cell(1).GetValue<int>();
+                                
+                                var groupName = row.Cell(2).GetValue<string>();
+                                var itemName = row.Cell(3).GetValue<string>();
+
+                                if (string.IsNullOrEmpty(groupName) || string.IsNullOrEmpty(itemName)) { errors++; continue; }
+
+                                var group = groups.FirstOrDefault(x => x.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+                                if (group == null) { errors++; continue; }
+
+                                FoodItem item = null;
+                                if (id.HasValue && id > 0) item = await _dbContext.FoodItems.FindAsync(id.Value);
+
+                                bool isNew = false;
+                                if (item == null) { item = new FoodItem(); isNew = true; }
+
+                                item.GroupId = (int)group.Id;
+                                item.ItemName = itemName;
+                                item.ArabicName = row.Cell(4).GetValue<string>();
+                                item.Description = row.Cell(5).GetValue<string>();
+                                item.Price = row.Cell(6).GetValue<decimal>();
+                                item.VanSalePrice = row.Cell(7).GetValue<decimal>();
+                                item.WholeSalePrice = row.Cell(8).GetValue<decimal>();
+                                item.Barcode = row.Cell(9).GetValue<string>();
+                                item.PermittedSalesTypes = row.Cell(10).GetValue<string>();
+                                item.Image = row.Cell(11).IsEmpty() ? "default" : row.Cell(11).GetValue<string>();
+                                item.UpdatedAt = CurrentDateTime();
+                                item.UpdatedBy = userName;
+
+                                if (isNew) { _dbContext.FoodItems.Add(item); inserted++; }
+                                else { _dbContext.FoodItems.Update(item); updated++; }
+                            }
+                            catch { errors++; }
+                        }
+                    }
+                }
+                else if (extension == ".csv")
+                {
+                    using (var reader = new StreamReader(menuFile.OpenReadStream(), Encoding.UTF8))
+                    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                    {
+                        csv.Read();
+                        csv.ReadHeader();
+                        while (csv.Read())
+                        {
+                            try
+                            {
+                                var id = csv.GetField<int?>("Id");
+                                var groupName = csv.GetField<string>("GroupName");
+                                var itemName = csv.GetField<string>("ItemName");
+
+                                if (string.IsNullOrEmpty(groupName) || string.IsNullOrEmpty(itemName)) { errors++; continue; }
+
+                                var group = groups.FirstOrDefault(x => x.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+                                if (group == null) { errors++; continue; }
+
+                                FoodItem item = null;
+                                if (id.HasValue && id > 0) item = await _dbContext.FoodItems.FindAsync(id.Value);
+
+                                bool isNew = false;
+                                if (item == null) { item = new FoodItem(); isNew = true; }
+
+                                item.GroupId = (int)group.Id;
+                                item.ItemName = itemName;
+                                item.ArabicName = csv.GetField<string>("ArabicName");
+                                item.Description = csv.GetField<string>("Description");
+                                item.Price = csv.GetField<decimal>("Price");
+                                item.VanSalePrice = csv.GetField<decimal>("VanSalePrice");
+                                item.WholeSalePrice = csv.GetField<decimal>("WholeSalePrice");
+                                item.Barcode = csv.GetField<string>("Barcode");
+                                item.PermittedSalesTypes = csv.GetField<string>("PermittedSalesTypes");
+                                item.Image = csv.GetField<string>("Image") ?? "default";
+                                item.UpdatedAt = CurrentDateTime();
+                                item.UpdatedBy = userName;
+
+                                if (isNew) { _dbContext.FoodItems.Add(item); inserted++; }
+                                else { _dbContext.FoodItems.Update(item); updated++; }
+                            }
+                            catch { errors++; }
+                        }
+                    }
+                }
+                else
+                {
+                    results.Add("status", "error");
+                    results.Add("message", "Unsupported file format. Please use Excel (.xlsx) or CSV.");
+                    return Json(results);
+                }
+
+                await _dbContext.SaveChangesAsync();
+                results.Add("status", "success");
+                results.Add("message", $"Import complete: {inserted} inserted, {updated} updated, {errors} skipped due to errors.");
+            }
+            catch (Exception ex)
+            {
+                results.Add("status", "error");
+                results.Add("message", "Error during file processing: " + ex.Message);
+            }
+
+            return Json(results);
         }
 
         /*
