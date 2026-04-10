@@ -20,8 +20,9 @@ namespace Saffrat.Models
         public decimal DiscountTotal { get; set; }
         public decimal ChargeTotal { get; set; }
         public decimal Total { get; set; }
-        public string PaymentMethod { get; set; }
+        public string DiscountReason { get; set; }
         public decimal PaidAmount { get; set; }
+        public string PaymentMethod { get; set; }
         public decimal DueAmount { get; set; }
         public int OrderType { get; set; }
         public int Status { get; set; }

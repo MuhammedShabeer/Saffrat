@@ -32,11 +32,20 @@ namespace Saffrat.Controllers
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
             var startOfDay = now.Date;
 
-            // 1. Revenue Summary
-            var todayRevenue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfDay).SumAsync(x => (decimal?)x.Total) ?? 0;
-            var todayOrders = await _dbContext.Orders.CountAsync(x => x.CreatedAt >= startOfDay);
-            var monthRevenue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfMonth).SumAsync(x => (decimal?)x.Total) ?? 0;
+            // 1. Revenue Summary (Restaurant vs VanSale)
+            var todayRevenue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfDay && x.PriceType != "VanSale").SumAsync(x => (decimal?)x.Total) ?? 0;
+            var todayDue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfDay && x.PriceType != "VanSale").SumAsync(x => (decimal?)x.DueAmount) ?? 0;
+            var todayOrders = await _dbContext.Orders.CountAsync(x => x.CreatedAt >= startOfDay && x.PriceType != "VanSale");
+            var monthRevenue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfMonth && x.PriceType != "VanSale").SumAsync(x => (decimal?)x.Total) ?? 0;
+            var monthDue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfMonth && x.PriceType != "VanSale").SumAsync(x => (decimal?)x.DueAmount) ?? 0;
             var avgOrderValue = todayOrders > 0 ? todayRevenue / todayOrders : 0;
+
+            var vtodayRevenue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfDay && x.PriceType == "VanSale").SumAsync(x => (decimal?)x.Total) ?? 0;
+            var vtodayDue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfDay && x.PriceType == "VanSale").SumAsync(x => (decimal?)x.DueAmount) ?? 0;
+            var vtodayOrders = await _dbContext.Orders.CountAsync(x => x.CreatedAt >= startOfDay && x.PriceType == "VanSale");
+            var vmonthRevenue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfMonth && x.PriceType == "VanSale").SumAsync(x => (decimal?)x.Total) ?? 0;
+            var vmonthDue = await _dbContext.Orders.Where(x => x.CreatedAt >= startOfMonth && x.PriceType == "VanSale").SumAsync(x => (decimal?)x.DueAmount) ?? 0;
+            var vavgOrderValue = vtodayOrders > 0 ? vtodayRevenue / vtodayOrders : 0;
 
             // 2. Daily Sales (Last 30 Days)
             var thirtyDaysAgo = now.Date.AddDays(-29);
@@ -123,8 +132,17 @@ namespace Saffrat.Controllers
                 HourlySales = hourlyData,
                 TodayRevenue = todayRevenue,
                 TodayOrders = todayOrders,
+                TodayDue = todayDue,
                 MonthRevenue = monthRevenue,
-                AvgOrderValue = avgOrderValue
+                MonthDue = monthDue,
+                AvgOrderValue = avgOrderValue,
+                
+                VanSaleTodayRevenue = vtodayRevenue,
+                VanSaleTodayOrders = vtodayOrders,
+                VanSaleTodayDue = vtodayDue,
+                VanSaleMonthRevenue = vmonthRevenue,
+                VanSaleMonthDue = vmonthDue,
+                VanSaleAvgOrderValue = vavgOrderValue
             };
 
             return Json(new { status = "success", data = viewModel });

@@ -13,6 +13,8 @@
         --premium-emerald: #1cc88a;
         --premium-gold: #f6c23e;
         --premium-crimson: #e74a3b;
+        --premium-indigo: #6610f2;
+        --premium-purple: #6f42c1;
     }
 
     .mis-container {
@@ -117,6 +119,7 @@
                 <div>
                     <div class="stat-label">@Localize("Today Revenue")</div>
                     <div class="stat-value" id="stat-today-revenue">...</div>
+                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-today-due">...</span></div>
                 </div>
                 <div class="stat-icon bg-primary shadow">
                     <i class="fas fa-wallet"></i>
@@ -139,6 +142,7 @@
                 <div>
                     <div class="stat-label">@Localize("Monthly Sales")</div>
                     <div class="stat-value" id="stat-month-revenue">...</div>
+                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-month-due">...</span></div>
                 </div>
                 <div class="stat-icon bg-info shadow">
                     <i class="fas fa-calendar-check"></i>
@@ -153,6 +157,60 @@
                 </div>
                 <div class="stat-icon bg-warning shadow">
                     <i class="fas fa-receipt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- VanSale KPI Row -->
+    <div class="d-flex align-items-center mb-3 px-2 mt-4">
+        <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-truck-moving text-indigo me-2"></i> @Localize("VanSale Performance")</h5>
+        <hr class="flex-grow-1 ms-3" style="opacity: 0.1;">
+    </div>
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="glass-card stat-card border-bottom" style="border-bottom: 3px solid var(--premium-indigo) !important;">
+                <div>
+                    <div class="stat-label">@Localize("Van Today Revenue")</div>
+                    <div class="stat-value" id="stat-van-today-revenue">...</div>
+                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-van-today-due">...</span></div>
+                </div>
+                <div class="stat-icon bg-indigo shadow" style="background-color: var(--premium-indigo);">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="glass-card stat-card border-bottom" style="border-bottom: 3px solid var(--premium-purple) !important;">
+                <div>
+                    <div class="stat-label">@Localize("Van Orders Count")</div>
+                    <div class="stat-value" id="stat-van-today-orders">...</div>
+                </div>
+                <div class="stat-icon bg-purple shadow" style="background-color: var(--premium-purple);">
+                    <i class="fas fa-boxes-packing"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="glass-card stat-card border-bottom" style="border-bottom: 3px solid var(--premium-indigo) !important;">
+                <div>
+                    <div class="stat-label">@Localize("Van Monthly Sales")</div>
+                    <div class="stat-value" id="stat-van-month-revenue">...</div>
+                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-van-month-due">...</span></div>
+                </div>
+                <div class="stat-icon bg-indigo shadow" style="background-color: var(--premium-indigo);">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="glass-card stat-card border-bottom" style="border-bottom: 3px solid var(--premium-purple) !important;">
+                <div>
+                    <div class="stat-label">@Localize("Van Avg Transaction")</div>
+                    <div class="stat-value" id="stat-van-avg-value">...</div>
+                </div>
+                <div class="stat-icon bg-purple shadow" style="background-color: var(--premium-purple);">
+                    <i class="fas fa-coins"></i>
                 </div>
             </div>
         </div>
@@ -214,9 +272,19 @@
                         
                         // Update Stats
                         $('#stat-today-revenue').text(GetCurrency(data.todayRevenue));
+                        $('#stat-today-due').text(GetCurrency(data.todayDue));
                         $('#stat-today-orders').text(data.todayOrders);
                         $('#stat-month-revenue').text(GetCurrency(data.monthRevenue));
+                        $('#stat-month-due').text(GetCurrency(data.monthDue));
                         $('#stat-avg-value').text(GetCurrency(data.avgOrderValue.toFixed(2)));
+
+                        // Update VanSale Stats
+                        $('#stat-van-today-revenue').text(GetCurrency(data.vanSaleTodayRevenue));
+                        $('#stat-van-today-due').text(GetCurrency(data.vanSaleTodayDue));
+                        $('#stat-van-today-orders').text(data.vanSaleTodayOrders);
+                        $('#stat-van-month-revenue').text(GetCurrency(data.vanSaleMonthRevenue));
+                        $('#stat-van-month-due').text(GetCurrency(data.vanSaleMonthDue));
+                        $('#stat-van-avg-value').text(GetCurrency(data.vanSaleAvgOrderValue.toFixed(2)));
 
                         RenderCharts(data);
                     }

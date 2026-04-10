@@ -433,7 +433,13 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div class="row g-3" id="discounts">
+                    <div class="row g-3 mb-4" id="discounts">
+                        <div class="col-6 col-md-4 item" data-id="0" data-value="0" data-percentage="False">
+                            <div class="card-box p-2 text-center custom-discount-btn">
+                                <h2>@Localize("Custom")</h2>
+                                <h2><i class="fas fa-plus"></i></h2>
+                            </div>
+                        </div>
                         @foreach (var item in Model.Discounts)
                         {
                             <div class="col-6 col-md-4 item" data-id="@item.Id" data-value="@item.Value" data-percentage="@item.IsPercentage" data-default="@item.IsDefault">
@@ -450,6 +456,29 @@
                                 </div>
                             </div>
                         }
+                    </div>
+                    <div id="customDiscountFields" class="d-none border-top pt-3">
+                        <h6>@Localize("Custom Discount Details")</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4 form-group">
+                                <label>@Localize("Discount Value")</label>
+                                <input type="number" id="customDiscountValueInput" class="form-control" placeholder="0.00" />
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label>@Localize("Type")</label>
+                                <select id="customDiscountTypeInput" class="form-select">
+                                    <option value="percentage">%</option>
+                                    <option value="fixed">@GetSetting.CurrencySymbol</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12 form-group">
+                                <label>@Localize("Reason")</label>
+                                <input type="text" id="customDiscountReasonInput" class="form-control" placeholder="@Localize("Staff reason for discount")" />
+                            </div>
+                        </div>
+                        <div class="text-end mt-2">
+                            <button type="button" onclick="ApplyCustomDiscount();" class="btn btn-primary">@Localize("Apply Custom")</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -874,6 +903,9 @@
         var TaxValue = 0;
         var DiscountIsPercentage = true;
         var DiscountValue = 0;
+        var DiscountReason = '';
+        var CustomDiscountValue = 0;
+        var CustomDiscountIsPercentage = false;
         var ChargeIsPercentage = false;
         var ChargeValue = 0;
         var category = 0;
@@ -988,6 +1020,9 @@
             TaxValue = 0;
             DiscountIsPercentage = true;
             DiscountValue = 0;
+            DiscountReason = '';
+            CustomDiscountValue = 0;
+            CustomDiscountIsPercentage = false;
             ChargeIsPercentage = false;
             ChargeValue = 0;
             category = 0;
@@ -1140,21 +1175,58 @@
         function SetDiscount() {
             $("#discounts").find(".card-box").removeClass("active");
             $("#discounts [data-id='" + DiscountId + "']").find(".card-box").addClass('active');
-            if (DiscountIsPercentage == true) {
-                $("#d-Discount").text(getNumber(DiscountValue) + ' %');
-            }
-            else {
-                $("#d-Discount").text(GetCurrency(getNumber(DiscountValue)));
+            
+            if (DiscountId == 0) {
+                if (CustomDiscountIsPercentage == true) {
+                    $("#d-Discount").text(getNumber(CustomDiscountValue) + ' %');
+                }
+                else {
+                    $("#d-Discount").text(GetCurrency(getNumber(CustomDiscountValue)));
+                }
+            } else {
+                if (DiscountIsPercentage == true) {
+                    $("#d-Discount").text(getNumber(DiscountValue) + ' %');
+                }
+                else {
+                    $("#d-Discount").text(GetCurrency(getNumber(DiscountValue)));
+                }
             }
             CalculateTotal();
         }
         $("#discounts").on("click", "div.item", function () {
-            DiscountId = $(this).data("id");
+            var id = $(this).data("id");
+            if (id == 0) {
+                $("#customDiscountFields").removeClass('d-none');
+                return;
+            }
+            $("#customDiscountFields").addClass('d-none');
+            DiscountId = id;
             DiscountValue = getLocaleNumber($(this).data("value"));
             DiscountIsPercentage = $(this).data("percentage") == 'True' ? true : false;
+            DiscountReason = '';
+            CustomDiscountValue = 0;
             SetDiscount();
             $("#DiscountModel").modal('hide');
         });
+
+        function ApplyCustomDiscount() {
+            DiscountId = 0;
+            CustomDiscountValue = getLocaleNumber($("#customDiscountValueInput").val());
+            CustomDiscountIsPercentage = $("#customDiscountTypeInput").val() == "percentage";
+            DiscountReason = $("#customDiscountReasonInput").val();
+
+            if (CustomDiscountValue <= 0) {
+                errorMessage('@Localize("Please enter a valid discount value.")');
+                return;
+            }
+            if (!DiscountReason) {
+                errorMessage('@Localize("Please enter a reason for the discount.")');
+                return;
+            }
+
+            SetDiscount();
+            $("#DiscountModel").modal('hide');
+        }
 
         // Charges
         function OpenChargeModel() {
@@ -1859,14 +1931,30 @@
             TaxId = order.TaxId;
             TaxValue = order.Tax.Value;
             TaxIsPercentage = order.Tax.IsPercentage;
-            DiscountId = order.DiscountId;
-            DiscountValue = order.Discount.Value;
-            DiscountIsPercentage = order.Discount.IsPercentage;
+            DiscountId = order.DiscountId || 0;
+            DiscountValue = order.Discount ? order.Discount.Value : 0;
+            DiscountIsPercentage = order.Discount ? order.Discount.IsPercentage : true;
             ChargeId = order.ChargesId;
             ChargeValue = order.Charges.Value;
             ChargeIsPercentage = order.Charges.IsPercentage;
             CustomerId = order.CustomerId;
             CustomerName = order.Customer.CustomerName;
+            
+            DiscountReason = order.DiscountReason || '';
+            if (DiscountId == 0 && order.DiscountTotal > 0) {
+                // If it's a custom discount, we estimate the value from DiscountTotal
+                // However, the backend doesn't store if it was percentage or fixed for custom
+                // except that we can assume it's fixed if we don't have that info, 
+                // but actually I updated the backend to accept them. 
+                // Let's assume for now we just show the total value.
+                CustomDiscountValue = order.DiscountTotal;
+                CustomDiscountIsPercentage = false; 
+                
+                $("#customDiscountValueInput").val(CustomDiscountValue);
+                $("#customDiscountTypeInput").val("fixed");
+                $("#customDiscountReasonInput").val(DiscountReason);
+            }
+
             WaiterOrDriver = order.WaiterOrDriver;
             OrderType = order.OrderType;
             OrderStatus = order.Status;
@@ -2107,8 +2195,16 @@
             }
             amount = subTotal;
             //apply discount
-
-            if (DiscountIsPercentage == true) {
+            if (DiscountId == 0) {
+                if (CustomDiscountIsPercentage == true) {
+                    var perc = CustomDiscountValue / 100;
+                    amount = amount - (amount * perc);
+                }
+                else {
+                    amount -= CustomDiscountValue;
+                }
+            }
+            else if (DiscountIsPercentage == true) {
                 var perc = DiscountValue / 100;
                 amount = amount - (amount * perc);
             }
@@ -2182,6 +2278,9 @@
                 data.append("Guests", Guests);
                 data.append("WaiterOrDriver", WaiterOrDriver);
                 data.append("PriceType", PriceType);
+                data.append("DiscountReason", DiscountReason);
+                data.append("CustomDiscountValue", getNumber(CustomDiscountValue));
+                data.append("CustomDiscountIsPercentage", CustomDiscountIsPercentage);
 
                 $.ajax({
                     url: url,

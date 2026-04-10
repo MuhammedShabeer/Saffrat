@@ -124,7 +124,8 @@ namespace Saffrat.Controllers
         [HttpPost]
         [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> SaveRunningOrder(int[] ItemIds, int[] Quantities, string[] Modifiers, decimal[] ItemPrices, string Note, int CustomerId,
-            int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType)
+            int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType, 
+            string DiscountReason = "", decimal CustomDiscountValue = 0, bool CustomDiscountIsPercentage = false)
         {
             var results = new Dictionary<string, string>();
             var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -154,7 +155,7 @@ namespace Saffrat.Controllers
                 results.Add("status", "error");
                 results.Add("message", "Please select tax.");
             }
-            else if (discount == null)
+            else if (DiscountId != 0 && discount == null)
             {
                 results.Add("status", "error");
                 results.Add("message", "Please select discount.");
@@ -209,11 +210,12 @@ namespace Saffrat.Controllers
                         CreatedBy = userName,
                         CreatedAt = CurrentDateTime(),
                         TaxId = TaxId,
-                        DiscountId = DiscountId,
+                        DiscountId = DiscountId == 0 ? (int?)null : DiscountId,
                         ChargesId = ChargeId,
                         PriceType = PriceType,
                         TaxTotal = 0,
                         DiscountTotal = 0,
+                        DiscountReason = DiscountReason,
                         ChargeTotal = 0,
                         SubTotal = 0,
                         PaidAmount = 0,
@@ -250,11 +252,12 @@ namespace Saffrat.Controllers
                                 CreatedBy = userName,
                                 CreatedAt = CurrentDateTime(),
                                 TaxId = TaxId,
-                                DiscountId = DiscountId,
+                                DiscountId = DiscountId == 0 ? (int?)null : DiscountId,
                                 ChargesId = ChargeId,
                                 PriceType = PriceType,
                                 TaxTotal = 0,
                                 DiscountTotal = 0,
+                                DiscountReason = DiscountReason,
                                 ChargeTotal = 0,
                                 SubTotal = 0,
                                 PaidAmount = 0,
@@ -302,7 +305,20 @@ namespace Saffrat.Controllers
                     }
                     order.Total = order.SubTotal;
                     //apply discount
-                    if (discount.IsPercentage)
+                    if (DiscountId == 0)
+                    {
+                        if (CustomDiscountIsPercentage)
+                        {
+                            var perc = CustomDiscountValue / 100;
+                            order.DiscountTotal = order.SubTotal * perc;
+                        }
+                        else
+                        {
+                            order.DiscountTotal = CustomDiscountValue;
+                        }
+                        order.Total = order.SubTotal - order.DiscountTotal;
+                    }
+                    else if (discount.IsPercentage)
                     {
                         var perc = discount.Value / 100;
                         order.DiscountTotal = order.SubTotal * perc;
@@ -378,7 +394,8 @@ namespace Saffrat.Controllers
         [HttpPost]
         [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> UpdateRunningOrder(int OrderId, int[] ItemIds, int[] Quantities, string[] Modifiers, decimal[] ItemPrices, string Note, int CustomerId,
-            int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType)
+            int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType,
+            string DiscountReason = "", decimal CustomDiscountValue = 0, bool CustomDiscountIsPercentage = false)
         {
             var response = new Dictionary<string, string>();
             var userName = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -408,7 +425,7 @@ namespace Saffrat.Controllers
                 response.Add("status", "error");
                 response.Add("message", "Please select tax.");
             }
-            else if (discount == null)
+            else if (DiscountId != 0 && discount == null)
             {
                 response.Add("status", "error");
                 response.Add("message", "Please select discount.");
@@ -487,7 +504,8 @@ namespace Saffrat.Controllers
                         order.OrderType = OrderType;
                         order.Note = !String.IsNullOrEmpty(Note) ? Note : String.Empty;
                         order.TaxId = TaxId;
-                        order.DiscountId = DiscountId;
+                        order.DiscountId = DiscountId == 0 ? (int?)null : DiscountId;
+                        order.DiscountReason = DiscountReason;
                         order.ChargesId = ChargeId;
                         order.PriceType = PriceType;
                         order.WaiterOrDriver = WaiterOrDriver;
@@ -533,7 +551,20 @@ namespace Saffrat.Controllers
                         }
                         order.Total = order.SubTotal;
                         //apply discount
-                        if (discount.IsPercentage)
+                        if (DiscountId == 0)
+                        {
+                            if (CustomDiscountIsPercentage)
+                            {
+                                var perc = CustomDiscountValue / 100;
+                                order.DiscountTotal = order.SubTotal * perc;
+                            }
+                            else
+                            {
+                                order.DiscountTotal = CustomDiscountValue;
+                            }
+                            order.Total = order.SubTotal - order.DiscountTotal;
+                        }
+                        else if (discount.IsPercentage)
                         {
                             var perc = discount.Value / 100;
                             order.DiscountTotal = order.SubTotal * perc;
@@ -838,6 +869,7 @@ namespace Saffrat.Controllers
                             DiscountTotal = oorder.DiscountTotal,
                             ChargeTotal = oorder.ChargeTotal,
                             Total = oorder.Total,
+                            DiscountReason = oorder.DiscountReason,
                             PaymentMethod = PaymentMethod,
                             PaidAmount = PaidAmount,
                             DueAmount = oorder.Total - PaidAmount,
@@ -1989,6 +2021,7 @@ td, th { padding: 4px 0; text-align: left; vertical-align: top; font-size: 12px;
     <table>
         <tr><td>{SubTotalTitle}:</td><td class=""right"">{SubTotal}</td></tr>
         <tr><td>{DiscountTitle}:</td><td class=""right"">{Discount}</td></tr>
+        {DiscountReasonRow}
         <tr><td>{ChargeTitle}:</td><td class=""right"">{Charge}</td></tr>
         <tr><td>{TaxTitle}:</td><td class=""right"">{Tax}</td></tr>
         <tr class=""total"">
@@ -2063,6 +2096,12 @@ td, th { padding: 4px 0; text-align: left; vertical-align: top; font-size: 12px;
                 html = html.Replace("{SubTotal}", GetCurrency(order.SubTotal));
                 html = html.Replace("{Charge}", GetCurrency(order.ChargeTotal));
                 html = html.Replace("{Discount}", GetCurrency(order.DiscountTotal));
+
+                var discountReasonRow = !string.IsNullOrEmpty(order.DiscountReason) 
+                    ? $@"<tr><td colspan=""2"" style=""font-size: 10px; color: #666; font-style: italic;"">({order.DiscountReason})</td></tr>" 
+                    : "";
+                html = html.Replace("{DiscountReasonRow}", discountReasonRow);
+
                 html = html.Replace("{TaxExcl}", GetCurrency(order.Total - order.TaxTotal));
                 html = html.Replace("{Tax}", GetCurrency(order.TaxTotal));
                 html = html.Replace("{Total}", GetCurrency(order.Total));
@@ -2154,6 +2193,7 @@ td, th { padding: 4px 0; text-align: right; vertical-align: top; font-size: 12px
     <table>
         <tr><td>{SubTotalTitle}:</td><td class=""right"">{SubTotal}</td></tr>
         <tr><td>{DiscountTitle}:</td><td class=""right"">{Discount}</td></tr>
+        {DiscountReasonRow}
         <tr><td>{ChargeTitle}:</td><td class=""right"">{Charge}</td></tr>
         <tr><td>{TaxTitle}:</td><td class=""right"">{Tax}</td></tr>
         <tr class=""total"">
@@ -2228,6 +2268,12 @@ td, th { padding: 4px 0; text-align: right; vertical-align: top; font-size: 12px
                 html = html.Replace("{SubTotal}", GetCurrency(order.SubTotal));
                 html = html.Replace("{Charge}", GetCurrency(order.ChargeTotal));
                 html = html.Replace("{Discount}", GetCurrency(order.DiscountTotal));
+
+                var discountReasonRow = !string.IsNullOrEmpty(order.DiscountReason) 
+                    ? $@"<tr><td colspan=""2"" style=""font-size: 10px; color: #666; font-style: italic;"">({order.DiscountReason})</td></tr>" 
+                    : "";
+                html = html.Replace("{DiscountReasonRow}", discountReasonRow);
+
                 html = html.Replace("{TaxExcl}", GetCurrency(order.Total - order.TaxTotal));
                 html = html.Replace("{Tax}", GetCurrency(order.TaxTotal));
                 html = html.Replace("{Total}", GetCurrency(order.Total));

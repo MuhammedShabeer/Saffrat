@@ -16,13 +16,14 @@ namespace Saffrat.Models
         public string WaiterOrDriver { get; set; }
         public int? Guests { get; set; }
         public int TaxId { get; set; }
-        public int DiscountId { get; set; }
+        public int? DiscountId { get; set; }
         public int ChargesId { get; set; }
         public decimal SubTotal { get; set; }
         public decimal TaxTotal { get; set; }
         public decimal DiscountTotal { get; set; }
         public decimal ChargeTotal { get; set; }
         public decimal Total { get; set; }
+        public string DiscountReason { get; set; }
         public string PaymentMethod { get; set; }
         public decimal PaidAmount { get; set; }
         public decimal DueAmount { get; set; }

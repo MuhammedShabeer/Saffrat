@@ -15,8 +15,18 @@ namespace Saffrat.ViewModels
         
         public decimal TodayRevenue { get; set; }
         public int TodayOrders { get; set; }
+        public decimal TodayDue { get; set; }
         public decimal MonthRevenue { get; set; }
+        public decimal MonthDue { get; set; }
         public decimal AvgOrderValue { get; set; }
+
+        // VanSale Metrics
+        public decimal VanSaleTodayRevenue { get; set; }
+        public int VanSaleTodayOrders { get; set; }
+        public decimal VanSaleTodayDue { get; set; }
+        public decimal VanSaleMonthRevenue { get; set; }
+        public decimal VanSaleMonthDue { get; set; }
+        public decimal VanSaleAvgOrderValue { get; set; }
     }
 
     public class DailySalePoint
