@@ -101,6 +101,10 @@ namespace Saffrat.Controllers
                 decimal totalSales = order.Any() ? order.Sum(x => x.Total) : 0;
                 decimal customerDue = order.Any() ? order.Sum(x => x.DueAmount) : 0;
                 int todayOrders = order.Count();
+                
+                var paymentSplitUp = order.GroupBy(x => x.PaymentMethod ?? "Unspecified")
+                    .Select(g => new { Method = g.Key, Amount = g.Sum(x => x.Total) })
+                    .ToDictionary(x => x.Method, x => x.Amount.ToString());
 
                 decimal totalPurchases = 0;
                 decimal supplierDue = 0;
@@ -119,6 +123,7 @@ namespace Saffrat.Controllers
                 results.Add("totalSales", totalSales.ToString());
                 results.Add("customersDue", customerDue.ToString());
                 results.Add("totalOrders", todayOrders.ToString());
+                results.Add("paymentSplitUp", JsonSerializer.Serialize(paymentSplitUp));
                 results.Add("totalPurchases", totalPurchases.ToString());
                 results.Add("suppliersDue", supplierDue.ToString());
                 results.Add("totalExpenses", totalExpenses.ToString());

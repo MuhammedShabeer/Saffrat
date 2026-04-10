@@ -6,14 +6,79 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<style>
+    /* Premium Dashboard Styles */
+    .card-type-3 { transition: all 0.3s ease; }
+    .card-type-3:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    
+    .payment-breakdown-card { border-radius: 12px; background: #fff; overflow: hidden; }
+    .payment-section-header { background: #f8f9fa; padding: 12px 20px; border-bottom: 1px solid #edf2f9; }
+    
+    .payment-list-item { 
+        display: flex; 
+        align-items: center; 
+        padding: 12px 20px; 
+        border-bottom: 1px solid #edf2f9; 
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .payment-list-item:last-child { border-bottom: none; }
+    .payment-list-item:hover { background-color: #fbfcfe; transform: translateX(5px); }
+    
+    .method-icon { 
+        width: 36px; 
+        height: 36px; 
+        border-radius: 10px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin-right: 15px; 
+        font-size: 18px; /* Increased for better padding/fullness */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    /* Branded Method Icons */
+    .method-icon.cash { background: #e6fffa; color: #38b2ac; }
+    .method-icon.card { background: #ebf4ff; color: #4299e1; }
+    .method-icon.talabat { background: #fff3e0; color: #ff5a00; }
+    .method-icon.keeta { background: #ffebee; color: #eb0029; }
+    .method-icon.rafeek { background: #e0f2f1; color: #00897b; }
+    .method-icon.other { background: #f7fafc; color: #a0aec0; }
+    
+    .method-info { flex-grow: 1; }
+    .method-name { font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 0; }
+    .method-amount { font-size: 15px; font-weight: 700; color: #1a202c; margin-bottom: 0; }
+    
+    .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #718096; font-weight: 700; margin-bottom: 2px; }
+    .stat-value { font-size: 18px; font-weight: 800; color: #2d3748; margin-bottom: 0; }
+    
+    .border-rb-primary { border-right: 1px solid #edf2f9; border-bottom: 1px solid #edf2f9; }
+    .border-b-primary { border-bottom: 1px solid #edf2f9; }
+    .border-r-primary { border-right: 1px solid #edf2f9; }
+
+    /* Alignment Fixes */
+    .row-equal-height > [class*='col-'] { 
+        display: flex;
+        flex-direction: column;
+    }
+    .row-equal-height .card { 
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .row-equal-height .card-body {
+        flex: 1;
+    }
+</style>
+
 <div class="row">
-    <div class="@(User.IsInRole("admin") ? "col-xl-3 col-lg-6" : "col-xl-6 col-lg-6")">
-        <div class="card">
+    <div class="@(User.IsInRole("admin") ? "col-xl-3 col-lg-6" : "col-xl-6 col-lg-6") mb-4">
+        <div class="card h-100">
             <div class="card-body card-type-3">
-                <div class="row">
+                <div class="row align-items-center">
                     <div class="col">
                         <h6 class="mb-0">@Localize("Total Orders")</h6>
-                        <p class="mb-0">@ViewBag.TotalOrders</p>
+                        <h4 class="mb-0 mt-2 font-weight-bold">@ViewBag.TotalOrders</h4>
                     </div>
                     <div class="col-auto">
                         <div class="card-circle">
@@ -21,19 +86,17 @@
                         </div>
                     </div>
                 </div>
-                <p class="mt-3 mb-0 text-sm">
-                    <span class="text-nowrap">@Localize("All Time")</span>
-                </p>
+                <p class="mt-3 mb-0 text-muted small">@Localize("All Time")</p>
             </div>
         </div>
     </div>
-    <div class="@(User.IsInRole("admin") ? "col-xl-3 col-lg-6" : "col-xl-6 col-lg-6")">
-        <div class="card">
+    <div class="@(User.IsInRole("admin") ? "col-xl-3 col-lg-6" : "col-xl-6 col-lg-6") mb-4">
+        <div class="card h-100">
             <div class="card-body card-type-3">
-                <div class="row">
+                <div class="row align-items-center">
                     <div class="col">
                         <h6 class="mb-0">@Localize("Total Sales")</h6>
-                        <p class="mb-0">@GetCurrency(ViewBag.TotalSales)</p>
+                        <h4 class="mb-0 mt-2 font-weight-bold">@GetCurrency(ViewBag.TotalSales)</h4>
                     </div>
                     <div class="col-auto">
                         <div class="card-circle">
@@ -41,21 +104,19 @@
                         </div>
                     </div>
                 </div>
-                <p class="mt-3 mb-0 text-sm">
-                    <span class="text-nowrap">@Localize("All Time")</span>
-                </p>
+                <p class="mt-3 mb-0 text-muted small">@Localize("All Time")</p>
             </div>
         </div>
     </div>
     @if (User.IsInRole("admin"))
     {
-        <div class="col-xl-3 col-lg-6">
-            <div class="card">
+        <div class="col-xl-3 col-lg-6 mb-4">
+            <div class="card h-100">
                 <div class="card-body card-type-3">
-                    <div class="row">
+                    <div class="row align-items-center">
                         <div class="col">
                             <h6 class="mb-0">@Localize("Total Purchases")</h6>
-                            <p class="mb-0">@GetCurrency(ViewBag.TotalPurchases)</p>
+                            <h4 class="mb-0 mt-2 font-weight-bold">@GetCurrency(ViewBag.TotalPurchases)</h4>
                         </div>
                         <div class="col-auto">
                             <div class="card-circle">
@@ -63,19 +124,17 @@
                             </div>
                         </div>
                     </div>
-                    <p class="mt-3 mb-0 text-sm">
-                        <span class="text-nowrap">@Localize("All Time")</span>
-                    </p>
+                    <p class="mt-3 mb-0 text-muted small">@Localize("All Time")</p>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-lg-6">
-            <div class="card">
+        <div class="col-xl-3 col-lg-6 mb-4">
+            <div class="card h-100">
                 <div class="card-body card-type-3">
-                    <div class="row">
+                    <div class="row align-items-center">
                         <div class="col">
                             <h6 class="mb-0">@Localize("Total Expenses")</h6>
-                            <p class="mb-0">@GetCurrency(ViewBag.TotalExpenses)</p>
+                            <h4 class="mb-0 mt-2 font-weight-bold">@GetCurrency(ViewBag.TotalExpenses)</h4>
                         </div>
                         <div class="col-auto">
                             <div class="card-circle">
@@ -83,90 +142,88 @@
                             </div>
                         </div>
                     </div>
-                    <p class="mt-3 mb-0 text-muted text-sm">
-                        <span class="text-nowrap">@Localize("All Time")</span>
-                    </p>
+                    <p class="mt-3 mb-0 text-muted small">@Localize("All Time")</p>
                 </div>
             </div>
         </div>
     }
 </div>
 
-<div class="row">
-    <div class="col-md-8">
+<div class="row row-equal-height">
+    <div class="col-md-8 mb-4">
         <div class="card">
-            <div class="card-body" id="card-1" style="min-height:300px;">
+            <div class="card-body" id="card-1">
                 <div id="chart1" style="width:100%;"></div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-4 mb-4">
         <div class="card">
-            <div class="card-header">
-                <h4>@Localize("Today Report")</h4>
+            <div class="card-header d-flex justify-content-between align-items-center py-3">
+                <h6 class="mb-0 font-weight-bold">@Localize("Today Report")</h6>
+                <span class="badge badge-primary">@DateTime.Now.ToString("dd MMM")</span>
             </div>
-            <div class="card-body p-0 mb-4 mt-4">
+            <div class="card-body p-0 d-flex flex-column">
                 <div class="row g-0">
-                    <div class="@(User.IsInRole("admin") ? "col-6" : "col-12") border-rb-primary p-4">
-                        <p class="mb-1"><strong>@Localize("Sales")</strong></p>
-                        <h6 id="d-Sales"></h6>
+                    <div class="@(User.IsInRole("admin") ? "col-6" : "col-12") border-rb-primary p-3 text-center">
+                        <p class="stat-label">@Localize("Sales")</p>
+                        <h5 id="d-Sales" class="stat-value text-primary"></h5>
                     </div>
-                    <div class="@(User.IsInRole("admin") ? "col-6" : "col-12") border-b-primary p-4">
-                        <p class="mb-1">
-                            <strong>@Localize("Orders")</strong>
-                        </p>
-                        <h6 id="d-Orders"></h6>
+                    <div class="@(User.IsInRole("admin") ? "col-6" : "col-12") border-b-primary p-3 text-center">
+                        <p class="stat-label">@Localize("Orders")</p>
+                        <h5 id="d-Orders" class="stat-value"></h5>
                     </div>
                     @if (User.IsInRole("admin"))
                     {
-                        <div class="col-6 border-rb-primary p-4">
-                            <p class="mb-1">
-                                <strong>@Localize("Purchases")</strong>
-                            </p>
-                            <h6 id="d-Purchases"></h6>
+                        <div class="col-6 border-rb-primary p-3 text-center">
+                            <p class="stat-label">@Localize("Purchases")</p>
+                            <h5 id="d-Purchases" class="stat-value"></h5>
                         </div>
-                        <div class="col-6 border-b-primary p-4">
-                            <p class="mb-1">
-                                <strong>@Localize("Expenses")</strong>
-                            </p>
-                            <h6 id="d-Expenses"></h6>
+                        <div class="col-6 border-b-primary p-3 text-center">
+                            <p class="stat-label">@Localize("Expenses")</p>
+                            <h5 id="d-Expenses" class="stat-value"></h5>
                         </div>
                     }
-                    <div class="@(User.IsInRole("admin") ? "col-6" : "col-12") border-r-primary p-4">
-                        <p class="mb-1">
-                            <strong>@Localize("Customer Due")</strong>
-                        </p>
-                        <h6 id="d-CustomersDue"></h6>
+                    <div class="@(User.IsInRole("admin") ? "col-6" : "col-12") border-r-primary p-3 text-center">
+                        <p class="stat-label">@Localize("Customer Due")</p>
+                        <h5 id="d-CustomersDue" class="stat-value text-danger"></h5>
                     </div>
                     @if (User.IsInRole("admin"))
                     {
-                        <div class="col-6 p-4">
-                            <p class="mb-1">
-                                <strong>@Localize("Supplier Due")</strong>
-                            </p>
-                            <h6 id="d-SuppliersDue"></h6>
+                        <div class="col-6 p-3 text-center">
+                            <p class="stat-label">@Localize("Supplier Due")</p>
+                            <h5 id="d-SuppliersDue" class="stat-value text-warning"></h5>
                         </div>
                     }
+                </div>
+                
+                <div class="payment-section-header py-2">
+                    <h6 class="mb-0 text-primary small uppercase font-weight-bold">
+                        <i class="fas fa-credit-card mr-2"></i> @Localize("Payment Breakdown")
+                    </h6>
+                </div>
+                <div id="d-PaymentSplitUp" class="flex-grow-1 overflow-auto" style="max-height: 250px;">
+                    <!-- Dynamic Items -->
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-8">
+<div class="row row-equal-height mt-2">
+    <div class="col-md-8 mb-4">
         <div class="card">
-            <div class="card-body" id="card-2" style="min-height:300px;">
+            <div class="card-body" id="card-2">
                 <div id="chart2" style="width:100%;"></div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-4 mb-4">
         <div class="card">
-            <div class="card-header">
-                <h4>@Localize("Sale By Order Type (This Month)")</h4>
+            <div class="card-header py-3">
+                <h6 class="mb-0 font-weight-bold">@Localize("Order Type Analysis")</h6>
             </div>
-            <div class="card-body pb-5 pt-5" id="card-3" style="min-height:300px;">
+            <div class="card-body d-flex align-items-center justify-content-center p-0" id="card-3">
                 <div id="chart3" style="width:100%;"></div>
             </div>
         </div>
@@ -189,8 +246,6 @@
                 url: '/Home/TodayReport',
                 type: 'GET',
                 dataType: "json",
-                contentType: false,
-                processData: false,
                 success: function (data) {
                     if (data.status == "success") {
                         $('#d-Sales').text(GetCurrency(getNumber(data.totalSales)));
@@ -199,6 +254,45 @@
                         $('#d-CustomersDue').text(GetCurrency(getNumber(data.customersDue)));
                         $('#d-SuppliersDue').text(GetCurrency(getNumber(data.suppliersDue)));
                         $('#d-Expenses').text(GetCurrency(getNumber(data.totalExpenses)));
+
+                        var splitUp = JSON.parse(data.paymentSplitUp);
+                        var html = '';
+                        $.each(splitUp, function (key, value) {
+                            var iconClass = 'other';
+                            var icon = 'fa-wallet';
+                            var lowerKey = key.toLowerCase();
+                            
+                            if (lowerKey.includes('cash')) {
+                                iconClass = 'cash';
+                                icon = 'fa-money-bill-wave';
+                            } else if (lowerKey.includes('card')) {
+                                iconClass = 'card';
+                                icon = 'fa-credit-card';
+                            } else if (lowerKey.includes('talabat')) {
+                                iconClass = 'talabat';
+                                icon = 'fa-motorcycle';
+                            } else if (lowerKey.includes('keeta')) {
+                                iconClass = 'keeta';
+                                icon = 'fa-shipping-fast';
+                            } else if (lowerKey.includes('rafeek')) {
+                                iconClass = 'rafeek';
+                                icon = 'fa-utensils';
+                            }
+
+                            html += '<div class="payment-list-item">';
+                            html += '  <div class="method-icon ' + iconClass + '"><i class="fas ' + icon + '"></i></div>';
+                            html += '  <div class="method-info">';
+                            html += '    <p class="method-name">' + key + '</p>';
+                            html += '    <p class="method-amount">' + GetCurrency(getNumber(value)) + '</p>';
+                            html += '  </div>';
+                            html += '  <i class="fas fa-chevron-right text-muted small"></i>';
+                            html += '</div>';
+                        });
+                        
+                        if (html === '') {
+                             html = '<div class="p-4 text-center text-muted small"><i class="fas fa-info-circle mr-1"></i> @Localize("No payments yet today")</div>';
+                        }
+                        $('#d-PaymentSplitUp').html(html);
                     }
                     else {
                         errorMessage(data.message);
@@ -227,8 +321,6 @@
                 url: '/Home/MonthlyReport',
                 type: 'GET',
                 dataType: "json",
-                contentType: false,
-                processData: false,
                 success: function (data) {
                     if (data.status == "success") {
                         var sales = JSON.parse(data.sales);
@@ -290,8 +382,6 @@
                 url: '/Home/SaleByOrderType',
                 type: 'GET',
                 dataType: "json",
-                contentType: false,
-                processData: false,
                 success: function (data) {
                     if (data.status == "success") {
                         chart3(Number(data.dineIn), Number(data.pickUp), Number(data.delivery));
@@ -339,15 +429,12 @@
                 ],
                 chart: {
                     type: 'area',
-                    height: 350,
+                    height: 380,
+                    toolbar: { show: false }
                 },
-                colors: ['#008FFB', '#00E396', '#CED4DC'],
-                dataLabels: {
-                    enabled: false
-                },
-                stroke: {
-                    curve: 'smooth'
-                },
+                colors: ['#6777ef', '#ffa426', '#fc544b'],
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 3 },
                 xaxis: {
                     type: 'category',
                     categories: months
@@ -364,6 +451,7 @@
             var chart = new ApexCharts(document.querySelector("#chart1"), options);
             chart.render();
         }
+
         function chart2(months, sales, orders, taxes, discounts, charges) {
             var options = {
                 series: [{
@@ -378,44 +466,27 @@
                 }, {
                     name: '@Localize("Charges")',
                     data: charges
-                }, {
-                    name: '@Localize("Orders")',
-                    data: orders
                 }],
                 chart: {
                     type: 'bar',
-                    height: 350
+                    height: 380,
+                    stacked: true,
+                    toolbar: { show: false }
                 },
                 plotOptions: {
                     bar: {
                         horizontal: false,
-                        columnWidth: '55%',
-                        endingShape: 'rounded'
+                        columnWidth: '45%',
+                        borderRadius: 5
                     },
                 },
-                dataLabels: {
-                    enabled: false
-                },
-                stroke: {
-                    show: true,
-                    width: 2,
-                    colors: ['transparent']
-                },
-                yaxis: {
-                    title: {
-                        text: GetCurrency('')
-                    }
-                },
-                xaxis: {
-                    categories: months,
-                },
-                fill: {
-                    opacity: 1
-                },
+                dataLabels: { enabled: false },
+                xaxis: { categories: months },
+                fill: { opacity: 1 },
                 tooltip: {
                     y: {
                         formatter: function (val) {
-                            return getNumber(val)
+                            return GetCurrency(getNumber(val))
                         }
                     }
                 }
@@ -424,13 +495,16 @@
             var chart = new ApexCharts(document.querySelector("#chart2"), options);
             chart.render();
         }
+
         function chart3(dineIn, pickUp, delivery) {
             var options = {
                 series: [dineIn, pickUp, delivery],
                 chart: {
-                    width: 380,
-                    type: 'pie',
+                    width: '100%',
+                    height: 300,
+                    type: 'donut',
                 },
+                colors: ['#6777ef', '#3abaf4', '#ffa426'],
                 tooltip: {
                     y: {
                         formatter: function (val) {
@@ -439,15 +513,12 @@
                     }
                 },
                 labels: ['@Localize("Dine In")', '@Localize("Pick Up")', '@Localize("Delivery")'],
+                legend: { position: 'bottom' },
                 responsive: [{
                     breakpoint: 480,
                     options: {
-                        chart: {
-                            width: 200
-                        },
-                        legend: {
-                            position: 'bottom'
-                        }
+                        chart: { width: 210 },
+                        legend: { position: 'bottom' }
                     }
                 }]
             };

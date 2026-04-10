@@ -26,7 +26,7 @@ namespace Saffrat.Controllers
          */
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> Index()
         {
             var items = await _dbContext.IngredientItems.OrderByDescending(x => x.Id).ToListAsync();
@@ -34,14 +34,14 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult AddIngredient()
         {
             return View();
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult EditIngredient(int? Id)
         {
             var existing = _dbContext.IngredientItems.FirstOrDefault(x => x.Id == Id);
@@ -58,7 +58,7 @@ namespace Saffrat.Controllers
         */
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult IngredientItemDetail(int? Id)
         {
             try
@@ -93,7 +93,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> AddIngredient(IngredientItem item)
         {
             var response = new Dictionary<string, string>();
@@ -127,7 +127,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPut]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> UpdateIngredient(IngredientItem item)
         {
             var response = new Dictionary<string, string>();
@@ -161,7 +161,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<JsonResult> DeleteIngredient(int? Id)
         {
             var response = new Dictionary<string, string>();

@@ -312,6 +312,27 @@
                                     <li id="purchaseList-menu"><a class="nav-link" asp-controller="Purchase" asp-action="PurchaseHistory">@Localize("Purchase History")</a></li>
                                 </ul>
                             </li>
+                            <li class="dropdown" id="food-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-utensils"></i><span>@Localize("Foods")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addFood-menu"><a class="nav-link" asp-controller="Food" asp-action="AddFoodItem">@Localize("Add Food Item")</a></li>
+                                    <li id="foodList-menu"><a class="nav-link" asp-controller="Food" asp-action="FoodItems">@Localize("Food Items")</a></li>
+                                    <li id="foodGroupList-menu"><a class="nav-link" asp-controller="Food" asp-action="FoodGroups">@Localize("Food Groups")</a></li>
+                                    <li id="modifierList-menu"><a class="nav-link" asp-controller="Food" asp-action="Modifiers">@Localize("Modifiers")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="ingredient-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-carrot"></i><span>@Localize("Ingredients")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="addIngredient-menu"><a class="nav-link" asp-controller="Ingredient" asp-action="AddIngredient">@Localize("Add Ingredient")</a></li>
+                                    <li id="ingredientList-menu"><a class="nav-link" asp-controller="Ingredient" asp-action="Index">@Localize("Ingredients")</a></li>
+                                    <li id="stock-adj-menu"><a class="nav-link" asp-controller="StockAdjustment" asp-action="Index">@Localize("Stock Adjustment")</a></li>
+                                </ul>
+                            </li>
                             <li class="dropdown" id="people-menu">
                                 <a href="#" class="menu-toggle nav-link has-dropdown">
                                     <i class="fas fa-users"></i><span>@Localize("People")</span>

@@ -32,7 +32,7 @@ namespace Saffrat.Controllers
          */
 
 		[HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> FoodGroups()
         {
             var groups = await _dbContext.FoodGroups.ToListAsync();
@@ -44,7 +44,7 @@ namespace Saffrat.Controllers
          */
 
         [HttpPost]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> SaveFoodGroup(FoodGroup group, IFormFile groupImage)
         {
             var response = new Dictionary<string, string>();
@@ -103,7 +103,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult FoodGroupDetail(int? Id)
         {
             try
@@ -138,7 +138,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<JsonResult> DeleteFoodGroup(int? Id)
         {
             var response = new Dictionary<string, string>();
@@ -177,7 +177,7 @@ namespace Saffrat.Controllers
          */
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> FoodItems()
         {
             var items = await _dbContext.FoodItems.OrderByDescending(x => x.Id)
@@ -186,7 +186,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult AddFoodItem()
         {
             ViewBag.ingredients = GetIngredients();
@@ -195,7 +195,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult EditFoodItem(int? Id)
         {
             var item = _dbContext.FoodItems.FirstOrDefault(x => x.Id == Id);
@@ -216,7 +216,7 @@ namespace Saffrat.Controllers
          * Food Item APIs
          */
         [HttpPost]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> AddFoodItem(FoodItem foodItem, int?[] ItemId, decimal?[] ItemConsumption, IFormFile itemimage)
         {
             var response = new Dictionary<string, string>();
@@ -286,7 +286,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPut]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> UpdateFoodItem(FoodItem foodItem, int?[] ItemId, decimal?[] ItemConsumption, IFormFile itemimage)
         {
             var response = new Dictionary<string, string>();
@@ -362,7 +362,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> DeleteFoodItem(int? Id)
         {
             var response = new Dictionary<string, string>();
@@ -397,7 +397,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> DownloadFoodExcel()
         {
             var items = await _dbContext.FoodItems.Include(x => x.Group).ToListAsync();
@@ -454,7 +454,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> ImportFoodItems(IFormFile menuFile)
         {
             var results = new Dictionary<string, string>();
@@ -593,7 +593,7 @@ namespace Saffrat.Controllers
          */
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> Modifiers()
         {
             var items = await _dbContext.Modifiers.OrderByDescending(x => x.Id).ToListAsync();
@@ -601,7 +601,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult AddModifier()
         {
             ViewBag.Ingredients = GetIngredients();
@@ -609,7 +609,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public IActionResult EditModifier(int? Id)
         {
             var item = _dbContext.Modifiers.FirstOrDefault(x => x.Id == Id);
@@ -628,7 +628,7 @@ namespace Saffrat.Controllers
          * Modifiers APIs
          */
         [HttpPost]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> AddModifier(Modifier modifier, int?[] ItemId, decimal?[] ItemConsumption)
         {
             var response = new Dictionary<string, string>();
@@ -683,7 +683,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpPut]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> UpdateModifier(Modifier modifier, int?[] ItemId, decimal?[] ItemConsumption)
         {
             var response = new Dictionary<string, string>();
@@ -743,7 +743,7 @@ namespace Saffrat.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,staff")]
         public async Task<IActionResult> DeleteModifier(int? Id)
         {
             var response = new Dictionary<string, string>();

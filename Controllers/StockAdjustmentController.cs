@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Saffrat.Controllers
 {
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,staff")]
     public class StockAdjustmentController : BaseController
     {
         private readonly RestaurantDBContext _dbContext;
