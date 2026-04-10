@@ -47,7 +47,7 @@ namespace Saffrat.Controllers
 
         [HttpPost]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> Printer(int PrinterMethod, int PrinterPaperWidth, IFormFile InvoiceLogo)
+        public async Task<IActionResult> Printer(int PrinterMethod, int PrinterPaperWidth, bool PrintLogo, IFormFile InvoiceLogo)
         {
             var response = new Dictionary<string, string>();
             if (GetSetting != null)
@@ -71,6 +71,7 @@ namespace Saffrat.Controllers
 
                 GetSetting.PrinterMethod = PrinterMethod;
                 GetSetting.PrinterPaperWidth = PrinterPaperWidth;
+                GetSetting.PrintLogo = PrintLogo;
 
                 _dbContext.AppSettings.Update(GetSetting);
                 await _dbContext.SaveChangesAsync();

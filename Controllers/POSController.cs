@@ -1957,7 +1957,7 @@ td, th { padding: 4px 0; text-align: left; vertical-align: top; font-size: 12px;
 </head>
 <body>
 <div class=""ticket"">
-    <img src=""{Logo}"" alt=""Logo"" class=""logo"">
+    {LogoTag}
     <div class=""centered"">
         <p style=""font-weight:bold; font-size:14px;"">{CompanyName}</p>
         <p>{CompanyAddress}</p>
@@ -2035,6 +2035,8 @@ td, th { padding: 4px 0; text-align: left; vertical-align: top; font-size: 12px;
             {
                 var protocol = HttpContext.Request.Scheme;
                 var finalLogoUrl = logoUrl.StartsWith("/") ? logoUrl : "/" + logoUrl;
+                var logoTagHtml = GetSetting.PrintLogo ? @"<img src=""{Logo}"" alt=""Logo"" class=""logo"">" : "";
+                html = html.Replace("{LogoTag}", logoTagHtml);
                 html = html.Replace("{Logo}", $"{protocol}://{host}{finalLogoUrl}");
                 html = html.Replace("{CompanyTaxNumber}", GetSetting.CompanyTaxNum);
                 html = html.Replace("{CompanyName}", GetSetting.CompanyName);
@@ -2120,7 +2122,7 @@ td, th { padding: 4px 0; text-align: right; vertical-align: top; font-size: 12px
 </head>
 <body>
 <div class=""ticket"">
-    <img src=""{Logo}"" alt=""Logo"" class=""logo"">
+    {LogoTag}
     <div class=""centered"">
         <p style=""font-weight:bold; font-size:14px;"">{CompanyName}</p>
         <p>{CompanyAddress}</p>
@@ -2198,6 +2200,8 @@ td, th { padding: 4px 0; text-align: right; vertical-align: top; font-size: 12px
             {
                 var protocol = HttpContext.Request.Scheme;
                 var finalLogoUrl = logoUrl.StartsWith("/") ? logoUrl : "/" + logoUrl;
+                var logoTagHtml = GetSetting.PrintLogo ? @"<img src=""{Logo}"" alt=""Logo"" class=""logo"">" : "";
+                html = html.Replace("{LogoTag}", logoTagHtml);
                 html = html.Replace("{Logo}", $"{protocol}://{host}{finalLogoUrl}");
                 html = html.Replace("{CompanyTaxNumber}", GetSetting.CompanyTaxNum);
                 html = html.Replace("{CompanyName}", GetSetting.CompanyName);

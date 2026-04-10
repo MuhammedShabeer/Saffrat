@@ -41,5 +41,6 @@ namespace Saffrat.Models
         public int PrinterMethod { get; set; } // 0: Browser, 1: USB
         public int PrinterPaperWidth { get; set; } // 80 or 58
         public string InvoiceLogo { get; set; }
+        public bool PrintLogo { get; set; }
     }
 }

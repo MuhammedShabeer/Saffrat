@@ -50,6 +50,15 @@
                         </div>
                     </div>
                     
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <div class="custom-control custom-switch mt-2">
+                                <input type="checkbox" class="custom-control-input" id="PrintLogo" name="PrintLogo" value="true" @(Model.PrintLogo ? "checked" : "")>
+                                <label class="custom-control-label" for="PrintLogo">@Localize("Print Logo on Invoice")</label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="usb-settings" class="d-none">
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i> @Localize("Direct USB Print requires a compatible thermal printer attached via USB. You must use Chrome, Edge, or a browser that supports WebUSB.")
