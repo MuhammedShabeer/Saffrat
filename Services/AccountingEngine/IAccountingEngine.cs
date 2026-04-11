@@ -63,6 +63,25 @@ namespace Saffrat.Services.AccountingEngine
         Task<JournalEntry> RecordFlexiblePayrollPaymentAsync(PayrollPayment payment, Payroll payroll, int? glAccountId = null);
 
         /// <summary>
+        /// Handles the translation of a specific POS Order into a Journal Entry.
+        /// Accounts for partial payments by splitting debit between Cash/Bank and Accounts Receivable.
+        /// </summary>
+        Task<JournalEntry> RecordOrderSaleAsync(Order order, int? glAccountId = null);
+
+        /// <summary>
+        /// Records a payment received for a specific order.
+        /// Defaults to "Main Cash" if glAccountId is null.
+        /// </summary>
+        Task<bool> CollectSpecificOrderPaymentAsync(int orderId, int? glAccountId = null, string note = "");
+
+        /// <summary>
+        /// Records a payment received from a customer against their outstanding due balance.
+        /// Accounts for the inflow to a specific Cash/Bank account and reduces AR.
+        /// Defaults to "Main Cash" if glAccountId is null.
+        /// </summary>
+        Task<bool> CollectCustomerPaymentAsync(int customerId, decimal amount, int? glAccountId = null, string note = "");
+
+        /// <summary>
         /// Reverses a Journal Entry and its Ledger Entries, adjusting account balances back.
         /// </summary>
         Task<bool> ReverseJournalEntryAsync(int journalEntryId);

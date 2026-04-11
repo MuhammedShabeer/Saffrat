@@ -8,6 +8,7 @@ using Saffrat.Hubs;
 using Saffrat.Models.AccountingEngine;
 using Saffrat.Models;
 using Saffrat.Services;
+using Saffrat.Services.AccountingEngine;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Globalization;
@@ -26,10 +27,11 @@ namespace Saffrat.Controllers
         private readonly RestaurantDBContext _dbContext;
         private readonly IHubContext<NotificationHub> _hub;
         private readonly IConverter _converter;
+        private readonly IAccountingEngine _accountingEngine;
 
 
         public POSController(ILogger<POSController> logger, RestaurantDBContext dbContext,
-            IHubContext<NotificationHub> hub, IConverter converter,
+            IHubContext<NotificationHub> hub, IConverter converter, IAccountingEngine accountingEngine,
             ILanguageService languageService, ILocalizationService localizationService, IDateTimeService dateTimeService)
         : base(languageService, localizationService, dateTimeService)
         {
@@ -37,7 +39,7 @@ namespace Saffrat.Controllers
             _dbContext = dbContext;
             _hub = hub;
             _converter = converter;
-
+            _accountingEngine = accountingEngine;
         }
 
         [HttpGet]
@@ -918,6 +920,9 @@ namespace Saffrat.Controllers
                         _dbContext.Remove(oorder);
                         await _dbContext.SaveChangesAsync();
 
+                        // Post to Accounting Engine
+                        await _accountingEngine.RecordOrderSaleAsync(order);
+
                         await transaction.CommitAsync();
 
                         await _hub.Clients.Group("admin").SendAsync("OrderNotification", "closed", order.Id);
@@ -1730,23 +1735,26 @@ namespace Saffrat.Controllers
         public async Task<JsonResult> ReceiveDue(int? Id)
         {
             var response = new Dictionary<string, string>();
-            var existing = await _dbContext.Orders.FindAsync(Id);
-            if (existing != null)
+            if (Id.HasValue)
             {
                 try
                 {
-                    existing.PaidAmount = existing.Total;
-                    existing.DueAmount = 0;
-                    _dbContext.Orders.Update(existing);
-                    await _dbContext.SaveChangesAsync();
-
-                    response.Add("status", "success");
-                    response.Add("message", "success");
+                    var success = await _accountingEngine.CollectSpecificOrderPaymentAsync(Id.Value);
+                    if (success)
+                    {
+                        response.Add("status", "success");
+                        response.Add("message", "success");
+                    }
+                    else
+                    {
+                        response.Add("status", "error");
+                        response.Add("message", "Could not record payment.");
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
                     response.Add("status", "error");
-                    response.Add("message", "Something went wrong.");
+                    response.Add("message", ex.Message);
                 }
             }
             else

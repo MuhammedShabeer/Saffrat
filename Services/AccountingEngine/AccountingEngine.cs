@@ -34,9 +34,9 @@ namespace Saffrat.Services.AccountingEngine
                 throw new Exception($"Daily Close has already been performed for {closeDate:yyyy-MM-dd}.");
             }
 
-            // Fetch raw operational data
+            // Fetch raw operational data - Skip already posted orders
             var dailyOrders = await _dbContext.Orders
-                .Where(o => o.CreatedAt >= startOfDay && o.CreatedAt <= endOfDay)
+                .Where(o => o.CreatedAt >= startOfDay && o.CreatedAt <= endOfDay && !o.IsPosted)
                 .ToListAsync();
 
             if (!dailyOrders.Any()) return null;
@@ -59,7 +59,8 @@ namespace Saffrat.Services.AccountingEngine
                 .Select(g => new
                 {
                     MethodTitle = g.Key,
-                    Amount = g.Sum(o => o.Total),
+                    PaidAmount = g.Sum(o => o.PaidAmount),
+                    DueAmount = g.Sum(o => o.DueAmount),
                     GLAccountId = paymentMethods.FirstOrDefault(pm => pm.Title == g.Key)?.GLAccountId
                 })
                 .ToList();
@@ -70,7 +71,8 @@ namespace Saffrat.Services.AccountingEngine
                 .Select(g => new
                 {
                     DriverUsername = g.Key,
-                    Amount = g.Sum(o => o.Total)
+                    PaidAmount = g.Sum(o => o.PaidAmount),
+                    DueAmount = g.Sum(o => o.DueAmount)
                 })
                 .ToList();
 
@@ -92,24 +94,38 @@ namespace Saffrat.Services.AccountingEngine
             int taxAccId = await GetOrCreateGLAccountAsync("Sales Tax", AccountType.OtherCurrentLiability, AccountCategory.Liability);
             int discountAccId = await GetOrCreateGLAccountAsync("General Sales Discounts", AccountType.Marketing, AccountCategory.Expense);
             int chargesAccId = await GetOrCreateGLAccountAsync("Service Charges", AccountType.OtherIncome, AccountCategory.Revenue);
+            int arAccId = await GetOrCreateGLAccountAsync("Accounts Receivable", AccountType.AccountsReceivable, AccountCategory.Asset);
             
             // Resolve Defaults by Flag
             int defaultCashAccId = await GetOrCreateGLAccountByFlagAsync("Main Cash", true, false);
             int defaultBankAccId = await GetOrCreateGLAccountByFlagAsync("Main Bank", false, true);
 
-            // Debits: POS Cash/Bank accounts
             foreach (var pay in posPayments)
             {
                 int targetAccId = pay.GLAccountId ?? 
                                  ((pay.MethodTitle?.ToLower().Contains("bank") ?? false) ? defaultBankAccId : defaultCashAccId);
 
-                journalEntry.LedgerEntries.Add(new LedgerEntry 
-                { 
-                    Description = $"Daily Register {pay.MethodTitle}", 
-                    Debit = pay.Amount, 
-                    Credit = 0, 
-                    GLAccountId = targetAccId 
-                });
+                if (pay.PaidAmount > 0)
+                {
+                    journalEntry.LedgerEntries.Add(new LedgerEntry 
+                    { 
+                        Description = $"Daily Register {pay.MethodTitle} (Paid)", 
+                        Debit = pay.PaidAmount, 
+                        Credit = 0, 
+                        GLAccountId = targetAccId 
+                    });
+                }
+
+                if (pay.DueAmount > 0)
+                {
+                    journalEntry.LedgerEntries.Add(new LedgerEntry 
+                    { 
+                        Description = $"Daily Register {pay.MethodTitle} (Debt)", 
+                        Debit = pay.DueAmount, 
+                        Credit = 0, 
+                        GLAccountId = arAccId 
+                    });
+                }
             }
 
             // Debits: Van Cash accounts
@@ -135,13 +151,27 @@ namespace Saffrat.Services.AccountingEngine
                     }
                 }
 
-                journalEntry.LedgerEntries.Add(new LedgerEntry 
-                { 
-                    Description = $"Van Sales Collection: {driver?.FullName ?? vanPay.DriverUsername}", 
-                    Debit = vanPay.Amount, 
-                    Credit = 0, 
-                    GLAccountId = driverCashAccId 
-                });
+                if (vanPay.PaidAmount > 0)
+                {
+                    journalEntry.LedgerEntries.Add(new LedgerEntry 
+                    { 
+                        Description = $"Van Sales Paid: {driver?.FullName ?? vanPay.DriverUsername}", 
+                        Debit = vanPay.PaidAmount, 
+                        Credit = 0, 
+                        GLAccountId = driverCashAccId 
+                    });
+                }
+
+                if (vanPay.DueAmount > 0)
+                {
+                    journalEntry.LedgerEntries.Add(new LedgerEntry 
+                    { 
+                        Description = $"Van Sales Debt: {driver?.FullName ?? vanPay.DriverUsername}", 
+                        Debit = vanPay.DueAmount, 
+                        Credit = 0, 
+                        GLAccountId = arAccId 
+                    });
+                }
             }
 
             // Credits: Revenue and Tax
@@ -166,6 +196,12 @@ namespace Saffrat.Services.AccountingEngine
 
             // Post if valid
             await PostJournalEntryAsync(journalEntry);
+
+            // Mark these orders as posted so they aren't double-counted if real-time posting is enabled later
+            foreach (var order in dailyOrders)
+            {
+                order.IsPosted = true;
+            }
             await _dbContext.SaveChangesAsync();
 
             return journalEntry;
@@ -520,6 +556,202 @@ namespace Saffrat.Services.AccountingEngine
             });
 
             return journalEntry;
+        }
+
+        public async Task<JournalEntry> RecordOrderSaleAsync(Order order, int? glAccountId = null)
+        {
+            var journalEntry = new JournalEntry
+            {
+                ReferenceNumber = $"SALE-{order.Id}",
+                Description = $"POS Order Sales Revenue",
+                EntryDate = order.ClosedAt ?? _dateTimeService.Now(),
+                SourceDocumentType = "pos",
+                SourceDocumentId = order.Id,
+                IsPosted = false, // Will be posted via PostJournalEntryAsync
+                CreatedAt = _dateTimeService.Now(),
+                LedgerEntries = new List<LedgerEntry>()
+            };
+
+            // 1. Resolve Revenue Account
+            int revenueAccId = 0;
+            if (order.PriceType == "VanSale")
+            {
+                revenueAccId = await GetOrCreateGLAccountAsync("Van Sale Revenue", AccountType.Sales, AccountCategory.Revenue);
+            }
+            else
+            {
+                revenueAccId = await GetOrCreateGLAccountAsync("Food Sales", AccountType.Sales, AccountCategory.Revenue);
+            }
+
+            // 2. Resolve Payment Account (Cash/Bank)
+            int paymentAccId = glAccountId ?? 0;
+            if (paymentAccId == 0)
+            {
+                if (order.PriceType == "VanSale")
+                {
+                    var driver = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserName == order.ClosedBy);
+                    if (driver != null && driver.VanCashAccountId.HasValue)
+                    {
+                        paymentAccId = driver.VanCashAccountId.Value;
+                    }
+                    else
+                    {
+                        string accName = "Van Cash - " + (driver?.FullName ?? order.ClosedBy);
+                        paymentAccId = await GetOrCreateGLAccountAsync(accName, AccountType.CashAndBank, AccountCategory.Asset);
+                        if (driver != null)
+                        {
+                            driver.VanCashAccountId = paymentAccId;
+                            _dbContext.Users.Update(driver);
+                        }
+                    }
+                }
+                else
+                {
+                    // For standard POS, use account mapped to payment method or default cash
+                    var method = await _dbContext.PaymentMethods.FirstOrDefaultAsync(pm => pm.Title == order.PaymentMethod);
+                    paymentAccId = method?.GLAccountId ?? await GetOrCreateGLAccountByFlagAsync("Main Cash", true, false);
+                }
+            }
+
+            // 3. Resolve Accounts Receivable
+            int arAccId = await GetOrCreateGLAccountAsync("Accounts Receivable", AccountType.AccountsReceivable, AccountCategory.Asset);
+
+            // 4. Create Ledger Entries
+            // Credit Revenue (Total)
+            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Order Revenue", Debit = 0, Credit = order.Total, GLAccountId = revenueAccId });
+
+            // Debit Cash/Bank (Paid Amount)
+            if (order.PaidAmount > 0)
+            {
+                journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Payment Received", Debit = order.PaidAmount, Credit = 0, GLAccountId = paymentAccId });
+            }
+
+            // Debit Accounts Receivable (Due Amount)
+            if (order.DueAmount > 0)
+            {
+                journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Debt (Due Amount)", Debit = order.DueAmount, Credit = 0, GLAccountId = arAccId });
+            }
+
+            // 5. Post Journal
+            await PostJournalEntryAsync(journalEntry);
+
+            // 6. Mark Order as Posted
+            order.IsPosted = true;
+            _dbContext.Orders.Update(order);
+            await _dbContext.SaveChangesAsync();
+
+            return journalEntry;
+        }
+
+        public async Task<bool> CollectSpecificOrderPaymentAsync(int orderId, int? glAccountId = null, string note = "")
+        {
+            var order = await _dbContext.Orders.Include(o => o.Customer).FirstOrDefaultAsync(o => o.Id == orderId);
+            if (order == null || order.DueAmount <= 0) return false;
+
+            decimal paymentAmount = order.DueAmount;
+
+            // Resolve target account
+            int targetAccountId;
+            if (glAccountId.HasValue)
+            {
+                targetAccountId = glAccountId.Value;
+            }
+            else
+            {
+                targetAccountId = await GetOrCreateGLAccountAsync("Main Cash", AccountType.CashAndBank, AccountCategory.Asset);
+            }
+
+            // 1. Update Order
+            order.PaidAmount += paymentAmount;
+            order.DueAmount = 0;
+
+            // 2. Create Journal Entry
+            var journal = new JournalEntry
+            {
+                ReferenceNumber = $"PAY-ORD-{orderId}-{_dateTimeService.Now():yyyyMMddHHmmss}",
+                Description = $"Order Payment Collection: Order #{orderId}. {note}",
+                EntryDate = _dateTimeService.Now(),
+                SourceDocumentType = "pos",
+                SourceDocumentId = orderId,
+                IsPosted = false,
+                CreatedAt = _dateTimeService.Now(),
+                LedgerEntries = new List<LedgerEntry>()
+            };
+
+            int arAccId = await GetOrCreateGLAccountAsync("Accounts Receivable", AccountType.AccountsReceivable, AccountCategory.Asset);
+
+            // Debit Cash/Bank (Inflow)
+            journal.LedgerEntries.Add(new LedgerEntry { Description = $"Collection for Order #{orderId}", Debit = paymentAmount, Credit = 0, GLAccountId = targetAccountId });
+            // Credit Accounts Receivable (Decrease Asset)
+            journal.LedgerEntries.Add(new LedgerEntry { Description = $"AR Reduction (Order #{orderId})", Debit = 0, Credit = paymentAmount, GLAccountId = arAccId });
+
+            await PostJournalEntryAsync(journal);
+            await _dbContext.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<bool> CollectCustomerPaymentAsync(int customerId, decimal amount, int? glAccountId = null, string note = "")
+        {
+            if (amount <= 0) return false;
+
+            var customer = await _dbContext.Customers.FindAsync(customerId);
+            if (customer == null) return false;
+
+            // Resolve target account
+            int targetAccountId;
+            if (glAccountId.HasValue)
+            {
+                targetAccountId = glAccountId.Value;
+            }
+            else
+            {
+                targetAccountId = await GetOrCreateGLAccountAsync("Main Cash", AccountType.CashAndBank, AccountCategory.Asset);
+            }
+
+            // 1. Get unpaid orders for this customer (oldest first)
+            var unpaidOrders = await _dbContext.Orders
+                .Where(o => o.CustomerId == customerId && o.DueAmount > 0)
+                .OrderBy(o => o.CreatedAt)
+                .ToListAsync();
+
+            if (!unpaidOrders.Any()) return false;
+
+            decimal remainingPayment = amount;
+            foreach (var order in unpaidOrders)
+            {
+                if (remainingPayment <= 0) break;
+
+                decimal applyToThisOrder = Math.Min(order.DueAmount, remainingPayment);
+                order.PaidAmount += applyToThisOrder;
+                order.DueAmount -= applyToThisOrder;
+                remainingPayment -= applyToThisOrder;
+            }
+
+            // 2. Create Journal Entry
+            var journal = new JournalEntry
+            {
+                ReferenceNumber = $"PAY-CUST-{customerId}-{_dateTimeService.Now():yyyyMMddHHmmss}",
+                Description = $"Customer Payment Collection: {customer.CustomerName}. {note}",
+                EntryDate = _dateTimeService.Now(),
+                SourceDocumentType = "CustomerCollection",
+                SourceDocumentId = customerId,
+                IsPosted = false,
+                CreatedAt = _dateTimeService.Now(),
+                LedgerEntries = new List<LedgerEntry>()
+            };
+
+            int arAccId = await GetOrCreateGLAccountAsync("Accounts Receivable", AccountType.AccountsReceivable, AccountCategory.Asset);
+
+            // Debit Cash/Bank (Inflow)
+            journal.LedgerEntries.Add(new LedgerEntry { Description = $"Collection from {customer.CustomerName}", Debit = amount, Credit = 0, GLAccountId = targetAccountId });
+            // Credit Accounts Receivable (Decrease Asset)
+            journal.LedgerEntries.Add(new LedgerEntry { Description = $"AR Reduction", Debit = 0, Credit = amount, GLAccountId = arAccId });
+
+            await PostJournalEntryAsync(journal);
+            await _dbContext.SaveChangesAsync();
+
+            return true;
         }
 
         /// <summary>

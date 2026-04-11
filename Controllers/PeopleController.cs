@@ -65,6 +65,7 @@ namespace Saffrat.Controllers
                 ViewBag.totalSales = Math.Round(totalSales, 2);
                 ViewBag.totalDue = Math.Round(totalSales - paidAmount, 2);
                 ViewBag.totalOrders = orders.Count();
+                
                 return View(existing);
             }
             return NotFound();

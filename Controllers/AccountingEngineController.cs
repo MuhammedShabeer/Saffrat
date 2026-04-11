@@ -1218,5 +1218,23 @@ namespace Saffrat.Controllers
 
             return directMatch || sourceMatch;
         }
+
+        [HttpPost]
+        public async Task<IActionResult> CollectCustomerPayment(int customerId, decimal amount, int? glAccountId = null, string note = "")
+        {
+            try
+            {
+                var success = await _accountingEngine.CollectCustomerPaymentAsync(customerId, amount, glAccountId, note);
+                if (success)
+                {
+                    return Json(new { status = "success", message = "Payment collected and recorded successfully." });
+                }
+                return Json(new { status = "error", message = "Could not record payment. Ensure the amount is valid and customer has outstanding due." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
     }
 }

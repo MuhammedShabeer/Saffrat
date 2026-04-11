@@ -32,6 +32,7 @@ namespace Saffrat.Models
         public string ClosedBy { get; set; }
         public DateTime? ClosedAt { get; set; }
         public string PriceType { get; set; }
+        public bool IsPosted { get; set; }
         public Guid OrderGuid { get; set; } = Guid.NewGuid();
 
         public virtual Customer Customer { get; set; }
