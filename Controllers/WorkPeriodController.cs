@@ -5,6 +5,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Saffrat.Services;
 using Microsoft.EntityFrameworkCore;
+using Saffrat.ViewModels;
+using System.Globalization;
 
 namespace Saffrat.Controllers
 {
@@ -103,11 +105,6 @@ namespace Saffrat.Controllers
                 if (workPeriod != null)
                 {
                     // Check if there are opened orders before ending the work period
-                    var saleAccountId = Convert.ToInt32(GetSetting.SaleAccount);
-                    var ledgerEntries = _dbContext.LedgerEntries
-                        .Include(x => x.JournalEntry)
-                        .Where(x => x.JournalEntry.EntryDate >= workPeriod.StartedAt && x.GLAccountId == saleAccountId)
-                        .ToList();
                     var openedOrders = _dbContext.RunningOrders.Where(x => x.Status > 0 && x.Status < 5).Count();
 
                     if (openedOrders > 0)
@@ -117,12 +114,27 @@ namespace Saffrat.Controllers
                     }
                     else
                     {
-                        // Calculate closing balance and end the work period
-                        foreach (var item in ledgerEntries)
+                        // Expected Cash Calculation:
+                        // 1. POS Cash Sales (those that go into the physical drawer)
+                        var cashSales = _dbContext.Orders
+                            .Where(x => x.CreatedAt >= workPeriod.StartedAt && x.PriceType != "VanSale" && x.PaymentMethod == "Cash")
+                            .Sum(x => (decimal?)x.PaidAmount) ?? 0;
+
+                        // 2. Net Cash Movements from Ledger (Expenses, Purchases, etc. paid from Cash accounts)
+                        var cashAccountIds = _dbContext.GLAccounts.Where(x => x.IsCash).Select(x => x.Id).ToList();
+                        var cashMovements = _dbContext.LedgerEntries
+                            .Include(x => x.JournalEntry)
+                            .Where(x => x.JournalEntry.EntryDate >= workPeriod.StartedAt && cashAccountIds.Contains(x.GLAccountId))
+                            .ToList();
+                        
+                        decimal netMovement = 0;
+                        foreach (var m in cashMovements)
                         {
-                            workPeriod.ClosingBalance += (item.Debit - item.Credit); // Debit increases cash, Credit decreases cash
+                            netMovement += (m.Debit - m.Credit);
                         }
-                        workPeriod.ClosingBalance += workPeriod.OpeningBalance;
+
+                        // Final Expected Balance
+                        workPeriod.ClosingBalance = workPeriod.OpeningBalance + cashSales + netMovement;
                         workPeriod.IsEnd = true;
                         workPeriod.EndAt = CurrentDateTime();
                         workPeriod.EndBy = userName;
@@ -132,8 +144,9 @@ namespace Saffrat.Controllers
 
                         response.Add("status", "success");
                         response.Add("message", "success");
+                        response.Add("id", workPeriod.Id.ToString());
                     }
-                }
+                }    
                 else
                 {
                     response.Add("status", "error");
@@ -154,6 +167,168 @@ namespace Saffrat.Controllers
         {
             var workPeriod = _dbContext.WorkPeriods.Where(x => x.IsEnd.Equals(false)).Count();
             return workPeriod > 0;
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "admin,staff")]
+        public async Task<IActionResult> PrintWorkPeriodReport(int? Id)
+        {
+            var workPeriod = await _dbContext.WorkPeriods.FirstOrDefaultAsync(x => x.Id == Id);
+            if (workPeriod == null) return NotFound();
+
+            var start = workPeriod.StartedAt;
+            var end = workPeriod.EndAt ?? CurrentDateTime();
+
+            var orders = await _dbContext.Orders
+                .Where(x => x.CreatedAt >= start && x.CreatedAt <= end)
+                .ToListAsync();
+
+            var purchases = await _dbContext.Purchases
+                .Where(x => x.PurchaseDate >= start && x.PurchaseDate <= end)
+                .ToListAsync();
+
+            var expenses = await _dbContext.LedgerEntries
+                .Include(x => x.GLAccount)
+                .Include(x => x.JournalEntry)
+                .Where(x => x.GLAccount.Category == (int)Saffrat.Models.AccountingEngine.AccountCategory.Expense 
+                            && x.JournalEntry.EntryDate >= start && x.JournalEntry.EntryDate <= end)
+                .ToListAsync();
+
+            var model = new WorkPeriodSummaryVM
+            {
+                Id = Convert.ToInt32(workPeriod.Id),
+                StartedAt = workPeriod.StartedAt,
+                EndAt = workPeriod.EndAt,
+                StartedBy = workPeriod.StartedBy,
+                EndBy = workPeriod.EndBy,
+                OpeningBalance = workPeriod.OpeningBalance,
+                ClosingBalance = workPeriod.ClosingBalance ?? 0,
+                POSSalesTotal = orders.Where(x => x.PriceType != "VanSale").Sum(x => x.Total),
+                VanSalesTotal = orders.Where(x => x.PriceType == "VanSale").Sum(x => x.Total),
+                TotalSales = orders.Sum(x => x.Total),
+                DueAmountTotal = orders.Sum(x => x.DueAmount),
+                POSDueAmount = orders.Where(x => x.PriceType != "VanSale").Sum(x => x.DueAmount),
+                VanDueAmount = orders.Where(x => x.PriceType == "VanSale").Sum(x => x.DueAmount),
+                PaidAmountTotal = orders.Sum(x => x.PaidAmount),
+                PurchasesTotal = purchases.Sum(x => x.TotalAmount),
+                ExpensesTotal = expenses.Sum(x => Math.Max(0, (decimal)(x.Debit - x.Credit))),
+                ChargesTotal = orders.Sum(x => x.ChargeTotal),
+                TaxTotal = orders.Sum(x => x.TaxTotal),
+                DiscountTotal = orders.Sum(x => x.DiscountTotal)
+            };
+
+            foreach (var order in orders)
+            {
+                var method = string.IsNullOrEmpty(order.PaymentMethod) ? "Other" : order.PaymentMethod;
+                if (model.PaymentMethodBreakdown.ContainsKey(method))
+                    model.PaymentMethodBreakdown[method] += order.PaidAmount;
+                else
+                    model.PaymentMethodBreakdown.Add(method, order.PaidAmount);
+            }
+
+            var lang = _dbContext.Languages.FirstOrDefault(x => x.Culture == GetSetting.DefaultLanguage);
+            var html = GenerateReportHtml(model, lang?.Id ?? 1);
+
+            html += "<script>window.onload = function() { window.print(); }</script>";
+            return Content(html, "text/html");
+        }
+
+        private string GenerateReportHtml(WorkPeriodSummaryVM model, int langId)
+        {
+            var logoUrl = !string.IsNullOrEmpty(GetSetting.InvoiceLogo) ? GetSetting.InvoiceLogo : GetSetting.Logo;
+            var host = HttpContext.Request.Host;
+            var protocol = HttpContext.Request.Scheme;
+            var finalLogoUrl = logoUrl.StartsWith("/") ? logoUrl : "/" + logoUrl;
+            var logoTagHtml = GetSetting.PrintLogo ? $@"<img src=""{protocol}://{host}{finalLogoUrl}"" alt=""Logo"" class=""logo"">" : "";
+
+            var paymentHtml = "";
+            foreach (var item in model.PaymentMethodBreakdown)
+            {
+                paymentHtml += $@"<tr><td>{item.Key}:</td><td class=""right"">{GetCurrency(item.Value)}</td></tr>";
+            }
+
+            var html = $@"<!DOCTYPE html><html><head>
+<meta charset=""UTF-8"">
+<meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+<title>Work Period Report</title>
+<style>
+@page {{ size: auto; margin: 0mm; }}
+body {{ margin: 0px; padding: 0px; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 11px; color: #000; line-height: 1.4; }}
+.ticket {{ width: 100%; max-width: 80mm; margin: 0 auto; padding: 4mm; background-color: #fff; box-sizing: border-box; }}
+.centered {{ text-align: center; }}
+.right {{ text-align: right; }}
+.logo {{ display: block; margin: 0 auto 10px auto; max-width: 120px; height: auto; }}
+p {{ margin: 3px 0; }}
+table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
+td, th {{ padding: 3px 0; text-align: left; vertical-align: top; font-size: 11px; }}
+.divider {{ border-top: 1px dashed #444; margin: 8px 0; }}
+.double-divider {{ border-top: 1px double #000; margin: 10px 0; border-bottom: 1px double #000; height: 3px; }}
+.section-title {{ font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 15px; margin-bottom: 5px; font-size: 11px; border-bottom: 1px solid #eee; padding-bottom: 2px; }}
+.grand-total {{ font-size: 13px; font-weight: bold; background: #f9f9f9; padding: 4px; }}
+.meta-info {{ font-size: 10px; color: #666; }}
+</style>
+</head>
+<body>
+<div class=""ticket"">
+    {logoTagHtml}
+    <div class=""centered"">
+        <p style=""font-weight:bold; font-size:16px; margin-bottom: 4px;"">{GetSetting.CompanyName}</p>
+        <p class=""meta-info"">{GetSetting.CompanyAddress}</p>
+        <p class=""meta-info"">{Localize("Phone", langId)}: {GetSetting.CompanyPhone}</p>
+    </div>
+    <div class=""divider""></div>
+    <div class=""centered"">
+        <p style=""font-weight:bold; font-size: 13px;"">{Localize("Work Period Report", langId)}</p>
+        <p class=""meta-info"">ID: #{model.Id}</p>
+    </div>
+    <table>
+        <tr><td>{Localize("Start", langId)}:</td><td class=""right"">{model.StartedAt:g}</td></tr>
+        <tr><td>{Localize("End", langId)}:</td><td class=""right"">{model.EndAt:g}</td></tr>
+        <tr><td>{Localize("Started By", langId)}:</td><td class=""right"">&#64;{model.StartedBy}</td></tr>
+        <tr><td>{Localize("Ended By", langId)}:</td><td class=""right"">&#64;{model.EndBy}</td></tr>
+    </table>
+    
+    <div class=""divider""></div>
+    <table>
+        <tr><td>{Localize("Opening Balance", langId)}:</td><td class=""right"" style=""font-weight:bold;"">{GetCurrency(model.OpeningBalance)}</td></tr>
+        <tr><td>{Localize("Closing Balance", langId)}:</td><td class=""right"" style=""font-weight:bold;"">{GetCurrency(model.ClosingBalance)}</td></tr>
+        <tr style=""color: #333;""><td>{Localize("Van Sales Balance", langId)}:</td><td class=""right"">{GetCurrency(model.VanSalesTotal - model.VanDueAmount)}</td></tr>
+    </table>
+    
+    <div class=""section-title"">{Localize("Sales Summary", langId)}</div>
+    <table>
+        <tr><td>{Localize("POS Sales", langId)}:</td><td class=""right"">{GetCurrency(model.POSSalesTotal)}</td></tr>
+        <tr><td>{Localize("Van Sales", langId)}:</td><td class=""right"">{GetCurrency(model.VanSalesTotal)}</td></tr>
+        <tr><td>{Localize("Service Charges", langId)}:</td><td class=""right"">{GetCurrency(model.ChargesTotal)}</td></tr>
+        <tr><td>{Localize("Total Discount", langId)}:</td><td class=""right"">({GetCurrency(model.DiscountTotal)})</td></tr>
+        <tr><td>{Localize("Total Tax", langId)}:</td><td class=""right"">{GetCurrency(model.TaxTotal)}</td></tr>
+        <tr class=""grand-total""><td>{Localize("Total Sales", langId)}:</td><td class=""right"">{GetCurrency(model.TotalSales)}</td></tr>
+    </table>
+
+    <div class=""section-title"">{Localize("Payments", langId)}</div>
+    <table>
+        {paymentHtml}
+        <tr style=""font-weight:bold; border-top: 1px solid #eee;""><td>{Localize("Total Collected", langId)}:</td><td class=""right"">{GetCurrency(model.PaidAmountTotal)}</td></tr>
+        <tr class=""meta-info""><td>{Localize("Due Amount (POS)", langId)}:</td><td class=""right"">{GetCurrency(model.POSDueAmount)}</td></tr>
+        <tr class=""meta-info""><td>{Localize("Due Amount (Van Sales)", langId)}:</td><td class=""right"">{GetCurrency(model.VanDueAmount)}</td></tr>
+        <tr style=""font-weight:bold; border-top: 1px dashed #ddd;""><td>{Localize("Total Due Amount", langId)}:</td><td class=""right"">{GetCurrency(model.DueAmountTotal)}</td></tr>
+    </table>
+
+    <div class=""section-title"">{Localize("Purchases & Expenses", langId)}</div>
+    <table>
+        <tr><td>{Localize("Total Purchases", langId)}:</td><td class=""right"">{GetCurrency(model.PurchasesTotal)}</td></tr>
+        <tr><td>{Localize("Total Expenses", langId)}:</td><td class=""right"">{GetCurrency(model.ExpensesTotal)}</td></tr>
+    </table>
+
+    <div class=""divider""></div>
+    <div class=""centered"" style=""margin-top:10px;"">
+        <p style=""font-weight:bold;"">*** {Localize("End of Report", langId)} ***</p>
+        <p class=""meta-info"" style=""margin-top: 5px;"">{Localize("Printed At", langId)}: {_dateTimeService.Now():g}</p>
+    </div>
+</div>
+</body></html>";
+
+            return html;
         }
     }
 }

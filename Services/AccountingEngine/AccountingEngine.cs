@@ -41,12 +41,20 @@ namespace Saffrat.Services.AccountingEngine
 
             if (!dailyOrders.Any()) return null;
 
-            var totalSales = dailyOrders.Sum(o => o.SubTotal);
+            var posOrders = dailyOrders.Where(o => o.PriceType != "VanSale").ToList();
+            var vanOrders = dailyOrders.Where(o => o.PriceType == "VanSale").ToList();
+
+            var totalSales = posOrders.Sum(o => o.SubTotal);
+            var totalVanSales = vanOrders.Sum(o => o.SubTotal);
             var totalTaxes = dailyOrders.Sum(o => o.TaxTotal);
+            var totalDiscounts = dailyOrders.Sum(o => o.DiscountTotal);
+            var totalCharges = dailyOrders.Sum(o => o.ChargeTotal);
             
-            // Group payments by GL Account
+            // Group payments
             var paymentMethods = await _dbContext.PaymentMethods.ToListAsync();
-            var paymentsByAccount = dailyOrders
+            
+            // 1. Standard POS Payments
+            var posPayments = posOrders
                 .GroupBy(o => o.PaymentMethod)
                 .Select(g => new
                 {
@@ -56,39 +64,42 @@ namespace Saffrat.Services.AccountingEngine
                 })
                 .ToList();
 
-            decimal totalCOGS = dailyOrders.Sum(o => o.Total) * 0.30m; // Example 30% COGS
+            // 2. Van Sale Payments (Grouped by Driver)
+            var vanPayments = vanOrders
+                .GroupBy(o => o.ClosedBy)
+                .Select(g => new
+                {
+                    DriverUsername = g.Key,
+                    Amount = g.Sum(o => o.Total)
+                })
+                .ToList();
 
             // Create Master Journal
             var journalEntry = new JournalEntry
             {
                 ReferenceNumber = refNo,
                 Description = $"Daily Close Summary for {closeDate:yyyy-MM-dd}",
-                EntryDate = closeDate.Date.Add(_dateTimeService.Now().TimeOfDay),
+                EntryDate = closeDate.Date.AddHours(23).AddMinutes(59).AddSeconds(59),
                 SourceDocumentType = "DailyClose",
                 IsPosted = false,
                 CreatedAt = _dateTimeService.Now(),
                 LedgerEntries = new List<LedgerEntry>()
             };
 
-            // In production, GLAccount IDs are dynamically queried based on Type mappings 
-            // from the AppSettings or explicit GLAccount Type configurations.
-            // Assuming dynamic mapping fallback here:
+            // Resolve General Accounts
             int salesAccId = await GetOrCreateGLAccountAsync("Food Sales", AccountType.Sales, AccountCategory.Revenue);
+            int vanSalesAccId = await GetOrCreateGLAccountAsync("Van Sale Revenue", AccountType.Sales, AccountCategory.Revenue);
             int taxAccId = await GetOrCreateGLAccountAsync("Sales Tax", AccountType.OtherCurrentLiability, AccountCategory.Liability);
-            int cogsAccId = await GetOrCreateGLAccountAsync("Cost of Goods Sold", AccountType.CostOfGoodsSold, AccountCategory.Expense);
-            int invAccId = await GetOrCreateGLAccountAsync("Inventory", AccountType.Inventory, AccountCategory.Asset);
+            int discountAccId = await GetOrCreateGLAccountAsync("General Sales Discounts", AccountType.Marketing, AccountCategory.Expense);
+            int chargesAccId = await GetOrCreateGLAccountAsync("Service Charges", AccountType.OtherIncome, AccountCategory.Revenue);
             
             // Resolve Defaults by Flag
             int defaultCashAccId = await GetOrCreateGLAccountByFlagAsync("Main Cash", true, false);
             int defaultBankAccId = await GetOrCreateGLAccountByFlagAsync("Main Bank", false, true);
 
-            // Debits: Cash/Bank accounts
-            foreach (var pay in paymentsByAccount)
+            // Debits: POS Cash/Bank accounts
+            foreach (var pay in posPayments)
             {
-                // Logic: 
-                // 1. Explicitly Linked?
-                // 2. Title contains "Bank"? Use defaultBankAccId
-                // 3. Fallback to defaultCashAccId
                 int targetAccId = pay.GLAccountId ?? 
                                  ((pay.MethodTitle?.ToLower().Contains("bank") ?? false) ? defaultBankAccId : defaultCashAccId);
 
@@ -101,16 +112,61 @@ namespace Saffrat.Services.AccountingEngine
                 });
             }
 
-            // Credits: Revenue and Tax
-            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Food Sales", Debit = 0, Credit = totalSales, GLAccountId = salesAccId });
-            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Tax Collected", Debit = 0, Credit = totalTaxes, GLAccountId = taxAccId });
+            // Debits: Van Cash accounts
+            var allUsers = await _dbContext.Users.ToListAsync();
+            foreach (var vanPay in vanPayments)
+            {
+                var driver = allUsers.FirstOrDefault(x => x.UserName == vanPay.DriverUsername);
+                int driverCashAccId = defaultCashAccId;
 
-            // COGS Adjustment
-            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Food Cost", Debit = totalCOGS, Credit = 0, GLAccountId = cogsAccId });
-            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Inventory Depletion", Debit = 0, Credit = totalCOGS, GLAccountId = invAccId });
+                if (driver != null)
+                {
+                    if (driver.VanCashAccountId.HasValue)
+                    {
+                        driverCashAccId = driver.VanCashAccountId.Value;
+                    }
+                    else
+                    {
+                        string accName = "Van Cash - " + (driver.FullName ?? driver.UserName);
+                        driverCashAccId = await GetOrCreateGLAccountAsync(accName, AccountType.CashAndBank, AccountCategory.Asset);
+                        
+                        driver.VanCashAccountId = driverCashAccId;
+                        _dbContext.Users.Update(driver);
+                    }
+                }
+
+                journalEntry.LedgerEntries.Add(new LedgerEntry 
+                { 
+                    Description = $"Van Sales Collection: {driver?.FullName ?? vanPay.DriverUsername}", 
+                    Debit = vanPay.Amount, 
+                    Credit = 0, 
+                    GLAccountId = driverCashAccId 
+                });
+            }
+
+            // Credits: Revenue and Tax
+            if (totalSales > 0)
+                journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Food Sales", Debit = 0, Credit = totalSales, GLAccountId = salesAccId });
+            
+            if (totalVanSales > 0)
+                journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Van Sales", Debit = 0, Credit = totalVanSales, GLAccountId = vanSalesAccId });
+
+            journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Tax Collected", Debit = 0, Credit = totalTaxes, GLAccountId = taxAccId });
+            
+            if (totalCharges != 0)
+            {
+                journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Service Charges", Debit = 0, Credit = totalCharges, GLAccountId = chargesAccId });
+            }
+
+            // Debits: Discounts
+            if (totalDiscounts != 0)
+            {
+                journalEntry.LedgerEntries.Add(new LedgerEntry { Description = "Daily Discounts Given", Debit = totalDiscounts, Credit = 0, GLAccountId = discountAccId });
+            }
 
             // Post if valid
             await PostJournalEntryAsync(journalEntry);
+            await _dbContext.SaveChangesAsync();
 
             return journalEntry;
         }
@@ -343,7 +399,9 @@ namespace Saffrat.Services.AccountingEngine
         // Helper Method for testing logic locally
         private async Task<int> GetOrCreateGLAccountAsync(string defaultName, AccountType type, AccountCategory category)
         {
-            var account = await _dbContext.Set<GLAccount>().FirstOrDefaultAsync(a => a.Type == (int)type);
+            // Search by Name first to allow distinct "Heads" within the same AccountType
+            var account = await _dbContext.Set<GLAccount>().FirstOrDefaultAsync(a => a.AccountName == defaultName);
+            
             if (account == null)
             {
                 account = new GLAccount

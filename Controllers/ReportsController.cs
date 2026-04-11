@@ -25,18 +25,74 @@ namespace Saffrat.Controllers
         //Work Periods Report
         [HttpGet]
         [Authorize(Roles = "admin")]
-        public IActionResult WorkPeriod(DateTime? start, DateTime? end)
+        //Work Periods Report
+        [HttpGet]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> WorkPeriod(DateTime? start, DateTime? end)
         {
             DateTime from = StartOfDay(start);
             DateTime to = EndOfDay(end);
 
-            var periods = _dbContext.WorkPeriods.OrderByDescending(x => x.Id)
-                .Where(x => x.IsEnd.Equals(true) && x.StartedAt >= from && x.EndAt <= to);
+            var periods = await _dbContext.WorkPeriods.OrderByDescending(x => x.Id)
+                .Where(x => x.IsEnd.Equals(true) && x.StartedAt >= from && x.EndAt <= to)
+                .ToListAsync();
+
+            var modelList = new List<WorkPeriodSummaryVM>();
+            foreach (var wp in periods)
+            {
+                modelList.Add(await GetWorkPeriodSummaryAsync(wp));
+            }
 
             ViewBag.start = from.ToString("yyyy-MM-dd");
             ViewBag.end = to.ToString("yyyy-MM-dd");
 
-            return View(periods);
+            return View(modelList);
+        }
+
+        private async Task<WorkPeriodSummaryVM> GetWorkPeriodSummaryAsync(WorkPeriod workPeriod)
+        {
+            var start = workPeriod.StartedAt;
+            var end = workPeriod.EndAt ?? _dateTimeService.Now();
+
+            var orders = await _dbContext.Orders
+                .Where(x => x.CreatedAt >= start && x.CreatedAt <= end)
+                .ToListAsync();
+
+            var purchases = await _dbContext.Purchases
+                .Where(x => x.PurchaseDate >= start && x.PurchaseDate <= end)
+                .ToListAsync();
+
+            var expenses = await _dbContext.LedgerEntries
+                .Include(x => x.GLAccount)
+                .Include(x => x.JournalEntry)
+                .Where(x => x.GLAccount.Category == (int)Saffrat.Models.AccountingEngine.AccountCategory.Expense 
+                            && x.JournalEntry.EntryDate >= start && x.JournalEntry.EntryDate <= end)
+                .ToListAsync();
+
+            var summary = new WorkPeriodSummaryVM
+            {
+                Id = Convert.ToInt32(workPeriod.Id),
+                StartedAt = workPeriod.StartedAt,
+                EndAt = workPeriod.EndAt,
+                StartedBy = workPeriod.StartedBy,
+                EndBy = workPeriod.EndBy,
+                OpeningBalance = workPeriod.OpeningBalance,
+                ClosingBalance = workPeriod.ClosingBalance ?? 0,
+                POSSalesTotal = orders.Where(x => x.PriceType != "VanSale").Sum(x => x.Total),
+                VanSalesTotal = orders.Where(x => x.PriceType == "VanSale").Sum(x => x.Total),
+                TotalSales = orders.Sum(x => x.Total),
+                DueAmountTotal = orders.Sum(x => x.DueAmount),
+                POSDueAmount = orders.Where(x => x.PriceType != "VanSale").Sum(x => x.DueAmount),
+                VanDueAmount = orders.Where(x => x.PriceType == "VanSale").Sum(x => x.DueAmount),
+                PaidAmountTotal = orders.Sum(x => x.PaidAmount),
+                PurchasesTotal = purchases.Sum(x => x.TotalAmount),
+                ExpensesTotal = expenses.Sum(x => Math.Max(0, (decimal)(x.Debit - x.Credit))),
+                ChargesTotal = orders.Sum(x => x.ChargeTotal),
+                TaxTotal = orders.Sum(x => x.TaxTotal),
+                DiscountTotal = orders.Sum(x => x.DiscountTotal)
+            };
+
+            return summary;
         }
 
         [HttpGet]

@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Saffrat.Models.WorkPeriod>
+@model IEnumerable<Saffrat.ViewModels.WorkPeriodSummaryVM>
 @using Saffrat.Resources
 @inherits LocService<TModel>
 
@@ -56,54 +56,74 @@
                     <table class="table table-bordered" id="exportTable">
                         <thead>
                             <tr>
-                                <th>@Localize("Start By")</th>
-                                <th>@Localize("Start At")</th>
-                                <th>@Localize("End By")</th>
-                                <th>@Localize("End At")</th>
-                                <th>@Localize("Opening Balance")</th>
-                                <th>@Localize("Closing Balance")</th>
+                                <th>@Localize("Start")</th>
+                                <th>@Localize("End")</th>
+                                <th>@Localize("Opening")</th>
+                                <th>@Localize("Closing")</th>
+                                <th>@Localize("POS Sales")</th>
+                                <th>@Localize("Van Sales")</th>
+                                <th>@Localize("Van Balance")</th>
+                                <th>@Localize("Total Sales")</th>
+                                <th>@Localize("Expenses")</th>
+                                <th class="notexport">@Localize("Actions")</th>
                             </tr>
                         </thead>
                         <tbody>
                             @{
                                 decimal openingTotal = 0;
                                 decimal closingTotal = 0;
+                                decimal posTotal = 0;
+                                decimal vanTotal = 0;
+                                decimal vanBalanceTotal = 0;
+                                decimal salesTotal = 0;
+                                decimal expenseTotal = 0;
                             }
                             @foreach (var item in Model)
                             {
                                 <tr>
                                     <td>
-                                        <a href="#">&#64;@item.StartedBy</a>
+                                       <small>@item.StartedAt.ToString("g")</small><br/>
+                                       <small class="text-muted">&#64;@item.StartedBy</small>
                                     </td>
                                     <td>
-                                        @item.StartedAt
+                                       <small>@(item.EndAt?.ToString("g") ?? "N/A")</small><br/>
+                                       <small class="text-muted">&#64;@item.EndBy</small>
                                     </td>
-                                    <td>
-                                        <a href="#">&#64;@item.EndBy</a>
-                                    </td>
-                                    <td>
-                                        @item.EndAt
-                                    </td>
-                                    <td>
-                                        @item.OpeningBalance
-                                    </td>
-                                    <td>
-                                        @item.ClosingBalance
+                                    <td>@GetCurrency(item.OpeningBalance)</td>
+                                    <td>@GetCurrency(item.ClosingBalance)</td>
+                                    <td>@GetCurrency(item.POSSalesTotal)</td>
+                                    <td>@GetCurrency(item.VanSalesTotal)</td>
+                                    <td>@GetCurrency(item.VanSalesTotal - item.VanDueAmount)</td>
+                                    <td class="table-success">@GetCurrency(item.TotalSales)</td>
+                                    <td class="table-danger">@GetCurrency(item.ExpensesTotal)</td>
+                                    <td class="text-center">
+                                        <a asp-controller="WorkPeriod" asp-action="PrintWorkPeriodReport" asp-route-id="@item.Id" target="_blank" class="btn btn-sm btn-info" title="@Localize("Print Receipt")">
+                                            <i class="fa fa-print"></i>
+                                        </a>
                                     </td>
                                 </tr>
 
                                 openingTotal += item.OpeningBalance;
-                                closingTotal += (decimal)item.ClosingBalance;
+                                closingTotal += item.ClosingBalance;
+                                posTotal += item.POSSalesTotal;
+                                vanTotal += item.VanSalesTotal;
+                                vanBalanceTotal += (item.VanSalesTotal - item.VanDueAmount);
+                                salesTotal += item.TotalSales;
+                                expenseTotal += item.ExpensesTotal;
                             }
                         </tbody>
                         <tfoot>
                             <tr class="text-primary">
                                 <th>Total</th>
                                 <th></th>
-                                <th></th>
-                                <th></th>
                                 <th>@GetCurrency(openingTotal)</th>
                                 <th>@GetCurrency(closingTotal)</th>
+                                <th>@GetCurrency(posTotal)</th>
+                                <th>@GetCurrency(vanTotal)</th>
+                                <th>@GetCurrency(vanBalanceTotal)</th>
+                                <th>@GetCurrency(salesTotal)</th>
+                                <th>@GetCurrency(expenseTotal)</th>
+                                <th></th>
                             </tr>
                         </tfoot>
                     </table>

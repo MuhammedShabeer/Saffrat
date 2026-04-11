@@ -1,4 +1,4 @@
-﻿@model Saffrat.Models.WorkPeriod
+@model Saffrat.Models.WorkPeriod
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -128,6 +128,8 @@
                     $("#WorkPeriodModel").modal('hide');
                     if (data.status == "success") {
                         setCookie("successMessage", '@Localize("Work Period ended successfully.")');
+                        var printUrl = '/WorkPeriod/PrintWorkPeriodReport?id=' + data.id;
+                        var printWindow = window.open(printUrl, '_blank');
                         window.location.reload(true);
                     }
                     else {
