@@ -114,19 +114,26 @@ namespace Saffrat.Controllers
                     }
                     else
                     {
-                        // Expected Cash Calculation:
-                        // 1. POS Cash Sales (those that go into the physical drawer)
+                        // 1. ALL Cash collected from ALL orders (POS + Van Sales)
+                        // Formula: (Total amount - Unpaid Due amount) = Cash actually in hand
                         var cashSales = _dbContext.Orders
-                            .Where(x => x.CreatedAt >= workPeriod.StartedAt && x.PriceType != "VanSale" && x.PaymentMethod == "Cash")
+                            .Where(x => x.CreatedAt >= workPeriod.StartedAt)
+                            .Sum(x => (decimal?)(x.PaidAmount)) ?? 0;
+                        
+                        // We must subtract Card payments since they aren't physical cash in the drawer
+                        var cardPayments = _dbContext.Orders
+                            .Where(x => x.CreatedAt >= workPeriod.StartedAt && x.PaymentMethod != "Cash" && x.PriceType != "VanSale")
                             .Sum(x => (decimal?)x.PaidAmount) ?? 0;
 
-                        // 2. Net Cash Movements from Ledger (Expenses, Purchases, etc. paid from Cash accounts)
-                        // We exclude 'DailyClose' journals to avoid double-counting POS/Van cash sales
+                        decimal netOrderCash = cashSales - cardPayments;
+
+                        // 2. Net Cash Movements from Ledger (Expenses, Manual Journals, etc.)
                         var cashAccountIds = _dbContext.GLAccounts.Where(x => x.IsCash).Select(x => x.Id).ToList();
                         var cashMovements = _dbContext.LedgerEntries
                             .Include(x => x.JournalEntry)
                             .Where(x => x.JournalEntry.EntryDate >= workPeriod.StartedAt 
                                         && x.JournalEntry.SourceDocumentType != "DailyClose"
+                                        && x.JournalEntry.SourceDocumentType != "pos"
                                         && cashAccountIds.Contains(x.GLAccountId))
                             .ToList();
                         
@@ -136,8 +143,8 @@ namespace Saffrat.Controllers
                             netMovement += (m.Debit - m.Credit);
                         }
 
-                        // Final Expected Balance
-                        workPeriod.ClosingBalance = workPeriod.OpeningBalance + cashSales + netMovement;
+                        // Final Expected Balance: Opening + Net Order Cash + Other Ledger Movements
+                        workPeriod.ClosingBalance = workPeriod.OpeningBalance + netOrderCash + netMovement;
                         workPeriod.IsEnd = true;
                         workPeriod.EndAt = CurrentDateTime();
                         workPeriod.EndBy = userName;
