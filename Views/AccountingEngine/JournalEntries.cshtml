@@ -151,6 +151,10 @@
                                         </td>
                                         <td>
                                             <button class="btn btn-sm btn-info text-white" title="@Localize("View Lines")" onclick="viewLines(@je.Id)"><i class="fa fa-eye"></i></button>
+                                            @if (je.SourceDocumentType == "DailyClose")
+                                            {
+                                                <button class="btn btn-sm btn-danger ms-1" title="@Localize("Reverse Daily Close")" onclick="reverseDailyClose(@je.Id)"><i class="fa fa-undo"></i></button>
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -284,6 +288,30 @@
                     }
                 });
             }
+        }
+
+        function reverseDailyClose(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This will reverse the Daily Close summary and allow you to edit all consolidated orders again.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, reverse it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('@Url.Action("ReverseDailyClose", "AccountingEngine")', { id: id }, function (response) {
+                        if (response.status === 'success') {
+                            successMessage(response.message);
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            errorMessage(response.message);
+                        }
+                    });
+                }
+            });
         }
 
         let currentSourceType = '';

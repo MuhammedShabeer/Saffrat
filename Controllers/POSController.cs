@@ -921,7 +921,11 @@ namespace Saffrat.Controllers
                         await _dbContext.SaveChangesAsync();
 
                         // Post to Accounting Engine
-                        await _accountingEngine.RecordOrderSaleAsync(order);
+                        // Post to Accounting Engine real-time ONLY if there is a debt (Due Amount > 0)
+                        if (order.DueAmount > 0)
+                        {
+                            await _accountingEngine.RecordOrderSaleAsync(order);
+                        }
 
                         await transaction.CommitAsync();
 
@@ -1627,6 +1631,27 @@ namespace Saffrat.Controllers
                         ReferenceHandler = ReferenceHandler.IgnoreCycles,
                     };
 
+                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "pos" && x.SourceDocumentId == existing.Id).ToList();
+                    
+                    // Safety Check: Prevent deletion of consolidated orders
+                    if (existing.IsPosted && !existingJournals.Any())
+                    {
+                        response.Add("status", "error");
+                        response.Add("message", "This order has already been consolidated into a Daily Close summary. You cannot delete it without reversing the Daily Close first.");
+                        return Json(response);
+                    }
+
+                    // Consistency Fix: Update WorkPeriod ClosingBalance if the period is already closed
+                    if (existing.PaymentMethod == "Cash" && existing.PriceType != "VanSale")
+                    {
+                        var wp = await _dbContext.WorkPeriods.FirstOrDefaultAsync(x => x.StartedAt <= existing.CreatedAt && (x.EndAt >= existing.CreatedAt || x.IsEnd == false));
+                        if (wp != null && wp.IsEnd == true)
+                        {
+                            wp.ClosingBalance -= existing.PaidAmount;
+                            _dbContext.WorkPeriods.Update(wp);
+                        }
+                    }
+
                     DeletedOrder deletedOrder = new()
                     {
                         OrderId = existing.Id,
@@ -1649,7 +1674,6 @@ namespace Saffrat.Controllers
                     _dbContext.Orders.Remove(existing);
                     await _dbContext.SaveChangesAsync();
 
-                    var existingJournals = _dbContext.JournalEntries.Where(x => x.SourceDocumentType == "pos" && x.SourceDocumentId == existing.Id).ToList();
                     if (existingJournals.Any())
                     {
                         _dbContext.JournalEntries.RemoveRange(existingJournals);

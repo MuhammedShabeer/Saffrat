@@ -85,6 +85,11 @@ namespace Saffrat.Services.AccountingEngine
         /// Reverses a Journal Entry and its Ledger Entries, adjusting account balances back.
         /// </summary>
         Task<bool> ReverseJournalEntryAsync(int journalEntryId);
+
+        /// <summary>
+        /// Safely reverses a Daily Close by unposting all linked orders and deleting the journal entry.
+        /// </summary>
+        Task<bool> ReverseDailyCloseAsync(int journalEntryId);
     }
 
     // Report DTOs

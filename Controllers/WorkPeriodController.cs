@@ -121,10 +121,13 @@ namespace Saffrat.Controllers
                             .Sum(x => (decimal?)x.PaidAmount) ?? 0;
 
                         // 2. Net Cash Movements from Ledger (Expenses, Purchases, etc. paid from Cash accounts)
+                        // We exclude 'DailyClose' journals to avoid double-counting POS/Van cash sales
                         var cashAccountIds = _dbContext.GLAccounts.Where(x => x.IsCash).Select(x => x.Id).ToList();
                         var cashMovements = _dbContext.LedgerEntries
                             .Include(x => x.JournalEntry)
-                            .Where(x => x.JournalEntry.EntryDate >= workPeriod.StartedAt && cashAccountIds.Contains(x.GLAccountId))
+                            .Where(x => x.JournalEntry.EntryDate >= workPeriod.StartedAt 
+                                        && x.JournalEntry.SourceDocumentType != "DailyClose"
+                                        && cashAccountIds.Contains(x.GLAccountId))
                             .ToList();
                         
                         decimal netMovement = 0;

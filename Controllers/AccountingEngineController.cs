@@ -515,6 +515,24 @@ namespace Saffrat.Controllers
             }
         }
 
+        [HttpPost]
+        public async Task<IActionResult> ReverseDailyClose(int id)
+        {
+            try
+            {
+                var result = await _accountingEngine.ReverseDailyCloseAsync(id);
+                if (result)
+                {
+                    return Json(new { status = "success", message = "Daily Close has been reversed. All linked orders are now unposted." });
+                }
+                return Json(new { status = "error", message = "Failed to reverse Daily Close. Journal entry may not be a Daily Close summary." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = "error", message = ex.Message });
+            }
+        }
+
         // --- PAYROLL PAYMENT FLOWS ---
 
         [HttpGet]

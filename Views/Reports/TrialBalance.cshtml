@@ -8,8 +8,16 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var groups = Model.GroupBy(x => x.AccountGroup).OrderBy(x => x.Key);
-    decimal gTotalDebit = Model.Sum(x => x.TotalDebit);
-    decimal gTotalCredit = Model.Sum(x => x.TotalCredit);
+    
+    // Balanced Totals Calculation:
+    // Assets (0) and Expenses (4) are Debit-normal
+    // Liabilities (1), Equity (2), and Revenue (3) are Credit-normal
+    
+    decimal openingTotalDR = Model.Where(x => x.Category == 0 || x.Category == 4).Sum(x => x.OpeningBalance);
+    decimal openingTotalCR = Model.Where(x => x.Category == 1 || x.Category == 2 || x.Category == 3).Sum(x => x.OpeningBalance);
+    
+    decimal closingTotalDR = Model.Where(x => x.Category == 0 || x.Category == 4).Sum(x => x.ClosingBalance);
+    decimal closingTotalCR = Model.Where(x => x.Category == 1 || x.Category == 2 || x.Category == 3).Sum(x => x.ClosingBalance);
 }
 
 <div class="page-title d-flex justify-content-between">
@@ -140,10 +148,22 @@
                             <tfoot>
                                 <tr class="bg-primary text-white font-weight-bold">
                                     <th class="text-end text-white">@Localize("Grand Total")</th>
-                                    <th class="text-end text-white">@Model.Sum(x => x.OpeningBalance).ToString("N2")</th>
+                                    <th class="text-end text-white">
+                                        @if (openingTotalDR == openingTotalCR) {
+                                            @openingTotalDR.ToString("N2")
+                                        } else {
+                                            <span title="DR sum != CR sum">DR: @openingTotalDR.ToString("N2") / CR: @openingTotalCR.ToString("N2")</span>
+                                        }
+                                    </th>
                                     <th class="text-end text-white">@Model.Sum(x => x.TotalDebit).ToString("N2")</th>
                                     <th class="text-end text-white">@Model.Sum(x => x.TotalCredit).ToString("N2")</th>
-                                    <th class="text-end text-white">@Model.Sum(x => x.ClosingBalance).ToString("N2")</th>
+                                    <th class="text-end text-white">
+                                        @if (closingTotalDR == closingTotalCR) {
+                                            @closingTotalDR.ToString("N2")
+                                        } else {
+                                            <span title="DR sum != CR sum">DR: @closingTotalDR.ToString("N2") / CR: @closingTotalCR.ToString("N2")</span>
+                                        }
+                                    </th>
                                 </tr>
                             </tfoot>
                         </table>

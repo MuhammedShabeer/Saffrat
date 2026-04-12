@@ -89,7 +89,7 @@ namespace Saffrat.Services.AccountingEngine
             };
 
             // Resolve General Accounts
-            int salesAccId = await GetOrCreateGLAccountAsync("Food Sales", AccountType.Sales, AccountCategory.Revenue);
+            int salesAccId = await GetOrCreateGLAccountAsync("Sales Account", AccountType.Sales, AccountCategory.Revenue);
             int vanSalesAccId = await GetOrCreateGLAccountAsync("Van Sale Revenue", AccountType.Sales, AccountCategory.Revenue);
             int taxAccId = await GetOrCreateGLAccountAsync("Sales Tax", AccountType.OtherCurrentLiability, AccountCategory.Liability);
             int discountAccId = await GetOrCreateGLAccountAsync("General Sales Discounts", AccountType.Marketing, AccountCategory.Expense);
@@ -786,6 +786,39 @@ namespace Saffrat.Services.AccountingEngine
 
             await _dbContext.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> ReverseDailyCloseAsync(int journalEntryId)
+        {
+            var journalEntry = await _dbContext.Set<JournalEntry>()
+                .Include(j => j.LedgerEntries)
+                .FirstOrDefaultAsync(j => j.Id == journalEntryId);
+
+            if (journalEntry == null || journalEntry.SourceDocumentType != "DailyClose") return false;
+
+            var closeDate = journalEntry.EntryDate.Date;
+
+            // 1. Identify and un-post orders that were part of this consolidation
+            // We find all orders from that day that are marked as Posted
+            var ordersOfDay = await _dbContext.Orders
+                .Where(o => EF.Functions.DateDiffDay(o.CreatedAt, closeDate) == 0 && o.IsPosted)
+                .ToListAsync();
+
+            foreach (var order in ordersOfDay)
+            {
+                // Check if this order has its own individual journal entry
+                // If it DOESN'T, it was part of the consolidated Daily Close
+                var hasIndividualJournal = await _dbContext.JournalEntries
+                    .AnyAsync(j => j.SourceDocumentType == "pos" && j.SourceDocumentId == order.Id);
+
+                if (!hasIndividualJournal)
+                {
+                    order.IsPosted = false;
+                }
+            }
+
+            // 2. Perform standard journal reversal (balances and deletion)
+            return await ReverseJournalEntryAsync(journalEntryId);
         }
     }
 }
