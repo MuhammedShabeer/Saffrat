@@ -5,9 +5,12 @@ namespace Saffrat.ViewModels
 {
     public class MISDashboardVM
     {
-        public List<DailySalePoint> DailySales { get; set; }
+        public List<DailySalePoint> DailySales { get; set; } // POS Daily
+        public List<DailySalePoint> DailyVanSales { get; set; } // Van Daily
         public List<MonthlySalePoint> MonthlySales { get; set; }
         public List<ItemPerformance> TopItems { get; set; }
+        public List<ItemPerformance> TopPosItems { get; set; }
+        public List<ItemPerformance> TopVanSaleItems { get; set; }
         public List<CategoryPerformance> CategorySales { get; set; }
         public List<OrderTypeDistribution> OrderTypeSales { get; set; }
         public List<PaymentMethodDistribution> PaymentMethodSales { get; set; }
@@ -19,6 +22,11 @@ namespace Saffrat.ViewModels
         public decimal MonthRevenue { get; set; }
         public decimal MonthDue { get; set; }
         public decimal AvgOrderValue { get; set; }
+
+        public decimal TotalDiscount { get; set; }
+        public decimal TotalCollected { get; set; }
+        public decimal OldDebtCollected { get; set; }
+        public decimal ExpensesTotal { get; set; }
 
         // VanSale Metrics
         public decimal VanSaleTodayRevenue { get; set; }

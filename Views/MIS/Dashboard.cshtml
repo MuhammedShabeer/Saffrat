@@ -105,148 +105,114 @@
 </style>
 
 <div class="mis-container mt-2">
-    <div class="d-flex justify-content-between align-items-center mb-4 px-2">
-        <h3 class="fw-bold text-dark"><i class="fas fa-chart-line text-primary me-2"></i> @Localize("MIS Analytics Control Center")</h3>
-        <div class="badge bg-white text-dark p-2 rounded-pill shadow-sm border">
-            <span class="pulse-live"></span> @Localize("LIVE VISION")
+    <div class="glass-card mb-4 p-3 d-flex flex-wrap justify-content-between align-items-center">
+        <div>
+            <h3 class="fw-bold text-dark mb-0"><i class="fas fa-chart-pie text-primary me-2"></i> @Localize("MIS Analytics Control Center")</h3>
+            <p class="text-muted small mb-0">@Localize("Strategic business insights & performance tracking")</p>
+        </div>
+        <div class="d-flex gap-2 align-items-end flex-wrap">
+            <div>
+                <label class="small fw-bold text-muted">@Localize("From")</label>
+                <input type="date" id="filter-from" class="form-control form-control-sm rounded-pill border-primary shadow-sm" style="width:140px;">
+            </div>
+            <div>
+                <label class="small fw-bold text-muted">@Localize("To")</label>
+                <input type="date" id="filter-to" class="form-control form-control-sm rounded-pill border-primary shadow-sm" style="width:140px;">
+            </div>
+            <button onclick="LoadMISDashboard()" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm h-100">
+                <i class="fas fa-sync-alt me-1"></i> @Localize("Apply Filter")
+            </button>
+            <div class="badge bg-white text-dark p-2 rounded-pill shadow-sm border h-100 d-flex align-items-center">
+                <span class="pulse-live"></span> @Localize("LIVE VISION")
+            </div>
         </div>
     </div>
 
-    <!-- KPI Row -->
+    <!-- Primary Financial Row -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="glass-card stat-card">
+            <div class="glass-card stat-card border-start border-4 border-primary">
                 <div>
-                    <div class="stat-label">@Localize("Today Revenue")</div>
-                    <div class="stat-value" id="stat-today-revenue">...</div>
-                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-today-due">...</span></div>
+                    <div class="stat-label">@Localize("Total Inflow")</div>
+                    <div class="stat-value text-primary" id="stat-total-collected">...</div>
+                    <div class="text-muted small">@Localize("Incl. Debt"): <span id="stat-old-debt">...</span></div>
                 </div>
-                <div class="stat-icon bg-primary shadow">
-                    <i class="fas fa-wallet"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="glass-card stat-card">
-                <div>
-                    <div class="stat-label">@Localize("Orders Count")</div>
-                    <div class="stat-value" id="stat-today-orders">...</div>
-                </div>
-                <div class="stat-icon bg-success shadow">
-                    <i class="fas fa-shopping-basket"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="glass-card stat-card">
-                <div>
-                    <div class="stat-label">@Localize("Monthly Sales")</div>
-                    <div class="stat-value" id="stat-month-revenue">...</div>
-                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-month-due">...</span></div>
-                </div>
-                <div class="stat-icon bg-info shadow">
-                    <i class="fas fa-calendar-check"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="glass-card stat-card">
-                <div>
-                    <div class="stat-label">@Localize("Avg Transaction")</div>
-                    <div class="stat-value" id="stat-avg-value">...</div>
-                </div>
-                <div class="stat-icon bg-warning shadow">
-                    <i class="fas fa-receipt"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- VanSale KPI Row -->
-    <div class="d-flex align-items-center mb-3 px-2 mt-4">
-        <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-truck-moving text-indigo me-2"></i> @Localize("VanSale Performance")</h5>
-        <hr class="flex-grow-1 ms-3" style="opacity: 0.1;">
-    </div>
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="glass-card stat-card border-bottom" style="border-bottom: 3px solid var(--premium-indigo) !important;">
-                <div>
-                    <div class="stat-label">@Localize("Van Today Revenue")</div>
-                    <div class="stat-value" id="stat-van-today-revenue">...</div>
-                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-van-today-due">...</span></div>
-                </div>
-                <div class="stat-icon bg-indigo shadow" style="background-color: var(--premium-indigo);">
+                <div class="stat-icon bg-primary shadow-sm">
                     <i class="fas fa-hand-holding-usd"></i>
                 </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="glass-card stat-card border-bottom" style="border-bottom: 3px solid var(--premium-purple) !important;">
+            <div class="glass-card stat-card border-start border-4 border-success">
                 <div>
-                    <div class="stat-label">@Localize("Van Orders Count")</div>
-                    <div class="stat-value" id="stat-van-today-orders">...</div>
+                    <div class="stat-label">@Localize("Net Sales (POS)")</div>
+                    <div class="stat-value text-success" id="stat-pos-revenue">...</div>
+                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-pos-due">...</span></div>
                 </div>
-                <div class="stat-icon bg-purple shadow" style="background-color: var(--premium-purple);">
-                    <i class="fas fa-boxes-packing"></i>
+                <div class="stat-icon bg-success shadow-sm">
+                    <i class="fas fa-cash-register"></i>
                 </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="glass-card stat-card border-bottom" style="border-bottom: 3px solid var(--premium-indigo) !important;">
+            <div class="glass-card stat-card border-start border-4 border-indigo">
                 <div>
-                    <div class="stat-label">@Localize("Van Monthly Sales")</div>
-                    <div class="stat-value" id="stat-van-month-revenue">...</div>
-                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-van-month-due">...</span></div>
+                    <div class="stat-label">@Localize("Net Sales (Van)")</div>
+                    <div class="stat-value text-indigo" id="stat-van-revenue">...</div>
+                    <div class="text-danger small fw-bold">@Localize("Due"): <span id="stat-van-due">...</span></div>
                 </div>
-                <div class="stat-icon bg-indigo shadow" style="background-color: var(--premium-indigo);">
-                    <i class="fas fa-calendar-alt"></i>
+                <div class="stat-icon bg-indigo shadow-sm" style="background-color: var(--premium-indigo);">
+                    <i class="fas fa-truck-pickup"></i>
                 </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="glass-card stat-card border-bottom" style="border-bottom: 3px solid var(--premium-purple) !important;">
+            <div class="glass-card stat-card border-start border-4 border-warning">
                 <div>
-                    <div class="stat-label">@Localize("Van Avg Transaction")</div>
-                    <div class="stat-value" id="stat-van-avg-value">...</div>
+                    <div class="stat-label">@Localize("Total Discounts")</div>
+                    <div class="stat-value text-warning" id="stat-total-discount">...</div>
+                    <div class="text-muted small">@Localize("Avg Tip/Order"): <span id="stat-avg-value">...</span></div>
                 </div>
-                <div class="stat-icon bg-purple shadow" style="background-color: var(--premium-purple);">
-                    <i class="fas fa-coins"></i>
+                <div class="stat-icon bg-warning shadow-sm">
+                    <i class="fas fa-tags"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Charts Row -->
+    <!-- Charts & Leaderboards -->
     <div class="row mb-4">
-        <div class="col-lg-8 mb-4">
-            <div class="glass-card h-100 chart-container">
-                <div class="card-title">@Localize("Revenue Velocity (Last 30 Days)")</div>
-                <div id="chart-revenue-velocity"></div>
+        <div class="col-lg-12 mb-4">
+            <div class="glass-card chart-container">
+                <div class="card-title">@Localize("Revenue Velocity Comparison (POS vs Van Sales)")</div>
+                <div id="chart-revenue-comparison"></div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="glass-card chart-container">
+                <div class="card-title">@Localize("POS Top Product Leaderboard")</div>
+                <div id="chart-top-pos-items"></div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="glass-card chart-container">
+                <div class="card-title">@Localize("Van Sale Top Product Leaderboard")</div>
+                <div id="chart-top-van-items"></div>
             </div>
         </div>
         <div class="col-lg-4 mb-4">
             <div class="glass-card h-100 chart-container">
-                <div class="card-title">@Localize("Daily Hourly Pulse")</div>
+                <div class="card-title">@Localize("Activity Pulse (Hourly)")</div>
                 <div id="chart-hourly-pulse"></div>
             </div>
         </div>
-    </div>
-
-    <!-- Secondary Charts Row -->
-    <div class="row">
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-4 mb-4">
             <div class="glass-card h-100 chart-container">
-                <div class="card-title">@Localize("Product Performance Leaderboard")</div>
-                <div id="chart-top-items"></div>
-            </div>
-        </div>
-        <div class="col-lg-3 mb-4">
-            <div class="glass-card h-100 chart-container">
-                <div class="card-title">@Localize("Revenue Mix (Order Type)")</div>
+                <div class="card-title">@Localize("Order Mix (POS+Van)")</div>
                 <div id="chart-order-mix"></div>
             </div>
         </div>
-        <div class="col-lg-3 mb-4">
+        <div class="col-lg-4 mb-4">
             <div class="glass-card h-100 chart-container">
                 <div class="card-title">@Localize("Payment Distribution")</div>
                 <div id="chart-payment-mix"></div>
@@ -258,33 +224,35 @@
 @section scripts {
     <script src="~/lib/apexchart/apexcharts.min.js"></script>
     <script>
+        let charts = {};
+
         $(document).ready(function() {
+            const today = new Date().toISOString().split('T')[0];
+            $('#filter-from').val(today);
+            $('#filter-to').val(today);
             LoadMISDashboard();
         });
 
         function LoadMISDashboard() {
+            const start = $('#filter-from').val();
+            const end = $('#filter-to').val();
+
             $.ajax({
-                url: '/MIS/GetMISData',
+                url: `/MIS/GetMISData?fromDate=${start}&toDate=${end}`,
                 type: 'GET',
                 success: function(response) {
                     if (response.status === "success") {
                         const data = response.data;
                         
-                        // Update Stats
-                        $('#stat-today-revenue').text(GetCurrency(data.todayRevenue));
-                        $('#stat-today-due').text(GetCurrency(data.todayDue));
-                        $('#stat-today-orders').text(data.todayOrders);
-                        $('#stat-month-revenue').text(GetCurrency(data.monthRevenue));
-                        $('#stat-month-due').text(GetCurrency(data.monthDue));
+                        // Financial Stats
+                        $('#stat-total-collected').text(GetCurrency(data.totalCollected));
+                        $('#stat-old-debt').text(GetCurrency(data.oldDebtCollected));
+                        $('#stat-pos-revenue').text(GetCurrency(data.todayRevenue));
+                        $('#stat-pos-due').text(GetCurrency(data.todayDue));
+                        $('#stat-van-revenue').text(GetCurrency(data.vanSaleTodayRevenue));
+                        $('#stat-van-due').text(GetCurrency(data.vanSaleTodayDue));
+                        $('#stat-total-discount').text(GetCurrency(data.totalDiscount));
                         $('#stat-avg-value').text(GetCurrency(data.avgOrderValue.toFixed(2)));
-
-                        // Update VanSale Stats
-                        $('#stat-van-today-revenue').text(GetCurrency(data.vanSaleTodayRevenue));
-                        $('#stat-van-today-due').text(GetCurrency(data.vanSaleTodayDue));
-                        $('#stat-van-today-orders').text(data.vanSaleTodayOrders);
-                        $('#stat-van-month-revenue').text(GetCurrency(data.vanSaleMonthRevenue));
-                        $('#stat-van-month-due').text(GetCurrency(data.vanSaleMonthDue));
-                        $('#stat-van-avg-value').text(GetCurrency(data.vanSaleAvgOrderValue.toFixed(2)));
 
                         RenderCharts(data);
                     }
@@ -292,61 +260,79 @@
             });
         }
 
+        function safeDestroy(chartKey) {
+            if (charts[chartKey]) { charts[chartKey].destroy(); }
+        }
+
         function RenderCharts(data) {
-            // 1. Revenue Velocity (Area)
-            new ApexCharts(document.querySelector("#chart-revenue-velocity"), {
-                series: [{ name: '@Localize("Revenue")', data: data.dailySales.map(x => x.amount) }],
-                chart: { type: 'area', height: 350, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
-                dataLabels: { enabled: false },
-                stroke: { curve: 'smooth', width: 3 },
-                colors: [window.getComputedStyle(document.documentElement).getPropertyValue('--premium-blue') || '#4e73df'],
-                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0 } },
+            // 1. Comparison
+            safeDestroy('comparison');
+            charts['comparison'] = new ApexCharts(document.querySelector("#chart-revenue-comparison"), {
+                series: [
+                    { name: '@Localize("POS Sales")', data: data.dailySales.map(x => x.amount) },
+                    { name: '@Localize("Van Sales")', data: data.dailyVanSales.map(x => x.amount) }
+                ],
+                chart: { type: 'area', height: 350, toolbar: { show: true } },
+                stroke: { curve: 'smooth', width: 2 },
+                colors: ['#4e73df', '#6610f2'],
                 xaxis: { categories: data.dailySales.map(x => x.date) },
-                yaxis: { labels: { formatter: function(val) { return GetCurrency(val.toFixed(0)); } } },
-                tooltip: { theme: 'light' }
-            }).render();
+                yaxis: { labels: { formatter: (val) => GetCurrency(val.toFixed(0)) } }
+            });
+            charts['comparison'].render();
 
-            // 2. Hourly Pulse (Bar)
-            new ApexCharts(document.querySelector("#chart-hourly-pulse"), {
-                series: [{ name: '@Localize("Sales")', data: data.hourlySales.map(x => x.amount) }],
-                chart: { type: 'bar', height: 350, toolbar: { show: false } },
-                plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
-                colors: ['#36b9cc'],
-                xaxis: { categories: data.hourlySales.map(x => x.hourLabel) },
-                dataLabels: { enabled: false }
-            }).render();
-
-            // 3. Top Items (Horizontal Bar)
-            new ApexCharts(document.querySelector("#chart-top-items"), {
-                series: [{ name: '@Localize("Revenue")', data: data.topItems.map(x => x.revenue) }],
-                chart: { type: 'bar', height: 400, toolbar: { show: false } },
-                plotOptions: { bar: { horizontal: true, borderRadius: 10, barHeight: '70%'} },
+            // 2. Top POS
+            safeDestroy('topPos');
+            charts['topPos'] = new ApexCharts(document.querySelector("#chart-top-pos-items"), {
+                series: [{ name: '@Localize("Revenue")', data: data.topPosItems.map(x => x.revenue) }],
+                chart: { type: 'bar', height: 300 },
+                plotOptions: { bar: { horizontal: true, borderRadius: 5 } },
                 colors: ['#1cc88a'],
-                dataLabels: { enabled: true, formatter: function(val) { return GetCurrency(val.toFixed(0)); } },
-                xaxis: { categories: data.topItems.map(x => x.itemName) }
-            }).render();
+                xaxis: { categories: data.topPosItems.map(x => x.itemName) }
+            });
+            charts['topPos'].render();
 
-            // 4. Order Mix (Donut)
-            new ApexCharts(document.querySelector("#chart-order-mix"), {
+            // 3. Top Van
+            safeDestroy('topVan');
+            charts['topVan'] = new ApexCharts(document.querySelector("#chart-top-van-items"), {
+                series: [{ name: '@Localize("Revenue")', data: data.topVanSaleItems.map(x => x.revenue) }],
+                chart: { type: 'bar', height: 300 },
+                plotOptions: { bar: { horizontal: true, borderRadius: 5 } },
+                colors: ['#6f42c1'],
+                xaxis: { categories: data.topVanSaleItems.map(x => x.itemName) }
+            });
+            charts['topVan'].render();
+
+            // 4. Hourly
+            safeDestroy('hourly');
+            charts['hourly'] = new ApexCharts(document.querySelector("#chart-hourly-pulse"), {
+                series: [{ name: '@Localize("Sales")', data: data.hourlySales.map(x => x.amount) }],
+                chart: { type: 'bar', height: 300 },
+                colors: ['#36b9cc'],
+                xaxis: { categories: data.hourlySales.map(x => x.hourLabel) }
+            });
+            charts['hourly'].render();
+
+            // 5. Order Mix
+            safeDestroy('orderMix');
+            charts['orderMix'] = new ApexCharts(document.querySelector("#chart-order-mix"), {
                 series: data.orderTypeSales.map(x => x.amount),
                 labels: data.orderTypeSales.map(x => x.typeName),
                 chart: { type: 'donut', height: 300 },
-                colors: ['#4e73df', '#1cc88a', '#f6c23e', '#e74a3b'],
-                legend: { position: 'bottom' },
-                dataLabels: { enabled: false },
-                plotOptions: { pie: { donut: { size: '70%' } } }
-            }).render();
+                colors: ['#4e73df', '#1cc88a', '#f6c23e', '#e74a3b', '#6610f2'],
+                legend: { position: 'bottom' }
+            });
+            charts['orderMix'].render();
 
-            // 5. Payment Mix (Donut)
-            new ApexCharts(document.querySelector("#chart-payment-mix"), {
+            // 6. Payment Mix
+            safeDestroy('paymentMix');
+            charts['paymentMix'] = new ApexCharts(document.querySelector("#chart-payment-mix"), {
                 series: data.paymentMethodSales.map(x => x.amount),
                 labels: data.paymentMethodSales.map(x => x.methodName),
                 chart: { type: 'donut', height: 300 },
                 colors: ['#36b9cc', '#f6c23e', '#4e73df', '#e74a3b'],
-                legend: { position: 'bottom' },
-                dataLabels: { enabled: false },
-                plotOptions: { pie: { donut: { size: '70%' } } }
-            }).render();
+                legend: { position: 'bottom' }
+            });
+            charts['paymentMix'].render();
         }
     </script>
 }

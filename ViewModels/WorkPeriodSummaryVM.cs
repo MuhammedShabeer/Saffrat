@@ -30,5 +30,11 @@ namespace Saffrat.ViewModels
         public decimal DiscountTotal { get; set; }
 
         public Dictionary<string, decimal> PaymentMethodBreakdown { get; set; } = new Dictionary<string, decimal>();
+
+        // New Detailed Breakdowns
+        public Dictionary<string, decimal> CategorySales { get; set; } = new Dictionary<string, decimal>();
+        public decimal OldDebtCollected { get; set; }
+        public int VoidCount { get; set; }
+        public decimal VoidAmount { get; set; }
     }
 }
