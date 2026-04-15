@@ -7,6 +7,7 @@ using Saffrat.Services;
 using Microsoft.EntityFrameworkCore;
 using Saffrat.ViewModels;
 using System.Globalization;
+using Saffrat.Services.AccountingEngine;
 
 namespace Saffrat.Controllers
 {
@@ -15,11 +16,13 @@ namespace Saffrat.Controllers
     {
         private readonly ILogger<WorkPeriodController> _logger;
         private readonly RestaurantDBContext _dbContext;
+        private readonly IAccountingEngine _accountingEngine;
 
         // Constructor for WorkPeriodController
         public WorkPeriodController(
             ILogger<WorkPeriodController> logger,
             RestaurantDBContext dbContext,
+            IAccountingEngine accountingEngine,
             ILanguageService languageService,
             ILocalizationService localizationService,
             IDateTimeService dateTimeService)
@@ -27,6 +30,7 @@ namespace Saffrat.Controllers
         {
             _logger = logger;
             _dbContext = dbContext;
+            _accountingEngine = accountingEngine;
         }
 
         // Action for displaying work period information
@@ -151,6 +155,9 @@ namespace Saffrat.Controllers
 
                         _dbContext.WorkPeriods.Update(workPeriod);
                         await _dbContext.SaveChangesAsync();
+
+                        // [NEW] Automation: Perform Daily Close using StartedAt to classify late night closures correctly
+                        await _accountingEngine.PerformDailyCloseAsync(workPeriod.StartedAt);
 
                         response.Add("status", "success");
                         response.Add("message", "success");

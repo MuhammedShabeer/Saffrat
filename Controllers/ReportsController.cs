@@ -309,32 +309,19 @@ namespace Saffrat.Controllers
             ViewBag.end = to.ToString("yyyy-MM-dd");
 
             var order = _dbContext.Orders.Where(x => x.CreatedAt >= from && x.CreatedAt <= to);
-            if (order != null)
-            {
-                ViewBag.totalOrders = order.Count();
-                ViewBag.totalSub = order.Sum(x => x.SubTotal);
-                ViewBag.totalAmount = order.Sum(x => x.Total);
-                ViewBag.totalCharges = order.Sum(x => x.ChargeTotal);
-                ViewBag.totalDiscount = order.Sum(x => x.DiscountTotal);
-                ViewBag.totalTax = order.Sum(x => x.TaxTotal);
-                ViewBag.totalTaxExclude = ViewBag.totalAmount - ViewBag.totalTax;
-            }
-            else
-            {
-                ViewBag.totalSub = 0;
-                ViewBag.totalOrders = 0;
-                ViewBag.totalAmount = 0;
-                ViewBag.totalCharges = 0;
-                ViewBag.totalDiscount = 0;
-                ViewBag.totalTax = 0;
-                ViewBag.totalTaxExclude = 0;
-            }
+            
+            ViewBag.totalOrders = order.Count();
+            ViewBag.totalSub = order.Sum(x => (decimal?)x.SubTotal) ?? 0;
+            ViewBag.totalAmount = order.Sum(x => (decimal?)x.Total) ?? 0;
+            ViewBag.totalCharges = order.Sum(x => (decimal?)x.ChargeTotal) ?? 0;
+            ViewBag.totalDiscount = order.Sum(x => (decimal?)x.DiscountTotal) ?? 0;
+            ViewBag.totalTax = order.Sum(x => (decimal?)x.TaxTotal) ?? 0;
+            ViewBag.totalTaxExclude = (decimal)ViewBag.totalAmount - (decimal)ViewBag.totalTax;
 
-            ViewBag.purchaseTotal = _dbContext.Purchases.Where(x => x.PurchaseDate >= from && x.PurchaseDate <= to).Sum(x => x.TotalAmount);
-            ViewBag.purchaseTotal = _dbContext.Purchases.Where(x => x.PurchaseDate >= from && x.PurchaseDate <= to).Sum(x => x.TotalAmount);
+            ViewBag.purchaseTotal = _dbContext.Purchases.Where(x => x.PurchaseDate >= from && x.PurchaseDate <= to).Sum(x => (decimal?)x.TotalAmount) ?? 0;
             ViewBag.expenseTotal = _dbContext.LedgerEntries.Include(x => x.GLAccount).Include(x => x.JournalEntry)
                 .Where(x => (x.GLAccount.Category == (int)AccountCategory.Expense) && x.JournalEntry.EntryDate >= from && x.JournalEntry.EntryDate <= to)
-                .Sum(x => Math.Max(0, (decimal)(x.Debit - x.Credit))); // Sum only net debits as expenses
+                .Sum(x => (decimal?)(x.Debit - x.Credit)) ?? 0;
 
             return View();
         }
