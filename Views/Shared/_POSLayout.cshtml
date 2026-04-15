@@ -87,6 +87,15 @@
                                 <a asp-controller="WorkPeriod" asp-action="Index" class="dropdown-item has-icon">
                                     <i class="fas fa-cash-register"></i> @Localize("Register")
                                 </a>
+                                @if (User.IsInRole("admin") || User.IsInRole("staff"))
+                                {
+                                    <a asp-controller="Inventory" asp-action="Index" class="dropdown-item has-icon">
+                                        <i class="fas fa-truck text-success"></i> @Localize("Van Inventory")
+                                    </a>
+                                    <a asp-controller="VanExpense" asp-action="Index" class="dropdown-item has-icon">
+                                        <i class="fas fa-receipt text-success"></i> @Localize("Van Expense")
+                                    </a>
+                                }
                                 <a asp-controller="POS" asp-action="OrderHistory" class="dropdown-item has-icon">
                                     <i class="fas fa-list"></i> @Localize("Order History")
                                 </a>
@@ -115,6 +124,19 @@
                                 <i class="fas fa-cash-register"></i> @Localize("Register")
                             </a>
                         </li>
+                        @if (User.IsInRole("admin") || User.IsInRole("staff"))
+                        {
+                            <li>
+                                <a asp-controller="Inventory" asp-action="Index">
+                                    <i class="fas fa-truck text-success"></i> @Localize("Inventory")
+                                </a>
+                            </li>
+                            <li>
+                                <a asp-controller="VanExpense" asp-action="Index">
+                                    <i class="fas fa-receipt text-success"></i> @Localize("Expense")
+                                </a>
+                            </li>
+                        }
                         <li>
                             <a asp-controller="POS" asp-action="OrderHistory">
                                 <i class="fas fa-list"></i> @Localize("Order History")

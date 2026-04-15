@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Saffrat.Models.Order>
+@model IEnumerable<Saffrat.Models.Order>
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -96,7 +96,17 @@
                                         <td></td>
                                     }
                                     <td></td>
-                                    <td>@item.OrderDetails.Sum(x=> x.Quantity)</td>
+                                    <td>
+                                        @{
+                                            var totalQty = item.OrderDetails.Sum(x => x.Quantity);
+                                            var totalFoc = item.OrderDetails.Sum(x => x.FocQuantity);
+                                        }
+                                        @totalQty
+                                        @if (totalFoc > 0)
+                                        {
+                                            <span> + @totalFoc FOC</span>
+                                        }
+                                    </td>
                                     <td>@item.SubTotal</td>
                                     <td>@item.ChargeTotal</td>
                                     <td>@item.DiscountTotal</td>
@@ -132,7 +142,13 @@
                                                 i++;
                                             }
                                         </td>
-                                        <td>@item1.Quantity</td>
+                                        <td>
+                                            @item1.Quantity
+                                            @if (item1.FocQuantity > 0)
+                                            {
+                                                <span> + @item1.FocQuantity FOC</span>
+                                            }
+                                        </td>
                                         <td></td>
                                         <td></td>
                                         <td></td>

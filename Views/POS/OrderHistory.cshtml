@@ -365,7 +365,8 @@
                                 htmlText += '<span class="badge badge-primary m-1">' + modifiers[j].Modifier.Title + '</span>';
                             }
                             htmlText += '</div></td>';
-                            htmlText += '<td class="text-center">' + items[i].Quantity + '</td>';
+                            var focText = items[i].FocQuantity > 0 ? ' + ' + items[i].FocQuantity + ' FOC' : '';
+                            htmlText += '<td class="text-center">' + items[i].Quantity + focText + '</td>';
                             htmlText += '<td class="text-end">' + GetCurrency(items[i].Total) + '</td></tr>';
                         }
                         htmlText += '</tbody></table>';
@@ -431,7 +432,8 @@
                                 }
                             }
                             htmlText += '</div></td>';
-                            htmlText += '<td class="text-center">' + items[i].Quantity + '</td>';
+                            var focText = items[i].FocQuantity > 0 ? ' + ' + items[i].FocQuantity + ' FOC' : '';
+                            htmlText += '<td class="text-center">' + items[i].Quantity + focText + '</td>';
                             htmlText += '<td class="text-end">' + GetCurrency(items[i].Total) + '</td></tr>';
                         }
                         htmlText += '</tbody></table>';

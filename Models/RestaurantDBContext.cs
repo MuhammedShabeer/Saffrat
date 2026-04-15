@@ -78,6 +78,8 @@ namespace Saffrat.Models
         public virtual DbSet<Partner> Partners { get; set; }
         public virtual DbSet<PartnerTransaction> PartnerTransactions { get; set; }
         public virtual DbSet<DeletedOrder> DeletedOrders { get; set; }
+        public virtual DbSet<FoodItemStock> FoodItemStocks { get; set; }
+        public virtual DbSet<InventoryTransaction> InventoryTransactions { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -701,6 +703,8 @@ namespace Saffrat.Models
                     .HasForeignKey(d => d.OrderId)
                     .OnDelete(DeleteBehavior.Cascade)
                     .HasConstraintName("FK_OrderDetails_Orders");
+
+                entity.Property(e => e.FocQuantity).HasColumnType("decimal(18, 2)").HasDefaultValue(0);
             });
 
             modelBuilder.Entity<OrderItemModifier>(entity =>
@@ -914,6 +918,8 @@ namespace Saffrat.Models
                     .HasForeignKey(d => d.OrderId)
                     .OnDelete(DeleteBehavior.Cascade)
                     .HasConstraintName("FK_RunningOrderDetails_RunningOrders");
+
+                entity.Property(e => e.FocQuantity).HasColumnType("decimal(18, 2)").HasDefaultValue(0);
             });
 
             modelBuilder.Entity<RunningOrderItemModifier>(entity =>
@@ -1137,6 +1143,31 @@ namespace Saffrat.Models
                     .HasForeignKey(d => d.CustomerId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_DeletedOrders_Customers");
+            });
+
+            modelBuilder.Entity<FoodItemStock>(entity =>
+            {
+                entity.Property(e => e.Quantity).HasColumnType("decimal(18, 2)");
+                entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(d => d.FoodItem)
+                    .WithMany()
+                    .HasForeignKey(d => d.FoodItemId)
+                    .HasConstraintName("FK_FoodItemStocks_FoodItems");
+            });
+
+            modelBuilder.Entity<InventoryTransaction>(entity =>
+            {
+                entity.Property(e => e.QuantityChange).HasColumnType("decimal(18, 2)");
+                entity.Property(e => e.EntryDate).HasColumnType("datetime");
+                entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(d => d.FoodItem)
+                    .WithMany()
+                    .HasForeignKey(d => d.FoodItemId)
+                    .HasConstraintName("FK_InventoryTransactions_FoodItems");
             });
 
             OnModelCreatingPartial(modelBuilder);

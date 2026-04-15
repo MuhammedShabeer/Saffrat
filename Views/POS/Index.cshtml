@@ -123,6 +123,7 @@
                                     <tr>
                                         <th>@Localize("Food Item")</th>
                                         <th class="text-center">@Localize("Quantity")</th>
+                                        <th id="focHeader" class="text-center @(ViewBag.IsVanSales ? "" : "d-none")">@Localize("FOC")</th>
                                         <th class="text-end">@Localize("Price")</th>
                                     </tr>
                                 </thead>
@@ -133,10 +134,16 @@
                     </div>
                     <div class="buttons pt-2 ps-2 bg-whitesmoke" id="cartActions">
                         <a href="javascript:void(0);" onclick="IncreaseQuantity();" class="btn btn-primary disabled">
-                            <i class="fas fa-plus"></i>
+                            <i class="fas fa-plus"></i> @Localize("Qty")
                         </a>
                         <a href="javascript:void(0);" onclick="DecreaseQuantity();" id="decreaseBtn" class="btn btn-primary disabled">
-                            <i class="fas fa-minus"></i>
+                            <i class="fas fa-minus"></i> @Localize("Qty")
+                        </a>
+                        <a href="javascript:void(0);" onclick="IncreaseFocQuantity();" class="btn btn-success disabled vanSaleOnly @(ViewBag.IsVanSales ? "" : "d-none")">
+                            <i class="fas fa-plus"></i> @Localize("FOC")
+                        </a>
+                        <a href="javascript:void(0);" onclick="DecreaseFocQuantity();" class="btn btn-success disabled vanSaleOnly @(ViewBag.IsVanSales ? "" : "d-none")">
+                            <i class="fas fa-minus"></i> @Localize("FOC")
                         </a>
                         <a href="javascript:void(0);" onclick="DeleteItem();" class="btn btn-danger disabled">
                             <i class="fas fa-trash"></i>
@@ -1691,6 +1698,7 @@
             item['ItemPrice'] = price;
             item['ItemModifierTotal'] = 0.0;
             item['ItemQuantity'] = quantity;
+            item['FocQuantity'] = 0;
             item['modifiers'] = [];
 
             cartItems.push(item);
@@ -1705,8 +1713,11 @@
             var priceAction = PriceType == 'VanSale' ? 'onclick="OpenPriceOverrideModel(' + item['Id'] + ')"' : '';
             var editIcon = PriceType == 'VanSale' ? '<i class="fas fa-edit ms-1 opacity-50"></i>' : '';
 
+            var focHtml = PriceType == 'VanSale' ? '<td class="foc text-center">' + getNumber(item['FocQuantity']) + '</td>' : '';
+            
             htmlText = '<tr class="item" id="cart' + item['Id'] + '" data-id="' + item['ItemId'] + '"><td><div>' + item['ItemName'] + '</div><div class="modifiers">';
             htmlText += '<td class="quantity text-center">' + getNumber(item['ItemQuantity']) + '</td>';
+            htmlText += focHtml;
             htmlText += '<td class="price text-end ' + priceClass + '" ' + priceAction + '>' + GetCurrency(getNumber(itemTotal.toFixed(2))) + editIcon + '</td></tr>';
 
             $("#cartItems").append(htmlText);
@@ -1770,6 +1781,32 @@
                 }
             }
             CalculateTotal();
+        }
+
+        function IncreaseFocQuantity() {
+            if (!IsItemSelected() || PriceType !== "VanSale") return;
+            var split = selectedCartItemId.match(/(\d+)/);
+            id = split[0];
+            for (var i = 0; i < cartItems.length; i++) {
+                if (cartItems[i].Id == id) {
+                    cartItems[i].FocQuantity += 1;
+                    $("#" + selectedCartItemId + " td.foc").text(getNumber(cartItems[i].FocQuantity));
+                }
+            }
+        }
+
+        function DecreaseFocQuantity() {
+            if (!IsItemSelected() || PriceType !== "VanSale") return;
+            var split = selectedCartItemId.match(/(\d+)/);
+            id = split[0];
+            for (var i = 0; i < cartItems.length; i++) {
+                if (cartItems[i].Id == id) {
+                    if (cartItems[i].FocQuantity > 0) {
+                        cartItems[i].FocQuantity -= 1;
+                        $("#" + selectedCartItemId + " td.foc").text(getNumber(cartItems[i].FocQuantity));
+                    }
+                }
+            }
         }
         //Delete Cart Item
         function DeleteItem() {
@@ -1911,6 +1948,15 @@
                 splitItems += '<td><div>' + items[i].Item.ItemName + '</div><div>';
 
                 AddItemInCart(items[i].Item.Id, items[i].Item.ItemName, items[i].Item.Price, items[i].Quantity);
+                
+                // Set FOC Quantity from loaded order
+                for(var k=0; k<cartItems.length; k++) {
+                    if(cartItems[k].Id == cartid) {
+                        cartItems[k].FocQuantity = items[i].FocQuantity || 0;
+                        $("#cart" + cartid + " td.foc").text(getNumber(cartItems[k].FocQuantity));
+                    }
+                }
+
                 var modifiers = items[i].RunningOrderItemModifiers;
                 for (var j = 0; j < modifiers.length; j++) {
                     splitItems += '<span class="badge badge-primary m-1">' + modifiers[j].Modifier.Title + '</span>';
@@ -2254,6 +2300,7 @@
                 for (var i = 0; i < cartItems.length; i++) {
                     data.append("ItemIds[]", cartItems[i].ItemId);
                     data.append("Quantities[]", cartItems[i].ItemQuantity);
+                    data.append("FocQuantities[]", cartItems[i].FocQuantity || 0);
                     data.append("ItemPrices[]", getNumber(cartItems[i].ItemPrice));
                     var modifiers = [];
                     for (var j = 0; j < cartItems[i].modifiers.length; j++) {
@@ -2391,17 +2438,25 @@
             var link = baseUrl + "/POS/DigitalInvoice?guid=" + guid;
             var text = encodeURIComponent("Hello " + name + ",\nYour bill for order #" + orderId + " is ready. You can view it here: " + link);
             
-            Swal.fire({
+            $.confirm({
                 title: '@Localize("Send Bill to WhatsApp?")',
-                text: "@Localize("The bill link will be sent to ") " + phone,
-                icon: 'info',
-                showCancelButton: true,
-                confirmButtonColor: '#25D366',
-                cancelButtonColor: '#d33',
-                confirmButtonText: '<i class="fab fa-whatsapp"></i> @Localize("Send Now")'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.open('https://wa.me/' + cleanPhone + '?text=' + text);
+                content: "@Localize("The bill link will be sent to ") " + phone,
+                icon: 'fab fa-whatsapp',
+                type: 'green',
+                buttons: {
+                    confirm: {
+                        text: '@Localize("Send Now")',
+                        btnClass: 'btn-green',
+                        action: function () {
+                            window.open('https://wa.me/' + cleanPhone + '?text=' + text);
+                        }
+                    },
+                    cancel: {
+                        text: '@Localize("Cancel")',
+                        action: function () {
+                            // do nothing
+                        }
+                    }
                 }
             });
         }
@@ -2425,6 +2480,35 @@
             }
             iframe.src = "/POS/PrintSticker/" + OrderId;
         }
+        $("#PriceType").change(function() {
+            PriceType = $(this).val();
+            if (PriceType == "VanSale") {
+                $("#focHeader").removeClass("d-none");
+                $(".vanSaleOnly").removeClass("d-none");
+            } else {
+                $("#focHeader").addClass("d-none");
+                $(".vanSaleOnly").addClass("d-none");
+            }
+            // Re-render cart to show/hide FOC cells
+            var items = JSON.parse(JSON.stringify(cartItems));
+            $("#cartItems").html('');
+            cartItems = [];
+            for (var i = 0; i < items.length; i++) {
+                var itm = items[i];
+                cartid++;
+                itm.Id = cartid;
+                cartItems.push(itm);
+                DisplayCartItem(itm);
+                if(itm.modifiers && itm.modifiers.length > 0) {
+                     var htmlText = '';
+                     for (var j = 0; j < itm.modifiers.length; j++) {
+                        htmlText += '<span class="badge badge-primary m-1">' + itm.modifiers[j].Name + '</span>';
+                     }
+                     $("#cart" + itm.Id + " td div.modifiers").html(htmlText);
+                }
+            }
+            SearchItems();
+        });
     </script>
 }
 

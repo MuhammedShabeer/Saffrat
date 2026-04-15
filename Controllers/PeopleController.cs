@@ -27,10 +27,28 @@ namespace Saffrat.Controllers
 
         [HttpGet]
         [Authorize(Roles = "admin,staff")]
-        public async Task<IActionResult> Customers()
+        public async Task<IActionResult> Customers(bool onlyDue = false)
         {
-            var users = await _dbContext.Customers.ToListAsync();
-            return View(users);
+            var customers = await _dbContext.Customers
+                .Select(c => new ViewModels.CustomerListItemVM
+                {
+                    Id = c.Id.Value,
+                    CustomerName = c.CustomerName,
+                    Email = c.Email,
+                    Phone = c.Phone,
+                    Address = c.Address,
+                    UpdatedAt = c.UpdatedAt,
+                    UpdatedBy = c.UpdatedBy,
+                    TotalDue = Math.Round(c.Orders.Sum(o => o.Total - o.PaidAmount), 2)
+                }).ToListAsync();
+
+            if (onlyDue)
+            {
+                customers = customers.Where(x => x.TotalDue > 0).ToList();
+            }
+
+            ViewBag.OnlyDue = onlyDue;
+            return View(customers);
         }
 
         [HttpGet]

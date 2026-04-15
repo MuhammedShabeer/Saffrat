@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -17,6 +17,7 @@ namespace Saffrat.Models
         public decimal? Price { get; set; }
         public decimal? ModifierTotal { get; set; }
         public int? Quantity { get; set; }
+        public decimal FocQuantity { get; set; }
         public decimal? Total { get; set; }
         public DateTime CreatedAt { get; set; }
 

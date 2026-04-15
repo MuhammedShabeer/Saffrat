@@ -125,7 +125,7 @@ namespace Saffrat.Controllers
         // Insert New Order
         [HttpPost]
         [Authorize(Roles = "admin,staff")]
-        public async Task<IActionResult> SaveRunningOrder(int[] ItemIds, int[] Quantities, string[] Modifiers, decimal[] ItemPrices, string Note, int CustomerId,
+        public async Task<IActionResult> SaveRunningOrder(int[] ItemIds, int[] Quantities, int[] FocQuantities, string[] Modifiers, decimal[] ItemPrices, string Note, int CustomerId,
             int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType, 
             string DiscountReason = "", decimal CustomDiscountValue = 0, bool CustomDiscountIsPercentage = false)
         {
@@ -284,12 +284,13 @@ namespace Saffrat.Controllers
                                 else if (PriceType == "WholeSale") detailPrice = item.WholeSalePrice;
                             }
 
-                            RunningOrderDetail orderDetail = new()
+                             RunningOrderDetail orderDetail = new()
                             {
                                 OrderId = order.Id,
                                 ItemId = item.Id,
                                 Price = detailPrice,
                                 Quantity = Quantities[i],
+                                FocQuantity = (FocQuantities != null && FocQuantities.Length > i) ? FocQuantities[i] : 0,
                                 ModifierTotal = 0,
                                 Total = 0,
                                 CreatedAt = CurrentDateTime(),
@@ -395,7 +396,7 @@ namespace Saffrat.Controllers
         // Update Running Order
         [HttpPost]
         [Authorize(Roles = "admin,staff")]
-        public async Task<IActionResult> UpdateRunningOrder(int OrderId, int[] ItemIds, int[] Quantities, string[] Modifiers, decimal[] ItemPrices, string Note, int CustomerId,
+        public async Task<IActionResult> UpdateRunningOrder(int OrderId, int[] ItemIds, int[] Quantities, int[] FocQuantities, string[] Modifiers, decimal[] ItemPrices, string Note, int CustomerId,
             int OrderType, string TableName, int TaxId, int DiscountId, int ChargeId, int Guests, string WaiterOrDriver, string PriceType,
             string DiscountReason = "", decimal CustomDiscountValue = 0, bool CustomDiscountIsPercentage = false)
         {
@@ -536,6 +537,7 @@ namespace Saffrat.Controllers
                                     ItemId = item.Id,
                                     Price = detailPrice,
                                     Quantity = Quantities[i],
+                                    FocQuantity = (FocQuantities != null && FocQuantities.Length > i) ? FocQuantities[i] : 0,
                                     ModifierTotal = 0,
                                     Total = 0,
                                     CreatedAt = CurrentDateTime(),
@@ -890,16 +892,17 @@ namespace Saffrat.Controllers
 
                         foreach (var item in oorder.RunningOrderDetails)
                         {
-                            OrderDetail orderDetail = new()
-                            {
-                                OrderId = order.Id,
-                                ItemId = item.ItemId,
-                                Price = item.Price,
-                                ModifierTotal = item.ModifierTotal,
-                                Quantity = item.Quantity,
-                                Total = item.Total,
-                                CreatedAt = item.CreatedAt
-                            };
+                                OrderDetail orderDetail = new()
+                                {
+                                    OrderId = order.Id,
+                                    ItemId = item.ItemId,
+                                    Price = item.Price,
+                                    ModifierTotal = item.ModifierTotal,
+                                    Quantity = item.Quantity,
+                                    FocQuantity = item.FocQuantity,
+                                    Total = item.Total,
+                                    CreatedAt = item.CreatedAt
+                                };
                             _dbContext.OrderDetails.Add(orderDetail);
                             _dbContext.SaveChanges();
 
@@ -919,6 +922,38 @@ namespace Saffrat.Controllers
 
                         _dbContext.Remove(oorder);
                         await _dbContext.SaveChangesAsync();
+
+                        // [NEW] Automated Van Stock Deduction
+                        if (order.PriceType == "VanSale")
+                        {
+                            foreach (var detail in order.OrderDetails)
+                            {
+                                var totalQty = (detail.Quantity ?? 0) + detail.FocQuantity;
+                                if (totalQty > 0)
+                                {
+                                    var stock = await _dbContext.FoodItemStocks.FirstOrDefaultAsync(x => x.FoodItemId == detail.ItemId && x.UserId == "VanStock");
+                                    if (stock != null)
+                                    {
+                                        stock.Quantity -= totalQty;
+                                        stock.UpdatedAt = CurrentDateTime();
+                                        _dbContext.FoodItemStocks.Update(stock);
+
+                                        // Audit Log
+                                        _dbContext.InventoryTransactions.Add(new InventoryTransaction
+                                        {
+                                            FoodItemId = detail.ItemId ?? 0,
+                                            UserId = "VanStock",
+                                            QuantityChange = -totalQty,
+                                            Type = "Sale",
+                                            EntryDate = CurrentDateTime(),
+                                            ReferenceId = order.Id,
+                                            CreatedBy = userName
+                                        });
+                                    }
+                                }
+                            }
+                            await _dbContext.SaveChangesAsync();
+                        }
 
                         // Post to Accounting Engine
                         // Post to Accounting Engine real-time ONLY if there is a debt (Due Amount > 0)
@@ -953,7 +988,7 @@ namespace Saffrat.Controllers
                     response.Add("message", "Enter required fields.");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (transaction != null)
                 {
@@ -1974,7 +2009,13 @@ td, th { padding: 4px 0; text-align: left; vertical-align: top; font-size: 12px;
                     i++;
                 }
                 itemHtml += "</td>";
-                itemHtml += @"<td class=""centered"">" + item.Quantity + "</td>";
+                
+                var qtyDisplay = (item.Quantity ?? 0).ToString("G29");
+                if (item.FocQuantity > 0) {
+                    qtyDisplay += " + " + item.FocQuantity.ToString("G29") + " FOC";
+                }
+
+                itemHtml += @"<td class=""centered"" style=""white-space:nowrap;"">" + qtyDisplay + "</td>";
                 itemHtml += @"<td class=""right"">" + item.Total + "</td></tr>";
             }
             string[] orderTypes = { "", Localize("Dine In"), Localize("Pick Up"), Localize("Delivery") };
@@ -2146,7 +2187,13 @@ td, th { padding: 4px 0; text-align: right; vertical-align: top; font-size: 12px
                     i++;
                 }
                 itemHtml += "</td>";
-                itemHtml += @"<td class=""centered"">" + item.Quantity + "</td>";
+                
+                var qtyDisplay = (item.Quantity ?? 0).ToString("G29");
+                if (item.FocQuantity > 0) {
+                    qtyDisplay += " + " + item.FocQuantity.ToString("G29") + " FOC";
+                }
+
+                itemHtml += @"<td class=""centered"" style=""white-space:nowrap;"">" + qtyDisplay + "</td>";
                 itemHtml += @"<td class=""right"">" + item.Total + "</td></tr>";
             }
             string[] orderTypes = { "", Localize("Dine In"), Localize("Pick Up"), Localize("Delivery") };

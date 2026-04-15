@@ -378,6 +378,7 @@ namespace Saffrat.Controllers
                     {
                         Item = g.First().Item,
                         Quantity = g.Sum(x => x.Quantity),
+                        FocQuantity = g.Sum(x => x.FocQuantity)
                     })
                     .ToList();
 

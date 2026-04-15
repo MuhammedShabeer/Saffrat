@@ -142,6 +142,16 @@
                                     <li id="orderList-menu"><a class="nav-link" asp-controller="POS" asp-action="OrderHistory">@Localize("Order History")</a></li>
                                 </ul>
                             </li>
+                            <li class="dropdown" id="van-sale-menu">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-truck text-success"></i><span>@Localize("Van Sale")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="van-inventory-menu"><a class="nav-link" asp-controller="Inventory" asp-action="Index">@Localize("Van Inventory")</a></li>
+                                    <li id="van-expense-menu"><a class="nav-link" asp-controller="VanExpense" asp-action="Index">@Localize("Expense Entry")</a></li>
+                                    <li id="vanSaleReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="VanSaleReport">@Localize("Van Sale Report")</a></li>
+                                </ul>
+                            </li>
                             <li class="dropdown" id="purchase-menu">
                                 <a href="#" class="menu-toggle nav-link has-dropdown">
                                     <i class="fas fa-credit-card"></i><span>@Localize("Purchase")</span>
@@ -211,7 +221,6 @@
                                 <ul class="dropdown-menu">
                                     <li id="workPeriodReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="WorkPeriod">@Localize("Work Period Report")</a></li>
                                     <li id="saleReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SaleReport">@Localize("Sale Report")</a></li>
-                                    <li id="vanSaleReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="VanSaleReport"><i class="fas fa-truck-ramp-box me-1"></i>@Localize("Van Sale Report")</a></li>
                                     <li id="itemSaleReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="ItemSaleReport">@Localize("Item Sale Report")</a></li>
                                     <li id="saleSummaryReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SaleSummaryReport">@Localize("Sale Summary Report")</a></li>
                                     <li id="saleDetailedReport-menu"><a class="nav-link" asp-controller="Reports" asp-action="SaleDetailedReport">@Localize("Sale Detailed Report")</a></li>
@@ -301,6 +310,15 @@
                                     <li><a class="nav-link" asp-controller="POS" asp-action="Kitchen">@Localize("Kitchen")</a></li>
                                     <li><a class="nav-link" asp-controller="WorkPeriod" asp-action="Index">@Localize("Register")</a></li>
                                     <li id="orderList-menu"><a class="nav-link" asp-controller="POS" asp-action="OrderHistory">@Localize("Order History")</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown" id="van-sale-menu-staff">
+                                <a href="#" class="menu-toggle nav-link has-dropdown">
+                                    <i class="fas fa-truck text-success"></i><span>@Localize("Van Sale")</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li id="van-inventory-menu-staff"><a class="nav-link" asp-controller="Inventory" asp-action="Index">@Localize("Van Inventory")</a></li>
+                                    <li id="van-expense-menu-staff"><a class="nav-link" asp-controller="VanExpense" asp-action="Index">@Localize("Expense Entry")</a></li>
                                 </ul>
                             </li>
                             <li class="dropdown" id="purchase-menu">

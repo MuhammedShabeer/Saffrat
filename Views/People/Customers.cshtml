@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Saffrat.Models.Customer>
+@model IEnumerable<Saffrat.ViewModels.CustomerListItemVM>
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -24,6 +24,9 @@
             </div>
             <div class="col">
                 <div class="float-end">
+                    <a asp-action="Customers" asp-route-onlyDue="@(!(ViewBag.OnlyDue ?? false))" class="btn btn-@(ViewBag.OnlyDue == true ? "danger" : "outline-danger") me-2">
+                        <i class="fas fa-filter me-1"></i> @(ViewBag.OnlyDue == true ? Localize("Show All") : Localize("Only Due"))
+                    </a>
                     <a asp-controller="People" asp-action="AddCustomer" class="btn btn-primary">
                         @Localize("Add New")
                     </a>
@@ -46,6 +49,7 @@
                                 <th>@Localize("Email")</th>
                                 <th>@Localize("Phone")</th>
                                 <th>@Localize("Address")</th>
+                                <th class="text-danger">@Localize("Due Balance")</th>
                                 <th>@Localize("Updated At")</th>
                                 <th>@Localize("Updated By")</th>
                                 <th>@Localize("Action")</th>
@@ -61,6 +65,7 @@
                                     <td>@item.Email</td>
                                     <td>@item.Phone</td>
                                     <td>@item.Address</td>
+                                    <td class="font-weight-bold @(item.TotalDue > 0 ? "text-danger" : "")">@GetCurrency(item.TotalDue)</td>
                                     <td>@item.UpdatedAt</td>
                                     <td>&#64;@item.UpdatedBy</td>
                                     <td>

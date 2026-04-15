@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Saffrat.Models.OrderDetail>
+@model IEnumerable<Saffrat.Models.OrderDetail>
 
 @using Saffrat.Resources
 @inherits LocService<TModel>
@@ -73,6 +73,10 @@
                                     </td>
                                     <td>
                                         @item.Quantity
+                                        @if (item.FocQuantity > 0)
+                                        {
+                                            <span> + @item.FocQuantity FOC</span>
+                                        }
                                     </td>
                                 </tr>
                             }

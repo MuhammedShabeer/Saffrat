@@ -1,0 +1,146 @@
+@model IEnumerable<Saffrat.Models.FoodItemStock>
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = Localize("Van Inventory");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var drivers = ViewBag.Drivers as List<Saffrat.Models.User>;
+    var foodItems = ViewBag.FoodItems as List<Saffrat.Models.FoodItem>;
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="page-header-title">
+                    <h4>@Localize("Van Inventory Management")</h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> @Localize("Home")</a></li>
+                    <li class="breadcrumb-item active">@Localize("Van Inventory")</li>
+                </ul>
+            </div>
+            <div class="col text-end">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadStockModal">
+                    <i class="feather icon-plus"></i> @Localize("Load Van Stock")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="dt-responsive table-responsive">
+                    <table id="inventoryTable" class="table table-striped table-bordered nowrap">
+                        <thead>
+                            <tr>
+                                <th>@Localize("Food Item")</th>
+                                <th>@Localize("In Van Quantity")</th>
+                                <th>@Localize("Last Updated")</th>
+                                <th>@Localize("Action")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>@item.FoodItem.ItemName</td>
+                                    <td>
+                                        <span class="badge @(item.Quantity <= 5 ? "bg-danger" : "bg-success")">
+                                            @item.Quantity.ToString("G29")
+                                        </span>
+                                    </td>
+                                    <td>@item.UpdatedAt.ToString("g")</td>
+                                    <td>
+                                        <a asp-action="Transactions" asp-route-userId="@item.UserId" class="btn btn-sm btn-info">
+                                            <i class="feather icon-list"></i> @Localize("History")
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section models {
+    <!-- Load Stock Modal -->
+    <div class="modal fade" id="loadStockModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@Localize("Load / Adjust Van Stock")</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="loadStockForm">
+                    <div class="modal-body">
+                        <input type="hidden" name="UserId" value="" />
+                        <div class="form-group mb-3">
+                            <label class="form-label">@Localize("Food Item")</label>
+                            <select name="FoodItemId" class="form-control select2" required>
+                                <option value="">-- @Localize("Select Item") --</option>
+                                @foreach (var fi in foodItems)
+                                {
+                                    <option value="@fi.Id">@fi.ItemName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">@Localize("Quantity")</label>
+                            <input type="number" name="Quantity" class="form-control" step="0.01" required min="0.01">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">@Localize("Operation Type")</label>
+                            <select name="Type" class="form-control">
+                                <option value="Load">@Localize("Load (Increase)")</option>
+                                <option value="Return">@Localize("Return (Decrease)")</option>
+                                <option value="Set">@Localize("Set (Manual Overwrite)")</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@Localize("Close")</button>
+                        <button type="submit" class="btn btn-primary">@Localize("Confirm Update")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#inventoryTable').DataTable({
+                order: [[0, 'asc']]
+            });
+
+            $('#loadStockForm').on('submit', function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '@Url.Action("LoadStock", "Inventory")',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.status === "success") {
+                            successMessage(response.message);
+                            location.reload();
+                        } else {
+                            errorMessage(response.message);
+                        }
+                    },
+                    error: function() {
+                        errorMessage("Something went wrong!");
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,75 @@
+@model IEnumerable<Saffrat.Models.InventoryTransaction>
+@using Saffrat.Resources
+@inherits LocService<TModel>
+
+@{
+    ViewData["Title"] = Localize("Stock Transaction History");
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header">
+    <div class="page-block">
+        <div class="row align-items-center">
+            <div class="col-md-12">
+                <div class="page-header-title">
+                    <h4>@Localize("Inventory Transaction Audit Logs")</h4>
+                </div>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa fa-home"></i> @Localize("Home")</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Inventory" asp-action="Index">@Localize("Van Inventory")</a></li>
+                    <li class="breadcrumb-item active">@Localize("Transaction History")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="dt-responsive table-responsive">
+                    <table id="logsTable" class="table table-striped table-bordered nowrap">
+                        <thead>
+                            <tr>
+                                <th>@Localize("Date")</th>
+                                <th>@Localize("Item")</th>
+                                <th>@Localize("Change")</th>
+                                <th>@Localize("Type")</th>
+                                <th>@Localize("Reference")</th>
+                                <th>@Localize("Created By")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in Model)
+                            {
+                                <tr>
+                                    <td>@log.EntryDate.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                    <td>@log.FoodItem.ItemName</td>
+                                    <td>
+                                        <b class="@(log.QuantityChange > 0 ? "text-success" : "text-danger")">
+                                            @(log.QuantityChange > 0 ? "+" : "")@log.QuantityChange.ToString("G29")
+                                        </b>
+                                    </td>
+                                    <td>@log.Type</td>
+                                    <td>@(log.ReferenceId != null ? $"Order #{log.ReferenceId}" : "-")</td>
+                                    <td>@log.CreatedBy</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#logsTable').DataTable({
+                order: [[0, 'desc']]
+            });
+        });
+    </script>
+}
